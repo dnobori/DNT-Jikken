@@ -1,0 +1,16 @@
+{
+  "name": "vscode-chrome-ts1",
+  "version": "1.0.0",
+  "description": "参考 URL:\r * https://code.visualstudio.com/docs/languages/typescript\r * https://qiita.com/selmertsx/items/c7a17261dcf802df2422",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "devDependencies": {
+    "tslint": "5.11.0",
+    "typescript": "3.1.3"
+  }
+}

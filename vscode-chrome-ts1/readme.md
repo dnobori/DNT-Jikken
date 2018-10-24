@@ -9,7 +9,7 @@
 ```
 npm init -y
 
-npm i -DE typescript tslint @types/node @types/config
+npm i -DE typescript tslint
 
 node_modules\.bin\tsc --init
 node_modules\.bin\tslint --init
@@ -46,15 +46,6 @@ node_modules\.bin\tslint --init
 ## HelloWorld.ts の実験
 `HelloWorld.ts` を作成
 
-F7 - Build を実行すると、コンパイル済み js ファイルが生成される。
-
-```
-node HelloWorld.js
-```
-でテスト実行。
-
-F5 でデバッグ実行。
-
 ## VS Code のビルドタスクの作成
 F1 -> `build` -> 既存のビルドタスクを構成する -> テンプレート -> `tsc watch`   
 を実行すると、`.vscode/tasks.json` が作成される。
@@ -82,7 +73,7 @@ F1 -> `build` -> 既存のビルドタスクを構成する -> テンプレー�
 ```
 
 ## VS Code のデバッグタスクの作成
-デバッグ -> 構成の追加 -> Node.js  
+デバッグ -> 構成の追加 -> Chrome.js  
 を実行すると、`.vscode/launch.json` が作成される。
 
 以下のように修正する。
