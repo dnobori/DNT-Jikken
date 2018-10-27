@@ -2,16 +2,14 @@ class Startup
 {
     public static main(): number
     {
-        let msg = "Hello World 8";
+        let msg = "Hello World 12";
         console.log(msg);
 
         await_test();
 
-
         return 0;
     }
 }
-
 
 async function await_test()
 {

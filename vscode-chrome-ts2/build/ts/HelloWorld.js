@@ -38,7 +38,7 @@ var Startup = /** @class */ (function () {
     function Startup() {
     }
     Startup.main = function () {
-        var msg = "Hello World 8";
+        var msg = "Hello World 12";
         console.log(msg);
         await_test();
         return 0;
