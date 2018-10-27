@@ -2,7 +2,7 @@
 function main()
 {
     'use strict';
-    
+
 
     await_test();
 }
