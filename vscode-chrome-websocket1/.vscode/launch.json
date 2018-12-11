@@ -1,0 +1,18 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "type": "chrome",
+            "request": "launch",
+            "trace": true,
+            "sourceMaps": true,
+            "name": "Launch Chrome",
+            "preLaunchTask": "webpack build",
+            "file": "${workspaceFolder}/index.html",
+            //"url": "https://127.0.0.1/admin/",
+            "webRoot": "${workspaceFolder}",
+            "internalConsoleOptions": "openOnSessionStart",
+            "userDataDir": false
+        }
+    ]
+}
