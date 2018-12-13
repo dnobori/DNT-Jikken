@@ -232,9 +232,9 @@ namespace SoftEther.WebSocket
         {
             byte[] b = new byte[100];
 
-            Span<byte> span = b;
+            Span<byte> s = b;
 
-            b.AsSpan<
+            s.pin
 
         }
 
