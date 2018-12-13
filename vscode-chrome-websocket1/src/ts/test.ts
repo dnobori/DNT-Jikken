@@ -120,7 +120,8 @@ function gen_str(len: number): string
 
 async function test()
 {
-    let url = "ws://echo.websocket.org";
+    //let url = "ws://echo.websocket.org";
+    let url = "wss://127.0.0.1.xip.io/mvpn";
 
     let ws = new AsyncWebSocket(url);
 
@@ -135,15 +136,15 @@ async function test()
     // let long_str_ret = await ws.RecvStr();
     // console.log("RecvStr Long: " + long_str_ret);
 
-    // for (let i = 0; i < 5; i++)
-    // {
-    //     let str = "Hello " + i;
-    //     await ws.SendStr(str);
+    for (let i = 0; i < 5; i++)
+    {
+        let str = "Hello " + i;
+        await ws.SendStr(str);
 
-    //     let ret = await ws.RecvStr();
+        let ret = await ws.RecvStr();
 
-    //     console.log("RecvStr: " + ret);
-    // }
+        console.log("RecvStr: " + ret);
+    }
 
     for (let i = 0; i < 5; i++)
     {
