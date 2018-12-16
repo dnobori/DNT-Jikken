@@ -13,6 +13,7 @@ using System.Threading.Tasks;
 using static System.Console;
 using Newtonsoft.Json;
 using SoftEther.WebSocket;
+using System.Runtime.CompilerServices;
 
 namespace SoftEther.WebSocket.Helper
 {
@@ -462,6 +463,14 @@ namespace SoftEther.WebSocket.Helper
 
             return read_size;
         }
+
+        public Span<byte> Span
+        {
+            get
+            {
+                return this.Data.AsSpan(this.pos, this.size);
+            }
+        }
     }
 
     public static class WebSocketHelper
@@ -472,6 +481,48 @@ namespace SoftEther.WebSocket.Helper
         static WebSocketHelper()
         {
             IsLittleEndian = BitConverter.IsLittleEndian;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Span<byte> Read(ref this Span<byte> span, int size)
+        {
+            if (size < 0) throw new ArgumentOutOfRangeException();
+            if (size == 0) return Span<byte>.Empty;
+            Span<byte> ret = span.Slice(0, size);
+            span = span.Slice(size);
+            return ret;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte ReadByte(ref this Span<byte> span)
+        {
+            byte[] data = span.Read(1).ToArray();
+            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
+            return (byte)data[0];
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ReadShort(ref this Span<byte> span)
+        {
+            byte[] data = span.Read(2).ToArray();
+            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
+            return BitConverter.ToUInt16(data, 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ReadInt(ref this Span<byte> span)
+        {
+            byte[] data = span.Read(4).ToArray();
+            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
+            return BitConverter.ToUInt32(data, 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ReadInt64(ref this Span<byte> span)
+        {
+            byte[] data = span.Read(8).ToArray();
+            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
+            return BitConverter.ToUInt64(data, 0);
         }
 
         public static byte[] CopyByte(byte[] src)

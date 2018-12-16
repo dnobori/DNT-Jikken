@@ -2,6 +2,7 @@
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Collections.Generic;
 using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using static System.Console;
@@ -31,6 +32,7 @@ namespace cs_struct_bench1
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Span<byte> GetSpan(this byte[] src, int start = 0)
         {
+            //return new Span<byte>(src).Slice(start);
             return src.AsSpan(0, src.Length).Slice(start);
         }
 
@@ -45,6 +47,16 @@ namespace cs_struct_bench1
         {
             return !(start < 0 || length < 0 || (start + length) < 0 || (start + length) > span.Length);
         }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Span<byte> Advance(ref this Span<byte> span, int offset)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException();
+            if (offset == 0) return Span<byte>.Empty;
+            Span<byte> ret = span.Slice(0, offset);
+            span = span.Slice(offset);
+            return ret;
+        }
     }
 
     [StructLayout(LayoutKind.Sequential, Pack = 1)]
@@ -56,7 +68,7 @@ namespace cs_struct_bench1
         public byte b4;
         public uint i1;
         public uint i2;
-        public fixed byte fixedBuffer[10000];
+        public fixed byte fixedBuffer[1500];
         public uint i3;
     }
 
@@ -101,14 +113,9 @@ namespace cs_struct_bench1
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public unsafe ref Struct1 GetStructWithSafe(int pos = 0)
+        public ref Struct1 GetStructWithSafe(int pos = 0)
         {
-            var span = Data.GetSpan().Slice(pos);
-            if (span.CheckRange(0, SizeOfStruct<Struct1>() + 101) == false)
-            {
-                byte[] tmp = new byte[SizeOfStruct<Struct1>()];
-                return ref tmp[0].AsStruct<Struct1>();
-            }
+            var span = Data.AsSpan();
             return ref span.AsStruct<Struct1>();
         }
 
@@ -178,7 +185,6 @@ namespace cs_struct_bench1
                 }
             }).ToString("#,0"));
 
-
             WriteLine("GetStructWithSafe (span direct 1): " + do_test(10000000, count =>
             {
                 for (int i = 0; i < count; i++)
@@ -203,7 +209,20 @@ namespace cs_struct_bench1
                 }
             }).ToString("#,0"));
 
-            WriteLine("GetStructWithSafe (span in func): " + do_test(10000000, count =>
+            WriteLine("GetStructWithSafe (memory direct 2): " + do_test(10000000, count =>
+            {
+                Memory<byte> memory = t1.Data.AsMemory();
+                for (int i = 0; i < count; i++)
+                {
+                    Util.Volatile += memory.Span.Slice(0, SizeOfStruct<Struct1>())[0].AsStruct<Struct1>().b1;
+                    Util.Volatile += memory.Span.Slice(0, SizeOfStruct<Struct1>())[0].AsStruct<Struct1>().b2;
+                    Util.Volatile += memory.Span.Slice(0, SizeOfStruct<Struct1>())[0].AsStruct<Struct1>().b3;
+                    Util.Volatile += memory.Span.Slice(0, SizeOfStruct<Struct1>())[0].AsStruct<Struct1>().b4;
+                }
+            }).ToString("#,0"));
+
+
+            WriteLine("GetStructWithSafe (span in func): " + do_test(100000, count =>
             {
                 for (int i = 0; i < count; i++)
                 {
@@ -213,6 +232,44 @@ namespace cs_struct_bench1
                     Util.Volatile += t1.GetStructWithSafe().b4;
                 }
             }).ToString("#,0"));
+
+            WriteLine("span advance 1: " + do_test(10000000, count =>
+            {
+                var span = t1.Data.AsSpan();
+                for (int i = 0; i < count; i++)
+                {
+                    var span2 = span;
+                    int offset = i % (span.Length - 2) + 1;
+                    Span<byte> s1 = span2.Slice(0, offset);
+                    span2 = span2.Slice(offset);
+                    Util.Volatile += s1[0];
+                    Util.Volatile += span2[0];
+                }
+            }).ToString("#,0"));
+
+            WriteLine("span advance 2: " + do_test(10000000, count =>
+            {
+                var span = t1.Data.AsSpan();
+                for (int i = 0; i < count; i++)
+                {
+                    var span2 = span;
+                    span2.Advance(i % (span.Length - 2) + 1);
+                    Util.Volatile += span2[0];
+                }
+            }).ToString("#,0"));
+
+            WriteLine("copy advance: " + do_test(10000000, count =>
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    int offset = i % (t1.Data.Length - 2) + 1;
+                    byte[] aa = new byte[t1.Data.Length - offset];
+                    Array.Copy(t1.Data, offset, aa, 0, t1.Data.Length - offset);
+                    Util.Volatile += aa[0];
+                }
+            }).ToString("#,0"));
+
+            System.IO.Stream st;st.Write(
         }
 
         static int do_test(int count, Action<int> action)

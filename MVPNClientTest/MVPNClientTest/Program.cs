@@ -12,6 +12,7 @@ using System.Threading.Tasks;
 using Newtonsoft.Json;
 using static System.Console;
 using SoftEther.WebSocket;
+using SoftEther.WebSocket.Helper;
 
 namespace MVPNClientTest
 {
@@ -26,7 +27,7 @@ namespace MVPNClientTest
         {
             try
             {
-                await test();
+                await test_plain();
             }
             catch (Exception ex)
             {
@@ -40,7 +41,31 @@ namespace MVPNClientTest
             return true;
         }
 
-        static async Task test()
+        static async Task test_plain()
+        {
+            string hostname = "echo.websocket.org";
+            int port = 80;
+
+            using (TcpClient tc = new TcpClient())
+            {
+                WriteLine("connecting.");
+                await tc.ConnectAsync(hostname, port);
+
+                WriteLine("connected.");
+
+                using (NetworkStream st = tc.GetStream())
+                {
+                    using (WebSocketStream s = new WebSocketStream(st))
+                    {
+                        await s.Open("ws://echo.websocket.org");
+
+                        await s.WriteAsync(
+                    }
+                }
+            }
+        }
+
+        static async Task test_ssl()
         {
             string hostname = "echo.websocket.org";
             int port = 443;

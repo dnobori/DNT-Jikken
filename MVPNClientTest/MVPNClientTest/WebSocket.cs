@@ -196,7 +196,16 @@ namespace SoftEther.WebSocket
 
             throw_if_disconnected();
 
-            await Task.CompletedTask;
+            try
+            {
+                await this.st.WriteAsyncWithTimeout(this.PhysicalSendFifo.Read(),
+                    timeout: TimeoutDataRecv,
+                    cancel: Cancel);
+            }
+            catch
+            {
+                this.HasError = true;
+            }
         }
 
         void try_sync()
@@ -205,6 +214,29 @@ namespace SoftEther.WebSocket
             while (true)
             {
                 throw_if_disconnected();
+
+                Frame f = try_recv_next_frame(out int read_buffer_size);
+                if (f == null) break; // No more frames
+
+                if (f.Opcode == WebSocketOpcode.Continue || f.Opcode == WebSocketOpcode.Text || f.Opcode == WebSocketOpcode.Bin)
+                {
+                    this.AppRecvFifo.Write(f.Data);
+                }
+                else if (f.Opcode == WebSocketOpcode.Ping)
+                {
+                    // todo
+                }
+                else if (f.Opcode == WebSocketOpcode.Pong)
+                {
+                    // todo
+                }
+                else
+                {
+                    // Error: disconnect
+                    this.HasError = true;
+                }
+
+                this.PhysicalRecvFifo.SkipRead(read_buffer_size);
             }
 
             // App -> Physical
@@ -219,23 +251,66 @@ namespace SoftEther.WebSocket
 
                 try_send_frame(WebSocketOpcode.Bin, AppSendFifo.Data, AppSendFifo.DataOffset, size);
             }
+
+            throw_if_disconnected();
         }
 
         Frame try_recv_next_frame(out int read_buffer_size)
         {
             read_buffer_size = 0;
-            throw_if_disconnected();
-            return null;
-        }
 
-        void test()
-        {
-            byte[] b = new byte[100];
+            try
+            {
+                throw_if_disconnected();
 
-            Span<byte> s = b;
+                var buf = this.PhysicalRecvFifo.Span;
+                var buf_pos0 = buf;
 
-            s.pin
+                byte flag_and_opcode = buf.ReadByte();
+                byte mask_and_payload_len = buf.ReadByte();
+                int mask_flag = mask_and_payload_len & 0x80;
+                int payload_len = mask_and_payload_len & 0x7F;
+                if (payload_len == 126)
+                {
+                    payload_len = buf.ReadShort();
+                }
+                else if (payload_len == 127)
+                {
+                    ulong u64 = buf.ReadInt64();
+                    if (u64 >= int.MaxValue)
+                    {
+                        this.HasError = true;
+                        return null;
+                    }
+                    payload_len = (int)u64;
+                }
 
+                if (payload_len > MaxPayloadLenPerFrame)
+                {
+                    this.HasError = true;
+                    return null;
+                }
+
+                var mask_key = Span<byte>.Empty;
+                if (mask_flag != 0)
+                {
+                    mask_key = buf.Read(4);
+                }
+
+                Frame f = new Frame()
+                {
+                    Data = buf.Read(payload_len).ToArray(),
+                    Opcode = (WebSocketOpcode)(flag_and_opcode & 0xF),
+                };
+
+                read_buffer_size = buf_pos0.Length - buf.Length;
+
+                return f;
+            }
+            catch (ArgumentOutOfRangeException)
+            {
+                return null;
+            }
         }
 
         void try_send_frame(WebSocketOpcode opcode, byte[] data, int pos, int size)
