@@ -58,8 +58,14 @@ namespace MVPNClientTest
                     using (WebSocketStream s = new WebSocketStream(st))
                     {
                         await s.Open("ws://echo.websocket.org");
+                        WriteLine("opened.");
 
-                        await s.WriteAsync(
+                        string hello = "Hello World";
+                        byte[] hello_bytes = hello.AsciiToByteArray();
+                        await s.WriteAsync(hello_bytes.AsMemory());
+                        WriteLine("Sent.");
+
+                        Thread.Sleep(-1);
                     }
                 }
             }

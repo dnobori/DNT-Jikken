@@ -140,11 +140,11 @@ namespace SoftEther.WebSocket
             Opened = true;
         }
 
-        public override bool CanRead => throw new NotImplementedException();
+        public override bool CanRead => true;
 
-        public override bool CanSeek => throw new NotImplementedException();
+        public override bool CanSeek => false;
 
-        public override bool CanWrite => throw new NotImplementedException();
+        public override bool CanWrite => true;
 
         public override long Length => throw new NotImplementedException();
 
@@ -250,6 +250,8 @@ namespace SoftEther.WebSocket
                 size = Math.Min(size, SendSingleFragmentSize);
 
                 try_send_frame(WebSocketOpcode.Bin, AppSendFifo.Data, AppSendFifo.DataOffset, size);
+
+                AppSendFifo.SkipRead(size);
             }
 
             throw_if_disconnected();
@@ -303,6 +305,14 @@ namespace SoftEther.WebSocket
                     Opcode = (WebSocketOpcode)(flag_and_opcode & 0xF),
                 };
 
+                if (mask_flag != 0)
+                {
+                    for (int i = 0; i < f.Data.Length; i++)
+                    {
+                        f.Data[i] ^= mask_key[i % 4];
+                    }
+                }
+
                 read_buffer_size = buf_pos0.Length - buf.Length;
 
                 return f;
@@ -317,21 +327,37 @@ namespace SoftEther.WebSocket
         {
             throw_if_disconnected();
 
+            bool use_mask = true;
+            byte[] mask = null;
+            if (use_mask) mask = WebSocketHelper.GenRandom(4);
+
             Buf b = new Buf();
 
             b.WriteByte((byte)((uint)0x80 | ((uint)opcode & 0x0f)));
 
             if (size < 125)
-                b.WriteByte((byte)size);
+                b.WriteByte((byte)(size | (use_mask ? 0x80 : 0x00)));
             else if (size <= 65536)
             {
-                b.WriteByte(126);
+                b.WriteByte((byte)(126 | (use_mask ? 0x80 : 0x00)));
                 b.WriteShort((ushort)size);
             }
             else
             {
-                b.WriteByte(127);
+                b.WriteByte((byte)(127 | (use_mask ? 0x80 : 0x00)));
                 b.WriteInt64((ulong)size);
+            }
+
+            if (use_mask)
+            {
+                b.Write(mask);
+
+                data = WebSocketHelper.CopyByte(data);
+
+                for (int i = 0; i < data.Length; i++)
+                {
+                    data[i] ^= mask[i % 4];
+                }
             }
 
             b.Write(data, pos, size);
@@ -344,6 +370,15 @@ namespace SoftEther.WebSocket
             if (this.Cancel.IsCancellationRequested) this.HasError = true;
             if (this.HasError) throw new ApplicationException("WebSocket is disconnected.");
         }
+
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            => ReadAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
+        public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
+
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            => WriteAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
+        public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
+
 
         class Frame
         {

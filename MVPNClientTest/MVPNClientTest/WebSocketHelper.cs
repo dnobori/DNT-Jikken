@@ -478,9 +478,21 @@ namespace SoftEther.WebSocket.Helper
         public static bool IsLittleEndian { get; }
         public static bool IsBigEndian => !IsLittleEndian;
 
+        static readonly Random random = new Random();
+
         static WebSocketHelper()
         {
             IsLittleEndian = BitConverter.IsLittleEndian;
+        }
+
+        public static byte[] GenRandom(int size)
+        {
+            lock (random)
+            {
+                byte[] ret = new byte[size];
+                random.NextBytes(ret);
+                return ret;
+            }
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -721,6 +733,52 @@ namespace SoftEther.WebSocket.Helper
         }
 
         public static void LaissezFaire(this Task task) { }
+
+        public static IAsyncResult AsApm<T>(this Task<T> task,
+                                            AsyncCallback callback,
+                                            object state)
+        {
+            if (task == null)
+                throw new ArgumentNullException("task");
+
+            var tcs = new TaskCompletionSource<T>(state);
+            task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    tcs.TrySetException(t.Exception.InnerExceptions);
+                else if (t.IsCanceled)
+                    tcs.TrySetCanceled();
+                else
+                    tcs.TrySetResult(t.Result);
+
+                if (callback != null)
+                    callback(tcs.Task);
+            }, TaskScheduler.Default);
+            return tcs.Task;
+        }
+
+        public static IAsyncResult AsApm(this Task task,
+                                            AsyncCallback callback,
+                                            object state)
+        {
+            if (task == null)
+                throw new ArgumentNullException("task");
+
+            var tcs = new TaskCompletionSource<int>(state);
+            task.ContinueWith(t =>
+            {
+                if (t.IsFaulted)
+                    tcs.TrySetException(t.Exception.InnerExceptions);
+                else if (t.IsCanceled)
+                    tcs.TrySetCanceled();
+                else
+                    tcs.TrySetResult(0);
+
+                if (callback != null)
+                    callback(tcs.Task);
+            }, TaskScheduler.Default);
+            return tcs.Task;
+        }
     }
 }
 
