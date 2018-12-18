@@ -15,6 +15,8 @@ using Newtonsoft.Json;
 using SoftEther.WebSocket.Helper;
 using System.Security.Cryptography;
 
+#pragma warning disable CS0162, CS1998
+
 namespace SoftEther.WebSocket
 {
     public enum WebSocketOpcode
@@ -31,13 +33,15 @@ namespace SoftEther.WebSocket
     {
         public string UserAgent { get; set; } = "Mozilla/5.0 (WebSocket) WebSocket Client";
         public int TimeoutOpen { get; set; } = 10 * 1000;
-        public int TimeoutDataRecv { get; set; } = 10 * 1000;
+        public int TimeoutComm { get; set; } = 10 * 1000;
 
         public CancellationToken Cancel { get; }
         public bool Opened { get; private set; } = false;
         public bool HasError { get; private set; } = false;
         public int MaxPayloadLenPerFrame { get; set; } = (8 * 1024 * 1024);
         public int SendSingleFragmentSize { get; set; } = (32 * 1024);
+
+        public int MaxBufferSize { get; set; } = (1600 * 1600);
 
         Fifo PhysicalSendFifo = new Fifo();
         Fifo PhysicalRecvFifo = new Fifo();
@@ -52,7 +56,7 @@ namespace SoftEther.WebSocket
             this.Cancel = cancel;
         }
 
-        public async Task Open(string uri)
+        public async Task OpenAsync(string uri)
         {
             if (Opened)
             {
@@ -92,7 +96,7 @@ namespace SoftEther.WebSocket
             StreamReader tmp_reader = new StreamReader(st);
             while (true)
             {
-                string line = await WebSocketHelper.DoAsyncWithTimeout<string>(() => tmp_reader.ReadLineAsync(),
+                string line = await WebSocketHelper.DoAsyncWithTimeout<string>((proc_cancel) => tmp_reader.ReadLineAsync(),
                     timeout: this.TimeoutOpen,
                     cancel: this.Cancel);
                 if (line == "")
@@ -150,6 +154,11 @@ namespace SoftEther.WebSocket
 
         public override long Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
 
+        public override bool CanTimeout => true;
+
+        public override int ReadTimeout { get => this.TimeoutComm; set => this.TimeoutComm = value; }
+        public override int WriteTimeout { get => this.TimeoutComm; set => this.TimeoutComm = value; }
+
         public override void Flush()
         {
         }
@@ -181,14 +190,51 @@ namespace SoftEther.WebSocket
 
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
-            await Task.CompletedTask;
-            return 0;
+            if (count == 0 && this.HasError == false) return 0;
+            throw_if_disconnected();
+
+            while (true)
+            {
+                try_sync();
+
+                throw_if_disconnected();
+
+                int sz = this.AppRecvFifo.Size;
+                if (sz >= 1)
+                {
+                    if (sz > count) sz = count;
+                    this.AppRecvFifo.Read(buffer, offset, sz);
+                    return sz;
+                }
+
+                try
+                {
+                    byte[] tmp_buffer = new byte[65536];
+
+                    int recv_size = await this.st.ReadAsyncWithTimeout(tmp_buffer,
+                        0, tmp_buffer.Length,
+                        timeout: TimeoutComm,
+                        cancel: Cancel,
+                        cancel_tokens: cancellationToken);
+
+                    this.PhysicalRecvFifo.Write(tmp_buffer, 0, recv_size);
+                }
+                catch
+                {
+                    this.HasError = true;
+                }
+            }
         }
 
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             if (count == 0 && this.HasError == false) return;
             throw_if_disconnected();
+
+            while (this.PhysicalSendFifo.Size > this.MaxBufferSize)
+            {
+                await Task.Delay(1, cancellationToken);
+            }
 
             this.AppSendFifo.Write(buffer, offset, count);
 
@@ -199,8 +245,9 @@ namespace SoftEther.WebSocket
             try
             {
                 await this.st.WriteAsyncWithTimeout(this.PhysicalSendFifo.Read(),
-                    timeout: TimeoutDataRecv,
-                    cancel: Cancel);
+                    timeout: TimeoutComm,
+                    cancel: Cancel,
+                    cancel_tokens: cancellationToken);
             }
             catch
             {
@@ -378,7 +425,6 @@ namespace SoftEther.WebSocket
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             => WriteAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
-
 
         class Frame
         {

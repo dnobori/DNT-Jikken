@@ -14,6 +14,9 @@ using static System.Console;
 using Newtonsoft.Json;
 using SoftEther.WebSocket;
 using System.Runtime.CompilerServices;
+using System.Xml.Serialization;
+
+#pragma warning disable CS0162, CS1998
 
 namespace SoftEther.WebSocket.Helper
 {
@@ -473,6 +476,49 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class AsyncLock : IDisposable
+    {
+        public class LockHolder : IDisposable
+        {
+            AsyncLock parent;
+            internal LockHolder(AsyncLock parent)
+            {
+                this.parent = parent;
+            }
+
+            Once dispose_flag;
+            public void Dispose()
+            {
+                if (dispose_flag.IsFirstCall())
+                {
+                    this.parent.Unlock();
+                }
+            }
+        }
+
+        SemaphoreSlim semaphone = new SemaphoreSlim(1, 1);
+        Once dispose_flag;
+
+        public async Task<LockHolder> LockWithAwait()
+        {
+            await LockAsync();
+
+            return new LockHolder(this);
+        }
+
+        public Task LockAsync() => semaphone.WaitAsync();
+        public void Unlock() => semaphone.Release();
+
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
+                semaphone.DisposeSafe();
+                semaphone = null;
+            }
+        }
+    }
+
     public static class WebSocketHelper
     {
         public static bool IsLittleEndian { get; }
@@ -480,9 +526,89 @@ namespace SoftEther.WebSocket.Helper
 
         static readonly Random random = new Random();
 
+        public const int DefaultMaxDepth = 8;
+
+        public static string NonNull(this string s) { if (s == null) return ""; else return s; }
+        public static bool IsEmpty(this string str)
+        {
+            if (str == null || str.Trim().Length == 0)
+                return true;
+            else
+                return false;
+        }
+        public static bool IsFilled(this string str) => !IsEmpty(str);
+
+        public static string ObjectToJson(this object obj, bool include_null = false, bool escape_html = false, int? max_depth = DefaultMaxDepth, bool compact = false, bool reference_handling = false) => Serialize(obj, include_null, escape_html, max_depth, compact, reference_handling);
+        public static T JsonToObject<T>(this string str, bool include_null = false, int? max_depth = DefaultMaxDepth) => Deserialize<T>(str, include_null, max_depth);
+        public static object JsonToObject(this string str, Type type, bool include_null = false, int? max_depth = DefaultMaxDepth) => Deserialize(str, type, include_null, max_depth);
+
+        public static string Serialize(object obj, bool include_null = false, bool escape_html = false, int? max_depth = DefaultMaxDepth, bool compact = false, bool reference_handling = false)
+        {
+            JsonSerializerSettings setting = new JsonSerializerSettings()
+            {
+                MaxDepth = max_depth,
+                NullValueHandling = include_null ? NullValueHandling.Include : NullValueHandling.Ignore,
+                ReferenceLoopHandling = ReferenceLoopHandling.Error,
+                PreserveReferencesHandling = reference_handling ? PreserveReferencesHandling.All : PreserveReferencesHandling.None,
+                StringEscapeHandling = escape_html ? StringEscapeHandling.EscapeHtml : StringEscapeHandling.Default,
+            };
+            return JsonConvert.SerializeObject(obj, compact ? Formatting.None : Formatting.Indented, setting);
+        }
+
+        public static T Deserialize<T>(string str, bool include_null = false, int? max_depth = DefaultMaxDepth)
+            => (T)Deserialize(str, typeof(T), include_null, max_depth);
+
+        public static object Deserialize(string str, Type type, bool include_null = false, int? max_depth = DefaultMaxDepth)
+        {
+            JsonSerializerSettings setting = new JsonSerializerSettings()
+            {
+                MaxDepth = max_depth,
+                NullValueHandling = include_null ? NullValueHandling.Include : NullValueHandling.Ignore,
+                ObjectCreationHandling = ObjectCreationHandling.Replace,
+                ReferenceLoopHandling = ReferenceLoopHandling.Error,
+            };
+            return JsonConvert.DeserializeObject(str, type, setting);
+        }
+
+        public static void Print(this object o)
+        {
+            string str = o.ObjectToJson();
+
+            if (o is string) str = (string)o;
+
+            Console.WriteLine(str);
+        }
+
         static WebSocketHelper()
         {
             IsLittleEndian = BitConverter.IsLittleEndian;
+        }
+
+        public static async Task ConnectAsync(this TcpClient tc, string host, int port,
+            int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        {
+            await DoAsyncWithTimeout<int>(
+            main_proc: async c =>
+            {
+                await tc.ConnectAsync(host, port);
+                return 0;
+            },
+            cancel_proc: () =>
+            {
+                tc.DisposeSafe();
+            },
+            timeout: timeout,
+            cancel: cancel,
+            cancel_tokens: cancel_tokens);
+        }
+
+        public static void DisposeSafe(this IDisposable obj)
+        {
+            try
+            {
+                if (obj != null) obj.Dispose();
+            }
+            catch { }
         }
 
         public static byte[] GenRandom(int size)
@@ -604,10 +730,13 @@ namespace SoftEther.WebSocket.Helper
 
             try
             {
-                int ret = await DoAsyncWithTimeout<int>(() =>
+                int ret = await DoAsyncWithTimeout<int>((cancel_for_proc) =>
                 {
-                    return stream.ReadAsync(buffer, offset, count ?? (buffer.Length - offset));
-                }, (int)timeout, cancel, cancel_tokens);
+                    return stream.ReadAsync(buffer, offset, count ?? (buffer.Length - offset), cancel_for_proc);
+                },
+                timeout: (int)timeout,
+                cancel: cancel,
+                cancel_tokens: cancel_tokens);
 
                 if (ret <= 0)
                 {
@@ -630,15 +759,18 @@ namespace SoftEther.WebSocket.Helper
 
             try
             {
-                await DoAsyncWithTimeout<int>(async () =>
+                await DoAsyncWithTimeout<int>(async (cancel_for_proc) =>
                 {
-                    await stream.WriteAsync(buffer, offset, count ?? (buffer.Length - offset));
+                    await stream.WriteAsync(buffer, offset, count ?? (buffer.Length - offset), cancel_for_proc);
                     if (no_flush == false)
                     {
-                        await stream.FlushAsync();
+                        await stream.FlushAsync(cancel_for_proc);
                     }
                     return 0;
-                }, (int)timeout, cancel, cancel_tokens);
+                },
+                timeout: (int)timeout,
+                cancel: cancel,
+                cancel_tokens: cancel_tokens);
 
             }
             catch
@@ -648,7 +780,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<Task<TResult>> proc, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<CancellationToken, Task<TResult>> main_proc, Action cancel_proc = null, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout < 0) timeout = Timeout.Infinite;
             if (timeout == 0) throw new TimeoutException("timeout == 0");
@@ -656,6 +788,8 @@ namespace SoftEther.WebSocket.Helper
             List<Task> wait_tasks = new List<Task>();
             Task timeout_task = null;
             CancellationTokenSource timeout_cts = null;
+
+            CancellationTokenSource cancel_for_proc = new CancellationTokenSource();
 
             if (timeout != Timeout.Infinite)
             {
@@ -684,7 +818,7 @@ namespace SoftEther.WebSocket.Helper
                     }
                 }
 
-                Task<TResult> proc_task = proc();
+                Task<TResult> proc_task = main_proc(cancel_for_proc.Token);
 
                 if (proc_task.IsCompleted)
                 {
@@ -709,6 +843,22 @@ namespace SoftEther.WebSocket.Helper
 
                 throw new TimeoutException();
             }
+            catch
+            {
+                try
+                {
+                    cancel_for_proc.Cancel();
+                }
+                catch { }
+                try
+                {
+                    if (cancel_proc != null) cancel_proc();
+                }
+                catch
+                {
+                }
+                throw;
+            }
             finally
             {
                 if (timeout_cts != null)
@@ -729,7 +879,6 @@ namespace SoftEther.WebSocket.Helper
                     }
                 }
             }
-
         }
 
         public static void LaissezFaire(this Task task) { }
@@ -779,6 +928,67 @@ namespace SoftEther.WebSocket.Helper
             }, TaskScheduler.Default);
             return tcs.Task;
         }
+
+        public static T ClonePublics<T>(this T o)
+        {
+            byte[] data = ObjectToXml(o);
+
+            return (T)XmlToObject(data, o.GetType());
+        }
+
+        public static byte[] ObjectToXml(object o)
+        {
+            if (o == null)
+            {
+                return null;
+            }
+            Type t = o.GetType();
+
+            return ObjectToXml(o, t);
+        }
+        public static byte[] ObjectToXml(object o, Type t)
+        {
+            if (o == null)
+            {
+                return null;
+            }
+
+            MemoryStream ms = new MemoryStream();
+            XmlSerializer x = new XmlSerializer(t);
+
+            x.Serialize(ms, o);
+
+            return ms.ToArray();
+        }
+
+        public static object XmlToObject(string str, Type t)
+        {
+            byte[] data = Encoding.UTF8.GetBytes(str);
+
+            return XmlToObject(data, t);
+        }
+        public static object XmlToObject(byte[] data, Type t)
+        {
+            if (data == null || data.Length == 0)
+            {
+                return null;
+            }
+
+            MemoryStream ms = new MemoryStream();
+            ms.Write(data, 0, data.Length);
+            ms.Position = 0;
+
+            XmlSerializer x = new XmlSerializer(t);
+
+            return x.Deserialize(ms);
+        }
+    }
+
+    public struct Once
+    {
+        volatile private int flag;
+        public bool IsFirstCall() => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
+        public bool IsSet => (this.flag != 0);
     }
 }
 

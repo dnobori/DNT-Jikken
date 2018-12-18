@@ -13,6 +13,9 @@ using Newtonsoft.Json;
 using static System.Console;
 using SoftEther.WebSocket;
 using SoftEther.WebSocket.Helper;
+using SoftEther.VpnClient;
+
+#pragma warning disable CS0162
 
 namespace MVPNClientTest
 {
@@ -27,7 +30,9 @@ namespace MVPNClientTest
         {
             try
             {
-                await test_plain();
+                //await test_plain();
+                //await test_ssl();
+                await test_vpn();
             }
             catch (Exception ex)
             {
@@ -57,13 +62,20 @@ namespace MVPNClientTest
                 {
                     using (WebSocketStream s = new WebSocketStream(st))
                     {
-                        await s.Open("ws://echo.websocket.org");
+                        await s.OpenAsync("ws://echo.websocket.org");
                         WriteLine("opened.");
 
-                        string hello = "Hello World";
-                        byte[] hello_bytes = hello.AsciiToByteArray();
-                        await s.WriteAsync(hello_bytes.AsMemory());
-                        WriteLine("Sent.");
+                        while (true)
+                        {
+                            string hello = "Hello World";
+                            byte[] hello_bytes = hello.AsciiToByteArray();
+                            await s.WriteAsync(hello_bytes.AsMemory());
+                            WriteLine("Sent.");
+
+                            byte[] recv_buffer = new byte[128];
+                            int recv_ret = await s.ReadAsync(recv_buffer, 0, recv_buffer.Length);
+                            WriteLine($"Recv: \"{recv_buffer.AsSpan(0, recv_ret).ToArray().ByteArrayToAscii()}\"");
+                        }
 
                         Thread.Sleep(-1);
                     }
@@ -93,10 +105,61 @@ namespace MVPNClientTest
 
                         using (WebSocketStream s = new WebSocketStream(ssl))
                         {
-                            await s.Open("wss://echo.websocket.org");
+                            await s.OpenAsync("wss://echo.websocket.org");
+                            WriteLine("opened.");
+
+                            while (true)
+                            {
+                                string hello = "Hello World";
+                                byte[] hello_bytes = hello.AsciiToByteArray();
+                                await s.WriteAsync(hello_bytes.AsMemory());
+                                WriteLine("Sent.");
+
+                                byte[] recv_buffer = new byte[128];
+                                int recv_ret = await s.ReadAsync(recv_buffer, 0, recv_buffer.Length);
+                                WriteLine($"Recv: \"{recv_buffer.AsSpan(0, recv_ret).ToArray().ByteArrayToAscii()}\"");
+                            }
+
+                            Thread.Sleep(-1);
                         }
                     }
                 }
+            }
+        }
+
+        static async Task test_vpn()
+        {
+            VpnSessionSetting setting = new VpnSessionSetting()
+            {
+                Host = new VpnHostSetting()
+                {
+                    Hostname = "127.0.0.1",
+                    Port = 443,
+                },
+                Proxy = new VpnProxySetting()
+                {
+                },
+            };
+
+            VpnSessionNotify notify = new VpnSessionNotify(Notify_VpnEventHandler);
+
+            VpnSession sess = new VpnSession(setting, notify);
+
+            await sess.StartAsync();
+
+            Console.ReadLine();
+
+            WriteLine("Stopping...");
+            await sess.StopAsync();
+            WriteLine("Stopped.");
+        }
+
+        private static void Notify_VpnEventHandler(object sender, VpnSessionEventArgs e)
+        {
+            Console.WriteLine($"{DateTime.Now}: {Enum.GetName(typeof(VpnSessionEventType), e.EventType)}");
+            if (e.Error != null)
+            {
+                Console.WriteLine($"  Error: {e.Error}");
             }
         }
     }
