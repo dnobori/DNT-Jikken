@@ -519,6 +519,17 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public static class Dbg
+    {
+        public static long Where(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null, long last_tick = 0)
+        {
+            long now = DateTime.Now.Ticks;
+            long diff = now - last_tick;
+            WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (string.IsNullOrEmpty(msg) == false ? (": " + msg) : ""));
+            return now;
+        }
+    }
+
     public static class WebSocketHelper
     {
         public static bool IsLittleEndian { get; }
@@ -622,6 +633,30 @@ namespace SoftEther.WebSocket.Helper
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ToShort(this byte[] data)
+        {
+            data = (byte[])data.Clone();
+            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
+            return BitConverter.ToUInt16(data, 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ToInt(this byte[] data)
+        {
+            data = (byte[])data.Clone();
+            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
+            return BitConverter.ToUInt32(data, 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ToInt64(this byte[] data)
+        {
+            data = (byte[])data.Clone();
+            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
+            return BitConverter.ToUInt64(data, 0);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Span<byte> Read(ref this Span<byte> span, int size)
         {
             if (size < 0) throw new ArgumentOutOfRangeException();
@@ -714,25 +749,47 @@ namespace SoftEther.WebSocket.Helper
             }).Start();
         }
 
-        public static async Task<byte[]> ReadAsyncWithTimeout(this Stream stream, int max_size = 65536, int? timeout = null, CancellationToken cancel = default(CancellationToken))
+        public static async Task<byte[]> ReadAsyncWithTimeout(this Stream stream, int max_size = 65536, int? timeout = null, bool? read_all = false, CancellationToken cancel = default(CancellationToken))
         {
             byte[] tmp = new byte[max_size];
-            int ret = await stream.ReadAsyncWithTimeout(tmp, 0, tmp.Length, timeout, cancel);
-            byte[] a = new byte[ret];
-            Array.Copy(tmp, a, ret);
-            return a;
+            int ret = await stream.ReadAsyncWithTimeout(tmp, 0, tmp.Length, timeout,
+                read_all: read_all,
+                cancel: cancel);
+            return CopyByte(tmp, 0, ret);
         }
 
-        public static async Task<int> ReadAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task<int> ReadAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, bool? read_all = false, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout == null) timeout = stream.ReadTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
+            int target_read_size = count ?? (buffer.Length - offset);
+            if (target_read_size == 0) return 0;
 
             try
             {
-                int ret = await DoAsyncWithTimeout<int>((cancel_for_proc) =>
+                int ret = await DoAsyncWithTimeout<int>(async (cancel_for_proc) =>
                 {
-                    return stream.ReadAsync(buffer, offset, count ?? (buffer.Length - offset), cancel_for_proc);
+                    if (read_all == false)
+                    {
+                        return await stream.ReadAsync(buffer, offset, target_read_size, cancel_for_proc);
+                    }
+                    else
+                    {
+                        int current_read_size = 0;
+
+                        while (current_read_size != target_read_size)
+                        {
+                            int sz = await stream.ReadAsync(buffer, offset + current_read_size, target_read_size - current_read_size, cancel_for_proc);
+                            if (sz == 0)
+                            {
+                                return 0;
+                            }
+
+                            current_read_size += sz;
+                        }
+
+                        return current_read_size;
+                    }
                 },
                 timeout: (int)timeout,
                 cancel: cancel,
@@ -740,7 +797,7 @@ namespace SoftEther.WebSocket.Helper
 
                 if (ret <= 0)
                 {
-                    throw new EndOfStreamException("The stream is disconnected.");
+                    throw new EndOfStreamException("The NetworkStream is disconnected.");
                 }
 
                 return ret;
@@ -752,20 +809,18 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public static async Task WriteAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, bool no_flush = false, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task WriteAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
             if (timeout == null) timeout = stream.WriteTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
+            int target_write_size = count ?? (buffer.Length - offset);
+            if (target_write_size == 0) return;
 
             try
             {
                 await DoAsyncWithTimeout<int>(async (cancel_for_proc) =>
                 {
-                    await stream.WriteAsync(buffer, offset, count ?? (buffer.Length - offset), cancel_for_proc);
-                    if (no_flush == false)
-                    {
-                        await stream.FlushAsync(cancel_for_proc);
-                    }
+                    await stream.WriteAsync(buffer, offset, target_write_size, cancel_for_proc);
                     return 0;
                 },
                 timeout: (int)timeout,

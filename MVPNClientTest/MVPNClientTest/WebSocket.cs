@@ -313,7 +313,7 @@ namespace SoftEther.WebSocket
                 throw_if_disconnected();
 
                 var buf = this.PhysicalRecvFifo.Span;
-                var buf_pos0 = buf;
+                var buf_pos0 = this.PhysicalRecvFifo.Span;
 
                 byte flag_and_opcode = buf.ReadByte();
                 byte mask_and_payload_len = buf.ReadByte();
