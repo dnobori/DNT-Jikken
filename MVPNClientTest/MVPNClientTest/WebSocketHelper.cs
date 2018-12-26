@@ -749,6 +749,57 @@ namespace SoftEther.WebSocket.Helper
             }).Start();
         }
 
+        public static Task WhenCanceled(CancellationToken cancel, out CancellationTokenRegistration registration)
+        {
+            TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+
+            registration = cancel.Register(() =>
+            {
+                tcs.SetResult(true);
+            });
+
+            return tcs.Task;
+        }
+
+        public static async Task CancelAsync(this CancellationTokenSource cts, bool throwOnFirstException = false)
+        {
+            await Task.Run(() => cts.Cancel(throwOnFirstException));
+        }
+
+        public static async Task TryCancelAsync(this CancellationTokenSource cts)
+        {
+            await Task.Run(() => TryCancel(cts));
+        }
+
+        public static void TryCancel(this CancellationTokenSource cts)
+        {
+            try
+            {
+                cts.Cancel();
+            }
+            catch
+            {
+            }
+        }
+
+        public static async Task TryWaitAsync(this Task t)
+        {
+            try
+            {
+                await t;
+            }
+            catch { }
+        }
+
+        public static void TryWait(this Task t)
+        {
+            try
+            {
+                t.Wait();
+            }
+            catch { }
+        }
+
         public static async Task<byte[]> ReadAsyncWithTimeout(this Stream stream, int max_size = 65536, int? timeout = null, bool? read_all = false, CancellationToken cancel = default(CancellationToken))
         {
             byte[] tmp = new byte[max_size];
@@ -984,6 +1035,8 @@ namespace SoftEther.WebSocket.Helper
             return tcs.Task;
         }
 
+
+
         public static T ClonePublics<T>(this T o)
         {
             byte[] data = ObjectToXml(o);
@@ -1037,6 +1090,61 @@ namespace SoftEther.WebSocket.Helper
 
             return x.Deserialize(ms);
         }
+
+        public static async Task WaitObjectsAsync(Task[] tasks = null, CancellationToken[] cancels = null, AsyncAutoResetEvent[] auto_events = null,
+            AsyncManualResetEvent[] manual_events = null, int timeout = Timeout.Infinite)
+        {
+            if (tasks == null) tasks = new Task[0];
+            if (cancels == null) cancels = new CancellationToken[0];
+            if (auto_events == null) auto_events = new AsyncAutoResetEvent[0];
+            if (manual_events == null) manual_events = new AsyncManualResetEvent[0];
+            if (timeout == 0) return;
+
+            List<Task> task_list = new List<Task>();
+            List<CancellationTokenRegistration> reg_list = new List<CancellationTokenRegistration>();
+            List<Action> undo_list = new List<Action>();
+
+            foreach (Task t in tasks)
+                task_list.Add(t);
+
+            foreach (CancellationToken c in cancels)
+            {
+                task_list.Add(WhenCanceled(c, out CancellationTokenRegistration reg));
+                reg_list.Add(reg);
+            }
+
+            foreach (AsyncAutoResetEvent ev in auto_events)
+            {
+                task_list.Add(ev.WaitOneAsync(out Action undo));
+                undo_list.Add(undo);
+            }
+
+            foreach (AsyncManualResetEvent ev in manual_events)
+            {
+                task_list.Add(ev.WaitAsync());
+            }
+
+            if (timeout >= 1)
+            {
+                task_list.Add(Task.Delay(timeout));
+            }
+
+            try
+            {
+                await Task.WhenAny(task_list.ToArray());
+            }
+            catch { }
+            finally
+            {
+                foreach (Action undo in undo_list)
+                    undo();
+
+                foreach (CancellationTokenRegistration reg in reg_list)
+                {
+                    reg.Dispose();
+                }
+            }
+        }
     }
 
     public struct Once
@@ -1044,6 +1152,240 @@ namespace SoftEther.WebSocket.Helper
         volatile private int flag;
         public bool IsFirstCall() => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
         public bool IsSet => (this.flag != 0);
+    }
+
+
+    public class CancelWatcher : IDisposable
+    {
+        CancellationTokenSource cts = new CancellationTokenSource();
+        public CancellationToken Cancel { get => cts.Token; }
+        public Task TaskWaitMe { get; }
+        public AsyncManualResetEvent EventWaitMe { get; } = new AsyncManualResetEvent();
+
+        AsyncAutoResetEvent ev = new AsyncAutoResetEvent();
+        volatile bool halt = false;
+
+        HashSet<CancellationToken> target_list = new HashSet<CancellationToken>();
+        List<Task> task_list = new List<Task>();
+
+        object LockObj = new object();
+
+        public CancelWatcher(params CancellationToken[] cancels)
+        {
+            AddWatch(cancels);
+            this.TaskWaitMe = cancel_watch_mainloop();
+        }
+
+        async Task cancel_watch_mainloop()
+        {
+            while (true)
+            {
+                List<CancellationToken> cancels = new List<CancellationToken>();
+
+                lock (LockObj)
+                {
+                    foreach (CancellationToken c in target_list)
+                        cancels.Add(c);
+                }
+
+                await WebSocketHelper.WaitObjectsAsync(
+                    cancels: cancels.ToArray(),
+                    auto_events: new AsyncAutoResetEvent[] { ev });
+
+                bool canceled = false;
+
+                lock (LockObj)
+                {
+                    foreach (CancellationToken c in target_list)
+                    {
+                        if (c.IsCancellationRequested)
+                        {
+                            canceled = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (halt)
+                {
+                    canceled = true;
+                }
+
+                if (canceled)
+                {
+                    try
+                    {
+                        this.cts.TryCancelAsync().LaissezFaire();
+                    }
+                    catch { }
+                    this.EventWaitMe.Set();
+                    //Dbg.Where();
+                    break;
+                }
+            }
+        }
+
+        public bool AddWatch(params CancellationToken[] cancels)
+        {
+            bool ret = false;
+
+            lock (LockObj)
+            {
+                foreach (CancellationToken cancel in cancels)
+                {
+                    if (this.target_list.Contains(cancel) == false)
+                    {
+                        this.target_list.Add(cancel);
+                        ret = true;
+                    }
+                }
+            }
+
+            if (ret)
+            {
+                this.ev.Set();
+            }
+
+            return ret;
+        }
+
+        Once dispose_flag;
+
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
+                this.halt = true;
+                this.ev.Set();
+                this.TaskWaitMe.Wait();
+            }
+        }
+    }
+
+    public class AsyncAutoResetEvent
+    {
+        object lockobj = new object();
+        List<AsyncManualResetEvent> event_queue = new List<AsyncManualResetEvent>();
+        bool is_set = false;
+
+        public Task WaitOneAsync(out Action cancel)
+        {
+            lock (lockobj)
+            {
+                if (is_set)
+                {
+                    is_set = false;
+                    cancel = () => { };
+                    return Task.CompletedTask;
+                }
+
+                AsyncManualResetEvent e = new AsyncManualResetEvent();
+
+                Task ret = e.WaitAsync();
+
+                event_queue.Add(e);
+
+                cancel = () =>
+                {
+                    lock (lockobj)
+                    {
+                        event_queue.Remove(e);
+                    }
+                };
+
+                return ret;
+            }
+        }
+
+        public void Set()
+        {
+            AsyncManualResetEvent ev = null;
+            lock (lockobj)
+            {
+                if (event_queue.Count >= 1)
+                {
+                    ev = event_queue[event_queue.Count - 1];
+                    event_queue.Remove(ev);
+                }
+
+                if (ev == null)
+                {
+                    is_set = true;
+                }
+            }
+
+            if (ev != null)
+            {
+                ev.Set();
+            }
+        }
+    }
+
+    public class AsyncManualResetEvent
+    {
+        object lockobj = new object();
+        volatile TaskCompletionSource<bool> tcs;
+        bool is_set = false;
+
+        public AsyncManualResetEvent()
+        {
+            init();
+        }
+
+        void init()
+        {
+            this.tcs = new TaskCompletionSource<bool>();
+        }
+
+        public bool IsSet
+        {
+            get
+            {
+                lock (lockobj)
+                {
+                    return this.is_set;
+                }
+            }
+        }
+
+        public Task WaitAsync()
+        {
+            lock (lockobj)
+            {
+                if (is_set)
+                {
+                    return Task.CompletedTask;
+                }
+                else
+                {
+                    return tcs.Task;
+                }
+            }
+        }
+
+        public void Set()
+        {
+            lock (lockobj)
+            {
+                if (is_set == false)
+                {
+                    is_set = true;
+                    tcs.TrySetResult(true);
+                }
+            }
+        }
+
+        public void Reset()
+        {
+            lock (lockobj)
+            {
+                if (is_set)
+                {
+                    is_set = false;
+                    init();
+                }
+            }
+        }
     }
 }
 
