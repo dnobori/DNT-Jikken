@@ -15,6 +15,7 @@ using Newtonsoft.Json;
 using SoftEther.WebSocket;
 using System.Runtime.CompilerServices;
 using System.Xml.Serialization;
+using System.Diagnostics;
 
 #pragma warning disable CS0162, CS1998
 
@@ -788,7 +789,10 @@ namespace SoftEther.WebSocket.Helper
             {
                 await t;
             }
-            catch { }
+            catch (Exception ex)
+            {
+                WriteLine("Task exception: " + ex.ToString());
+            }
         }
 
         public static void TryWait(this Task t)
@@ -892,15 +896,16 @@ namespace SoftEther.WebSocket.Helper
             if (timeout == 0) throw new TimeoutException("timeout == 0");
 
             List<Task> wait_tasks = new List<Task>();
+            List<IDisposable> disposes = new List<IDisposable>();
             Task timeout_task = null;
             CancellationTokenSource timeout_cts = null;
-
             CancellationTokenSource cancel_for_proc = new CancellationTokenSource();
 
             if (timeout != Timeout.Infinite)
             {
                 timeout_cts = new CancellationTokenSource();
                 timeout_task = Task.Delay(timeout, timeout_cts.Token);
+                disposes.Add(timeout_cts);
 
                 wait_tasks.Add(timeout_task);
             }
@@ -911,7 +916,9 @@ namespace SoftEther.WebSocket.Helper
                 {
                     cancel.ThrowIfCancellationRequested();
 
-                    wait_tasks.Add(Task.Delay(Timeout.Infinite, cancel));
+                    Task t = WhenCanceled(cancel, out CancellationTokenRegistration reg);
+                    disposes.Add(reg);
+                    wait_tasks.Add(t);
                 }
 
                 foreach (CancellationToken c in cancel_tokens)
@@ -920,7 +927,9 @@ namespace SoftEther.WebSocket.Helper
                     {
                         c.ThrowIfCancellationRequested();
 
-                        wait_tasks.Add(Task.Delay(Timeout.Infinite, c));
+                        Task t = WhenCanceled(c, out CancellationTokenRegistration reg);
+                        disposes.Add(reg);
+                        wait_tasks.Add(t);
                     }
                 }
 
@@ -976,13 +985,10 @@ namespace SoftEther.WebSocket.Helper
                     catch
                     {
                     }
-                    try
-                    {
-                        timeout_task.Dispose();
-                    }
-                    catch
-                    {
-                    }
+                }
+                foreach (IDisposable i in disposes)
+                {
+                    i.DisposeSafe();
                 }
             }
         }
@@ -1124,9 +1130,11 @@ namespace SoftEther.WebSocket.Helper
                 task_list.Add(ev.WaitAsync());
             }
 
+            CancellationTokenSource delay_cancel = new CancellationTokenSource();
+
             if (timeout >= 1)
             {
-                task_list.Add(Task.Delay(timeout));
+                task_list.Add(Task.Delay(timeout, delay_cancel.Token));
             }
 
             try
@@ -1143,6 +1151,12 @@ namespace SoftEther.WebSocket.Helper
                 {
                     reg.Dispose();
                 }
+
+                if (delay_cancel != null)
+                {
+                    delay_cancel.Cancel();
+                    delay_cancel.Dispose();
+                }
             }
         }
     }
@@ -1154,13 +1168,116 @@ namespace SoftEther.WebSocket.Helper
         public bool IsSet => (this.flag != 0);
     }
 
+    public class TimeoutDetector : IDisposable
+    {
+        Task main_loop;
+
+        object LockObj = new object();
+
+        Stopwatch sw = new Stopwatch();
+        long tick { get => this.sw.ElapsedMilliseconds; }
+
+        public long Timeout { get; }
+
+        long next_timeout;
+
+        AsyncAutoResetEvent ev = new AsyncAutoResetEvent();
+
+        CancellationTokenSource halt = new CancellationTokenSource();
+
+        CancelWatcher watcher;
+        AutoResetEvent event_auto;
+        ManualResetEvent event_manual;
+
+        CancellationTokenSource cts = new CancellationTokenSource();
+        public CancellationToken Cancel { get => cts.Token; }
+        public Task TaskWaitMe { get => this.main_loop; }
+
+        Action callme;
+
+        public TimeoutDetector(int timeout, CancelWatcher watcher = null, AutoResetEvent event_auto = null, ManualResetEvent event_manual = null, Action callme = null)
+        {
+            this.Timeout = timeout;
+            this.watcher = watcher;
+            this.event_auto = event_auto;
+            this.event_manual = event_manual;
+            this.callme = callme;
+
+            sw.Start();
+            next_timeout = tick + this.Timeout;
+            main_loop = timeout_detector_main_loop();
+        }
+
+        public void Keep()
+        {
+            lock (LockObj)
+            {
+                this.next_timeout = tick + this.Timeout;
+            }
+        }
+
+        async Task timeout_detector_main_loop()
+        {
+            while (halt.IsCancellationRequested == false)
+            {
+                long now, remain_time;
+
+                lock (LockObj)
+                {
+                    now = tick;
+                    remain_time = next_timeout - now;
+                }
+
+                Dbg.Where($"remain_time = {remain_time}");
+
+                if (remain_time < 0)
+                {
+                    break;
+                }
+                else
+                {
+                    await WebSocketHelper.WaitObjectsAsync(
+                        auto_events: new AsyncAutoResetEvent[] { ev },
+                        cancels: new CancellationToken[] { halt.Token },
+                        timeout: (int)remain_time);
+                }
+            }
+
+            cts.TryCancelAsync().LaissezFaire();
+            if (this.watcher != null) this.watcher.Cancel();
+            if (this.event_auto != null) this.event_auto.Set();
+            if (this.event_manual != null) this.event_manual.Set();
+            if (this.callme != null)
+            {
+                new Task(() =>
+                {
+                    try
+                    {
+                        this.callme();
+                    }
+                    catch { }
+                }).Start();
+            }
+        }
+
+        Once dispose_flag;
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
+                halt.TryCancelAsync().LaissezFaire();
+            }
+        }
+    }
 
     public class CancelWatcher : IDisposable
     {
         CancellationTokenSource cts = new CancellationTokenSource();
-        public CancellationToken Cancel { get => cts.Token; }
+        public CancellationToken CancelToken { get => cts.Token; }
         public Task TaskWaitMe { get; }
         public AsyncManualResetEvent EventWaitMe { get; } = new AsyncManualResetEvent();
+
+        CancellationTokenSource canceller = new CancellationTokenSource();
 
         AsyncAutoResetEvent ev = new AsyncAutoResetEvent();
         volatile bool halt = false;
@@ -1172,8 +1289,15 @@ namespace SoftEther.WebSocket.Helper
 
         public CancelWatcher(params CancellationToken[] cancels)
         {
+            AddWatch(canceller.Token);
             AddWatch(cancels);
+
             this.TaskWaitMe = cancel_watch_mainloop();
+        }
+
+        public void Cancel()
+        {
+            canceller.TryCancelAsync().LaissezFaire();
         }
 
         async Task cancel_watch_mainloop()
@@ -1213,13 +1337,8 @@ namespace SoftEther.WebSocket.Helper
 
                 if (canceled)
                 {
-                    try
-                    {
-                        this.cts.TryCancelAsync().LaissezFaire();
-                    }
-                    catch { }
+                    this.cts.TryCancelAsync().LaissezFaire();
                     this.EventWaitMe.Set();
-                    //Dbg.Where();
                     break;
                 }
             }
@@ -1257,6 +1376,8 @@ namespace SoftEther.WebSocket.Helper
             {
                 this.halt = true;
                 this.ev.Set();
+                this.cts.TryCancelAsync().LaissezFaire();
+                this.EventWaitMe.Set();
                 this.TaskWaitMe.Wait();
             }
         }

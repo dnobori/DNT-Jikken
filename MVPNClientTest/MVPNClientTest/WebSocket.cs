@@ -35,6 +35,8 @@ namespace SoftEther.WebSocket
         public int TimeoutOpen { get; set; } = 10 * 1000;
         public int TimeoutComm { get; set; } = 10 * 1000;
 
+        CancelWatcher cancel_watcher;
+
         public CancellationToken Cancel { get; }
         public bool Opened { get; private set; } = false;
         public bool HasError { get; private set; } = false;
@@ -53,7 +55,9 @@ namespace SoftEther.WebSocket
         public WebSocketStream(Stream inner_stream, CancellationToken cancel = default(CancellationToken))
         {
             this.st = inner_stream;
-            this.Cancel = cancel;
+
+            cancel_watcher = new CancelWatcher(cancel);
+            this.Cancel = cancel_watcher.CancelToken;
         }
 
         public async Task OpenAsync(string uri)
@@ -195,7 +199,33 @@ namespace SoftEther.WebSocket
 
             while (true)
             {
-                try_sync();
+                while (true)
+                {
+                    throw_if_disconnected();
+
+                    Frame f = try_recv_next_frame(out int read_buffer_size);
+                    if (f == null) break; // No more frames
+
+                    if (f.Opcode == WebSocketOpcode.Continue || f.Opcode == WebSocketOpcode.Text || f.Opcode == WebSocketOpcode.Bin)
+                    {
+                        this.AppRecvFifo.Write(f.Data);
+                    }
+                    else if (f.Opcode == WebSocketOpcode.Ping)
+                    {
+                        // todo
+                    }
+                    else if (f.Opcode == WebSocketOpcode.Pong)
+                    {
+                        // todo
+                    }
+                    else
+                    {
+                        // Error: disconnect
+                        this.HasError = true;
+                    }
+
+                    this.PhysicalRecvFifo.SkipRead(read_buffer_size);
+                }
 
                 throw_if_disconnected();
 
@@ -238,54 +268,6 @@ namespace SoftEther.WebSocket
 
             this.AppSendFifo.Write(buffer, offset, count);
 
-            try_sync();
-
-            throw_if_disconnected();
-
-            try
-            {
-                await this.st.WriteAsyncWithTimeout(this.PhysicalSendFifo.Read(),
-                    timeout: TimeoutComm,
-                    cancel: Cancel,
-                    cancel_tokens: cancellationToken);
-            }
-            catch
-            {
-                this.HasError = true;
-            }
-        }
-
-        void try_sync()
-        {
-            // Physical -> App
-            while (true)
-            {
-                throw_if_disconnected();
-
-                Frame f = try_recv_next_frame(out int read_buffer_size);
-                if (f == null) break; // No more frames
-
-                if (f.Opcode == WebSocketOpcode.Continue || f.Opcode == WebSocketOpcode.Text || f.Opcode == WebSocketOpcode.Bin)
-                {
-                    this.AppRecvFifo.Write(f.Data);
-                }
-                else if (f.Opcode == WebSocketOpcode.Ping)
-                {
-                    // todo
-                }
-                else if (f.Opcode == WebSocketOpcode.Pong)
-                {
-                    // todo
-                }
-                else
-                {
-                    // Error: disconnect
-                    this.HasError = true;
-                }
-
-                this.PhysicalRecvFifo.SkipRead(read_buffer_size);
-            }
-
             // App -> Physical
             while (true)
             {
@@ -302,8 +284,19 @@ namespace SoftEther.WebSocket
             }
 
             throw_if_disconnected();
-        }
 
+            try
+            {
+                await this.st.WriteAsyncWithTimeout(this.PhysicalSendFifo.Read(),
+                    timeout: TimeoutComm,
+                    cancel: Cancel,
+                    cancel_tokens: cancellationToken);
+            }
+            catch
+            {
+                this.HasError = true;
+            }
+        }
         Frame try_recv_next_frame(out int read_buffer_size)
         {
             read_buffer_size = 0;
@@ -406,8 +399,12 @@ namespace SoftEther.WebSocket
                     data[i] ^= mask[i % 4];
                 }
             }
-
+            if (size < 0)
+            {
+                WriteLine();
+            }
             b.Write(data, pos, size);
+
 
             PhysicalSendFifo.Write(b);
         }
@@ -425,6 +422,22 @@ namespace SoftEther.WebSocket
         public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
             => WriteAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
+
+        Once dispose_flag;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (disposing)
+            {
+                if (dispose_flag.IsFirstCall())
+                {
+                    this.cancel_watcher.DisposeSafe();
+                    this.st.DisposeSafe();
+                }
+            }
+
+            base.Dispose(disposing);
+        }
 
         class Frame
         {

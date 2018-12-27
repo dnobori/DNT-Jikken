@@ -85,6 +85,49 @@ namespace MVPNClientTest
 
         static async Task test_ssl()
         {
+            string hostname = "www.google.com";
+            int port = 443;
+
+            using (TcpClient tc = new TcpClient())
+            {
+                WriteLine("connecting.");
+                await tc.ConnectAsync(hostname, port);
+
+                WriteLine("connected.");
+
+                using (NetworkStream st = tc.GetStream())
+                {
+                    using (SslStream ssl = new SslStream(st, false, check_cert))
+                    {
+                        WriteLine("start ssl");
+                        await ssl.AuthenticateAsClientAsync(hostname);
+                        WriteLine("end ssl");
+
+                        string text = "GET / HTTP/1.1\r\nHOST: www.google.com\r\n\r\n";
+                        byte[] bin = Encoding.UTF8.GetBytes(text);
+
+                        //await ssl.WriteAsync(bin, 0, bin.Length);
+
+                        for (int i = 0; i < bin.Length; i++)
+                        {
+                            await ssl.WriteAsyncWithTimeout(new byte[1] { bin[i] }, timeout: 1000);
+                            WriteLine("send: " + i);
+                        }
+
+                        for (int i =0; ;i++)
+                        {
+                            byte[] ret = await ssl.ReadAsyncWithTimeout(1, read_all: true, timeout: 1000);
+                            WriteLine("recv: " + i + " " + ret.Length);
+                        }
+
+                        WriteLine();
+                    }
+                }
+            }
+        }
+
+        static async Task test_ssl__()
+        {
             string hostname = "echo.websocket.org";
             int port = 443;
 
@@ -143,15 +186,40 @@ namespace MVPNClientTest
 
             VpnSessionNotify notify = new VpnSessionNotify(Notify_VpnEventHandler);
 
-            VpnSession sess = new VpnSession(setting, notify);
 
-            await sess.StartAsync();
+            if (false)
+            {
+                VpnSession sess = new VpnSession(setting, notify);
 
-            Console.ReadLine();
+                await sess.StartAsync();
 
-            WriteLine("Stopping...");
-            await sess.StopAsync();
-            WriteLine("Stopped.");
+                Console.ReadLine();
+
+                WriteLine("Stopping...");
+                await sess.StopAsync();
+                WriteLine("Stopped.");
+
+                await Task.Yield();
+            }
+            else
+            {
+                while (true)
+                {
+                    VpnSession sess = new VpnSession(setting, notify);
+
+                    await sess.StartAsync();
+
+                    await Task.Delay(1000);
+
+                    WriteLine("Stopping...");
+                    await sess.StopAsync();
+                    WriteLine("Stopped.");
+
+                    await Task.Yield();
+
+                    System.GC.Collect();
+                }
+            }
         }
 
         private static void Notify_VpnEventHandler(object sender, VpnSessionEventArgs e)
