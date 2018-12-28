@@ -308,6 +308,8 @@ namespace SoftEther.WebSocket
                 var buf = this.PhysicalRecvFifo.Span;
                 var buf_pos0 = this.PhysicalRecvFifo.Span;
 
+                if (buf.Length <= 2) return null;
+
                 byte flag_and_opcode = buf.ReadByte();
                 byte mask_and_payload_len = buf.ReadByte();
                 int mask_flag = mask_and_payload_len & 0x80;

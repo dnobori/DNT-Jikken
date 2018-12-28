@@ -16,6 +16,10 @@ using SoftEther.WebSocket;
 using System.Runtime.CompilerServices;
 using System.Xml.Serialization;
 using System.Diagnostics;
+using Org.BouncyCastle.Crypto.Engines;
+using Org.BouncyCastle.Crypto.Macs;
+using Org.BouncyCastle.Crypto.Parameters;
+using System.Runtime.InteropServices;
 
 #pragma warning disable CS0162, CS1998
 
@@ -699,6 +703,91 @@ namespace SoftEther.WebSocket.Helper
             return BitConverter.ToUInt64(data, 0);
         }
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ArraySegment<T> AsSegment<T>(this Memory<T> memory)
+        {
+            if (MemoryMarshal.TryGetArray(memory, out ArraySegment<T> seg) == false)
+            {
+                throw new ArgumentException("Memory<T> memory cannot be converted to ArraySegment<T>.");
+            }
+
+            return seg;
+        }
+
+        public static string ByteToHex(byte[] data)
+        {
+            return ByteToHex(data, "");
+        }
+        public static string ByteToHex(byte[] data, string paddingStr)
+        {
+            StringBuilder ret = new StringBuilder();
+
+            int i;
+            for (i = 0; i < data.Length; i++)
+            {
+                byte b = data[i];
+
+                string s = b.ToString("X");
+                if (s.Length == 1)
+                {
+                    s = "0" + s;
+                }
+
+                ret.Append(s);
+
+                if (paddingStr != null)
+                {
+                    if (i != (data.Length - 1))
+                    {
+                        ret.Append(paddingStr);
+                    }
+                }
+            }
+
+            return ret.ToString().Trim();
+        }
+
+        public static byte[] HexToByte(string str)
+        {
+            try
+            {
+                List<byte> o = new List<byte>();
+                string tmp = "";
+                int i, len;
+
+                str = str.ToUpper().Trim();
+                len = str.Length;
+
+                for (i = 0; i < len; i++)
+                {
+                    char c = str[i];
+                    if (('0' <= c && c <= '9') || ('A' <= c && c <= 'F'))
+                    {
+                        tmp += c;
+                        if (tmp.Length == 2)
+                        {
+                            byte b = Convert.ToByte(tmp, 16);
+                            o.Add(b);
+                            tmp = "";
+                        }
+                    }
+                    else if (c == ' ' || c == ',' || c == '-' || c == ';')
+                    {
+                    }
+                    else
+                    {
+                        break;
+                    }
+                }
+
+                return o.ToArray();
+            }
+            catch
+            {
+                return new byte[0];
+            }
+        }
+
         public static byte[] CopyByte(byte[] src)
         {
             return (byte[])src.Clone();
@@ -1156,6 +1245,223 @@ namespace SoftEther.WebSocket.Helper
                 {
                     delay_cancel.Cancel();
                     delay_cancel.Dispose();
+                }
+            }
+        }
+
+        public const int AeadChaCha20Poly1305MacSize = 16;
+        public const int AeadChaCha20Poly1305NonceSize = 12;
+        public const int AeadChaCha20Poly1305KeySize = 32;
+
+        static readonly byte[] zero15 = new byte[15];
+
+        static void crypto_stream_chacha20_ietf(Memory<byte> c, Memory<byte> n, Memory<byte> k)
+        {
+            var kk = k.AsSegment();
+            var nn = n.AsSegment();
+            var cc = c.AsSegment();
+
+            if (c.Length == 0) return;
+            ChaCha7539Engine ctx = new ChaCha7539Engine();
+            ctx.Init(true, new ParametersWithIV(new KeyParameter(kk.Array, kk.Offset, kk.Count), nn.Array, nn.Offset, nn.Count));
+            c.Span.Fill(0);
+            ctx.ProcessBytes(cc.Array, cc.Offset, cc.Count, cc.Array, cc.Offset);
+        }
+
+        static void crypto_stream_chacha20_ietf_xor_ic(Memory<byte> c, Memory<byte> m, Memory<byte> n, uint ic, Memory<byte> k)
+        {
+            var kk = k.AsSegment();
+            var nn = n.AsSegment();
+            var cc = c.AsSegment();
+
+            if (c.Length == 0) return;
+            ChaCha7539Engine ctx = new ChaCha7539Engine();
+            byte[] ic_bytes = BitConverter.GetBytes(ic);
+            if (IsLittleEndian == false) Array.Reverse(ic_bytes);
+            ctx.Init(true, new ParametersWithIV(new KeyParameter(kk.Array, kk.Offset, kk.Count), nn.Array, nn.Offset, nn.Count));
+        }
+
+        static bool crypto_aead_chacha20poly1305_ietf_decrypt_detached(Memory<byte> m, Memory<byte> c, Memory<byte> mac, Memory<byte> ad, Memory<byte> npub, Memory<byte> k)
+        {
+            var kk = k.AsSegment();
+            var nn = npub.AsSegment();
+            var cc = c.AsSegment();
+            var aa = ad.AsSegment();
+            var mm = m.AsSegment();
+
+            byte[] block0 = new byte[64];
+
+            ChaCha7539Engine ctx = new ChaCha7539Engine();
+            ctx.Init(true, new ParametersWithIV(new KeyParameter(kk.Array, kk.Offset, kk.Count), nn.Array, nn.Offset, nn.Count));
+            ctx.ProcessBytes(block0, 0, block0.Length, block0, 0);
+
+            Poly1305 state = new Poly1305();
+            state.Init(new KeyParameter(block0, 0, AeadChaCha20Poly1305KeySize));
+
+            state.BlockUpdate(aa.Array, aa.Offset, aa.Count);
+            if ((aa.Count % 16) != 0)
+                state.BlockUpdate(zero15, 0, 16 - (aa.Count % 16));
+
+            state.BlockUpdate(cc.Array, cc.Offset, cc.Count);
+            if ((cc.Count % 16) != 0)
+                state.BlockUpdate(zero15, 0, 16 - (cc.Count % 16));
+
+            byte[] slen = BitConverter.GetBytes((ulong)aa.Count);
+            if (IsBigEndian) Array.Reverse(slen);
+            state.BlockUpdate(slen, 0, slen.Length);
+
+            byte[] mlen = BitConverter.GetBytes((ulong)cc.Count);
+            if (IsBigEndian) Array.Reverse(mlen);
+            state.BlockUpdate(mlen, 0, mlen.Length);
+
+            byte[] computed_mac = new byte[AeadChaCha20Poly1305MacSize];
+            state.DoFinal(computed_mac, 0);
+
+            if (computed_mac.AsSpan().SequenceEqual(mac.Span) == false)
+            {
+                return false;
+            }
+
+            ctx.ProcessBytes(cc.Array, cc.Offset, cc.Count, mm.Array, mm.Offset);
+
+            return true;
+        }
+
+        static void crypto_aead_chacha20poly1305_ietf_encrypt_detached(Memory<byte> c, Memory<byte> mac, Memory<byte> m, Memory<byte> ad, Memory<byte> npub, Memory<byte> k)
+        {
+            var kk = k.AsSegment();
+            var nn = npub.AsSegment();
+            var cc = c.AsSegment();
+            var aa = ad.AsSegment();
+            var mm = m.AsSegment();
+
+            byte[] block0 = new byte[64];
+
+            ChaCha7539Engine ctx = new ChaCha7539Engine();
+            ctx.Init(true, new ParametersWithIV(new KeyParameter(kk.Array, kk.Offset, kk.Count), nn.Array, nn.Offset, nn.Count));
+            ctx.ProcessBytes(block0, 0, block0.Length, block0, 0);
+
+            Poly1305 state = new Poly1305();
+            state.Init(new KeyParameter(block0, 0, AeadChaCha20Poly1305KeySize));
+
+            state.BlockUpdate(aa.Array, aa.Offset, aa.Count);
+            if ((aa.Count % 16) != 0)
+                state.BlockUpdate(zero15, 0, 16 - (aa.Count % 16));
+
+            ctx.ProcessBytes(mm.Array, mm.Offset, mm.Count, cc.Array, cc.Offset);
+
+            state.BlockUpdate(cc.Array, cc.Offset, cc.Count);
+            if ((cc.Count % 16) != 0)
+                state.BlockUpdate(zero15, 0, 16 - (cc.Count % 16));
+
+            byte[] slen = BitConverter.GetBytes((ulong)aa.Count);
+            if (IsBigEndian) Array.Reverse(slen);
+            state.BlockUpdate(slen, 0, slen.Length);
+
+            byte[] mlen = BitConverter.GetBytes((ulong)mm.Count);
+            if (IsBigEndian) Array.Reverse(mlen);
+            state.BlockUpdate(mlen, 0, mlen.Length);
+
+            var macmac = mac.AsSegment();
+            state.DoFinal(macmac.Array, macmac.Offset);
+        }
+
+        static void crypto_aead_chacha20poly1305_ietf_encrypt(Memory<byte> c, Memory<byte> m, Memory<byte> ad, Memory<byte> npub, Memory<byte> k)
+        {
+            crypto_aead_chacha20poly1305_ietf_encrypt_detached(c.Slice(0, c.Length - AeadChaCha20Poly1305MacSize),
+                c.Slice(c.Length - AeadChaCha20Poly1305MacSize, AeadChaCha20Poly1305MacSize),
+                m, ad, npub, k);
+        }
+
+        static bool crypto_aead_chacha20poly1305_ietf_decrypt(Memory<byte> m, Memory<byte> c, Memory<byte> ad, Memory<byte> npub, Memory<byte> k)
+        {
+            //return crypto_aead_chacha20poly1305_ietf_decrypt_detached(m.Slice(0, c.Length - AeadChaCha20Poly1305MacSize), c.Slice(0, c.Length - AeadChaCha20Poly1305MacSize),
+            //    c.Slice(c.Length - AeadChaCha20Poly1305MacSize, AeadChaCha20Poly1305MacSize),
+            //    ad, npub, k);
+            return crypto_aead_chacha20poly1305_ietf_decrypt_detached(m, c.Slice(0, c.Length - AeadChaCha20Poly1305MacSize),
+                c.Slice(c.Length - AeadChaCha20Poly1305MacSize, AeadChaCha20Poly1305MacSize),
+                ad, npub, k);
+        }
+
+        public static void Aead_ChaCha20Poly1305_Ietf_Encrypt(Memory<byte> dest, Memory<byte> src, Memory<byte> key, Memory<byte> nonce,
+            Memory<byte> aad)
+        {
+            crypto_aead_chacha20poly1305_ietf_encrypt(dest, src, aad, nonce, key);
+        }
+
+        public static bool Aead_ChaCha20Poly1305_Ietf_Decrypt(Memory<byte> dest, Memory<byte> src, Memory<byte> key, Memory<byte> nonce,
+            Memory<byte> aad)
+        {
+            return crypto_aead_chacha20poly1305_ietf_decrypt(dest, src, aad, nonce, key);
+        }
+
+        public static void Aead_ChaCha20Poly1305_Ietf_Test()
+        {
+            string nonce_hex = "07 00 00 00 40 41 42 43 44 45 46 47";
+            string plaintext_hex =
+                "4c 61 64 69 65 73 20 61 6e 64 20 47 65 6e 74 6c " +
+                "65 6d 65 6e 20 6f 66 20 74 68 65 20 63 6c 61 73 " +
+                "73 20 6f 66 20 27 39 39 3a 20 49 66 20 49 20 63 " +
+                "6f 75 6c 64 20 6f 66 66 65 72 20 79 6f 75 20 6f " +
+                "6e 6c 79 20 6f 6e 65 20 74 69 70 20 66 6f 72 20 " +
+                "74 68 65 20 66 75 74 75 72 65 2c 20 73 75 6e 73 " +
+                "63 72 65 65 6e 20 77 6f 75 6c 64 20 62 65 20 69 " +
+                "74 2e";
+            string aad_hex = "50 51 52 53 c0 c1 c2 c3 c4 c5 c6 c7";
+            string key_hex = "80 81 82 83 84 85 86 87 88 89 8a 8b 8c 8d 8e 8f " +
+                "90 91 92 93 94 95 96 97 98 99 9a 9b 9c 9d 9e 9f";
+
+            string rfc_mac = "1a:e1:0b:59:4f:09:e2:6a:7e:90:2e:cb:d0:60:06:91".Replace(':', ' ');
+            string rfc_enc = "d3 1a 8d 34 64 8e 60 db 7b 86 af bc 53 ef 7e c2 " +
+                "a4 ad ed 51 29 6e 08 fe a9 e2 b5 a7 36 ee 62 d6 " +
+                "3d be a4 5e 8c a9 67 12 82 fa fb 69 da 92 72 8b " +
+                "1a 71 de 0a 9e 06 0b 29 05 d6 a5 b6 7e cd 3b 36 " +
+                "92 dd bd 7f 2d 77 8b 8c 98 03 ae e3 28 09 1b 58 " +
+                "fa b3 24 e4 fa d6 75 94 55 85 80 8b 48 31 d7 bc " +
+                "3f f4 de f0 8e 4b 7a 9d e5 76 d2 65 86 ce c6 4b " +
+                "61 16";
+
+            var nonce = HexToByte(nonce_hex).AsMemory();
+            var plaintext = HexToByte(plaintext_hex).AsMemory();
+            var aad = HexToByte(aad_hex).AsMemory();
+            var key = HexToByte(key_hex).AsMemory();
+            var encrypted = new byte[plaintext.Length + AeadChaCha20Poly1305MacSize].AsMemory();
+            var decrypted = new byte[plaintext.Length].AsMemory();
+
+            Console.WriteLine("Aead_ChaCha20Poly1305_Ietf_Test()");
+
+            Aead_ChaCha20Poly1305_Ietf_Encrypt(encrypted, plaintext, key, nonce, aad);
+
+            string encrypted_hex = ByteToHex(encrypted.Slice(0, plaintext.Length).ToArray(), " ");
+            string mac_hex = ByteToHex(encrypted.Slice(plaintext.Length, AeadChaCha20Poly1305MacSize).ToArray(), " ");
+
+            Console.WriteLine($"Encrypted:\n{encrypted_hex}\n");
+
+            Console.WriteLine($"MAC:\n{mac_hex}\n");
+
+            var a = HexToByte(rfc_enc);
+            if (encrypted.Slice(0, plaintext.Length).Span.SequenceEqual(a) == false)
+            {
+                throw new ApplicationException("encrypted != rfc_enc");
+            }
+
+            Console.WriteLine("Check OK.");
+
+            if (Aead_ChaCha20Poly1305_Ietf_Decrypt(decrypted, encrypted, key, nonce, aad) == false)
+            {
+                throw new ApplicationException("Decrypt failed.");
+            }
+            else
+            {
+                Console.WriteLine("Decrypt OK.");
+
+                if (plaintext.Span.SequenceEqual(decrypted.Span))
+                {
+                    Console.WriteLine("Same OK.");
+                }
+                else
+                {
+                    throw new ApplicationException("Different !!!");
                 }
             }
         }

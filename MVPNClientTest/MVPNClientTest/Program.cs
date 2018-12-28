@@ -15,7 +15,7 @@ using SoftEther.WebSocket;
 using SoftEther.WebSocket.Helper;
 using SoftEther.VpnClient;
 
-#pragma warning disable CS0162
+#pragma warning disable CS0162, CS1998
 
 namespace MVPNClientTest
 {
@@ -23,7 +23,8 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            test0().Wait();
+            WebSocketHelper.Aead_ChaCha20Poly1305_Ietf_Test();
+            //test0().Wait();
         }
 
         static async Task test0()
@@ -186,10 +187,9 @@ namespace MVPNClientTest
 
             VpnSessionNotify notify = new VpnSessionNotify(Notify_VpnEventHandler);
 
-
-            if (false)
+            if (true)
             {
-                VpnSession sess = new VpnSession(setting, notify);
+                VpnSession sess = new VpnSession(setting, notify, new NetworkAdapterDummy());
 
                 await sess.StartAsync();
 
@@ -205,7 +205,7 @@ namespace MVPNClientTest
             {
                 while (true)
                 {
-                    VpnSession sess = new VpnSession(setting, notify);
+                    VpnSession sess = new VpnSession(setting, notify, new NetworkAdapterDummy());
 
                     await sess.StartAsync();
 
@@ -229,6 +229,56 @@ namespace MVPNClientTest
             {
                 Console.WriteLine($"  Error: {e.Error}");
             }
+        }
+    }
+
+    public class NetworkAdapterDummy : VpnVirtualNetworkAdapter
+    {
+        VpnVirtualNetworkAdapterParam p;
+
+        CancellationTokenSource cancel = new CancellationTokenSource();
+
+        public override async Task<object> OnConnected(VpnVirtualNetworkAdapterParam param)
+        {
+            Console.WriteLine($"Connected.");
+
+            cancel = new CancellationTokenSource();
+
+            this.p = param;
+
+            test().LaissezFaire();
+
+            return new object();
+        }
+
+        public async Task test()
+        {
+            while (cancel.Token.IsCancellationRequested == false)
+            {
+                Buf eth = new Buf();
+                eth.Write(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, });
+                eth.Write(new byte[] { 0x00, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, });
+                eth.WriteShort(0x0800);
+                eth.Write(WebSocketHelper.GenRandom(32));
+
+                this.p.SendPackets(new VpnPacket[] { new VpnPacket(VpnProtocolPacketType.Ethernet, eth.ByteData) });
+
+                await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel.Token }, timeout: 100);
+            }
+
+            Dbg.Where();
+        }
+
+        public override async Task OnDisconnected(object state, VpnVirtualNetworkAdapterParam param)
+        {
+            Console.WriteLine($"Disconnected.");
+
+            cancel.Cancel();
+        }
+
+        public override async Task OnPacketsReceived(object state, VpnVirtualNetworkAdapterParam param, VpnPacket[] packets)
+        {
+            Console.WriteLine($"recv packets: {packets[0].Data.Length}");
         }
     }
 }
