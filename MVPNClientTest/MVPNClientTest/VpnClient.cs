@@ -233,7 +233,7 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public class VpnProtocolConsts
+    public static class VpnProtocolConsts
     {
         public const uint PacketMagicNumber = 0xCAFEBEEF;
         public const int MaxBufferingPacketSize = (1600 * 1600);
@@ -684,6 +684,21 @@ namespace SoftEther.VpnClient
                 main_loop_task = null;
                 cancel = null;
             }
+        }
+
+        public static string GetNatTServerHostName(IPAddress ip)
+        {
+            string tmp;
+            if (ip != null && ip.AddressFamily == AddressFamily.InterNetwork)
+            {
+                tmp = WebSocketHelper.ByteToHex(new SHA1Managed().ComputeHash(ip.GetAddressBytes()));
+            }
+            else
+            {
+                tmp = WebSocketHelper.ByteToHex(WebSocketHelper.GenRandom(4));
+            }
+            tmp = tmp.ToLowerInvariant();
+            return $"x{tmp[2]}.x{tmp[3]}.servers.nat-traversal.softether-network.net.";
         }
 
         async Task main_loop()

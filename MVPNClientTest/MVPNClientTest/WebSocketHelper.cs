@@ -526,12 +526,17 @@ namespace SoftEther.WebSocket.Helper
 
     public static class Dbg
     {
+        static object LockObj = new object();
+
         public static long Where(string msg = "", [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null, long last_tick = 0)
         {
-            long now = DateTime.Now.Ticks;
-            long diff = now - last_tick;
-            WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (string.IsNullOrEmpty(msg) == false ? (": " + msg) : ""));
-            return now;
+            lock (LockObj)
+            {
+                long now = DateTime.Now.Ticks;
+                long diff = now - last_tick;
+                WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (string.IsNullOrEmpty(msg) == false ? (": " + msg) : ""));
+                return now;
+            }
         }
     }
 
@@ -598,6 +603,93 @@ namespace SoftEther.WebSocket.Helper
         static WebSocketHelper()
         {
             IsLittleEndian = BitConverter.IsLittleEndian;
+        }
+
+        public static bool CanUdpSocketErrorBeIgnored(SocketException e)
+        {
+            switch (e.SocketErrorCode)
+            {
+                case SocketError.ConnectionReset:
+                case SocketError.NetworkReset:
+                case SocketError.MessageSize:
+                case SocketError.HostUnreachable:
+                case SocketError.NetworkUnreachable:
+                case SocketError.NoBufferSpaceAvailable:
+                case SocketError.AddressNotAvailable:
+                case SocketError.ConnectionRefused:
+                case SocketError.Interrupted:
+                case SocketError.WouldBlock:
+                case SocketError.TryAgain:
+                case SocketError.InProgress:
+                case SocketError.InvalidArgument:
+                case (SocketError)12: // ENOMEM
+                case (SocketError)10068: // WSAEUSERS
+                    return true;
+            }
+            return false;
+        }
+
+        static readonly IPEndPoint udp_ep_ipv4 = new IPEndPoint(IPAddress.Any, 0);
+        static readonly IPEndPoint udp_ep_ipv6 = new IPEndPoint(IPAddress.IPv6Any, 0);
+        const int udp_max_retry_on_ignore_error = 5;
+        public static async Task<SocketReceiveFromResult> ReceiveFromSafeUdpErrorAsync(this Socket socket, ArraySegment<byte> buffer, SocketFlags socketFlags)
+        {
+            int num_retry = 0;
+
+            LABEL_RETRY:
+
+            try
+            {
+                Task<SocketReceiveFromResult> t = socket.ReceiveFromAsync(buffer, socketFlags, socket.AddressFamily == AddressFamily.InterNetworkV6 ? udp_ep_ipv6 : udp_ep_ipv4);
+                if (t.IsCompleted)
+                {
+                    return t.Result;
+                }
+                else
+                {
+                    num_retry = 0;
+                    return await t;
+                }
+            }
+            catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e))
+            {
+                num_retry++;
+                if (num_retry >= udp_max_retry_on_ignore_error)
+                {
+                    throw;
+                }
+                goto LABEL_RETRY;
+            }
+        }
+
+        public static async Task<int> SendToSafeUdpErrorAsync(this Socket socket, ArraySegment<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP)
+        {
+            int num_retry = 0;
+
+            LABEL_RETRY:
+
+            try
+            {
+                Task<int> t = socket.SendToAsync(buffer, socketFlags, remoteEP);
+                if (t.IsCompleted)
+                {
+                    return t.Result;
+                }
+                else
+                {
+                    num_retry = 0;
+                    return await t;
+                }
+            }
+            catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e))
+            {
+                num_retry++;
+                if (num_retry >= udp_max_retry_on_ignore_error)
+                {
+                    throw;
+                }
+                goto LABEL_RETRY;
+            }
         }
 
         public static async Task ConnectAsync(this TcpClient tc, string host, int port,
@@ -1582,6 +1674,7 @@ namespace SoftEther.WebSocket.Helper
         public CancellationToken CancelToken { get => cts.Token; }
         public Task TaskWaitMe { get; }
         public AsyncManualResetEvent EventWaitMe { get; } = new AsyncManualResetEvent();
+        public bool Canceled { get; private set; } = false;
 
         CancellationTokenSource canceller = new CancellationTokenSource();
 
@@ -1604,6 +1697,7 @@ namespace SoftEther.WebSocket.Helper
         public void Cancel()
         {
             canceller.TryCancelAsync().LaissezFaire();
+            this.Canceled = true;
         }
 
         async Task cancel_watch_mainloop()
@@ -1645,6 +1739,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     this.cts.TryCancelAsync().LaissezFaire();
                     this.EventWaitMe.Set();
+                    this.Canceled = true;
                     break;
                 }
             }
@@ -1681,6 +1776,7 @@ namespace SoftEther.WebSocket.Helper
             if (dispose_flag.IsFirstCall())
             {
                 this.halt = true;
+                this.Canceled = true;
                 this.ev.Set();
                 this.cts.TryCancelAsync().LaissezFaire();
                 this.EventWaitMe.Set();
@@ -1813,6 +1909,350 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
         }
+    }
+
+    class TimeHelper
+    {
+        internal Stopwatch Sw;
+        internal long Freq;
+        internal DateTimeOffset FirstDateTimeOffset;
+
+        public TimeHelper()
+        {
+            FirstDateTimeOffset = DateTimeOffset.Now;
+            //FirstDateTimeOffset = 
+            Sw = new Stopwatch();
+            Sw.Start();
+            Freq = Stopwatch.Frequency;
+        }
+
+        public DateTimeOffset GetDateTimeOffset()
+        {
+            return FirstDateTimeOffset + this.Sw.Elapsed;
+        }
+    }
+
+    public static class Time
+    {
+        static TimeHelper h = new TimeHelper();
+        static TimeSpan baseTimeSpan = new TimeSpan(0, 0, 1);
+
+        static public TimeSpan NowTimeSpan
+        {
+            get
+            {
+                return h.Sw.Elapsed.Add(baseTimeSpan);
+            }
+        }
+
+        static public long NowLong100Usecs
+        {
+            get
+            {
+                return NowTimeSpan.Ticks;
+            }
+        }
+
+        static public long NowLongMillisecs
+        {
+            get
+            {
+                return NowLong100Usecs / 10000;
+            }
+        }
+
+        static public long Tick64
+        {
+            get
+            {
+                return NowLongMillisecs;
+            }
+        }
+
+        static public double NowDouble
+        {
+            get
+            {
+                return (double)NowLong100Usecs / (double)10000000.0;
+            }
+        }
+
+        static public DateTime NowDateTimeLocal
+        {
+            get
+            {
+                return h.GetDateTimeOffset().LocalDateTime;
+            }
+        }
+
+
+        static public DateTime NowDateTimeUtc
+        {
+            get
+            {
+                return h.GetDateTimeOffset().UtcDateTime;
+            }
+        }
+
+        static public DateTimeOffset NowDateTimeOffset
+        {
+            get
+            {
+                return h.GetDateTimeOffset();
+            }
+        }
+    }
+
+    public class UdpPacket
+    {
+        public byte[] Data;
+        public IPEndPoint EndPoint;
+
+        public UdpPacket(byte[] data, IPEndPoint ep)
+        {
+            this.Data = data;
+            this.EndPoint = ep;
+        }
+    }
+
+    public class NonBlockSocket : IDisposable
+    {
+        public Socket Sock { get; }
+        public bool IsStream { get; }
+        public bool IsDisconnected { get => Watcher.Canceled; }
+        public CancellationToken CancelToken { get => Watcher.CancelToken; }
+
+        public AsyncAutoResetEvent EventSendReady { get; } = new AsyncAutoResetEvent();
+        public AsyncAutoResetEvent EventRecvReady { get; } = new AsyncAutoResetEvent();
+        public AsyncAutoResetEvent EventSendNow { get; } = new AsyncAutoResetEvent();
+
+        CancelWatcher Watcher;
+        byte[] TmpRecvBuffer;
+
+        public Fifo RecvTcpFifo { get; } = new Fifo();
+        public Fifo SendTcpFifo { get; } = new Fifo();
+
+        public Queue<UdpPacket> RecvUdpQueue { get; } = new Queue<UdpPacket>();
+        public Queue<UdpPacket> SendUdpQueue { get; } = new Queue<UdpPacket>();
+
+        int MaxRecvFifoSize;
+        int MaxRecvUdpQueueSize;
+
+        Task RecvLoopTask = null;
+        Task SendLoopTask = null;
+
+        public NonBlockSocket(Socket s, CancellationToken cancel = default(CancellationToken), int tmp_buffer_size = 65536, int max_recv_buffer_size = 65536, int max_recv_udp_queue_size = 4096)
+        {
+            if (tmp_buffer_size < 65536) tmp_buffer_size = 65536;
+            TmpRecvBuffer = new byte[tmp_buffer_size];
+            MaxRecvFifoSize = max_recv_buffer_size;
+            MaxRecvUdpQueueSize = max_recv_udp_queue_size;
+
+            EventSendReady.Set();
+            EventRecvReady.Set();
+
+            Sock = s;
+            IsStream = (s.SocketType == SocketType.Stream);
+            Watcher = new CancelWatcher(cancel);
+
+            if (IsStream)
+            {
+                RecvLoopTask = TCP_RecvLoop();
+                SendLoopTask = TCP_SendLoop();
+            }
+            else
+            {
+                RecvLoopTask = UDP_RecvLoop();
+                SendLoopTask = UDP_SendLoop();
+            }
+        }
+
+        async Task TCP_RecvLoop()
+        {
+            try
+            {
+                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                {
+                    while (cancel.IsCancellationRequested == false)
+                    {
+                        int r = await Sock.ReceiveAsync(TmpRecvBuffer, SocketFlags.None, cancel);
+                        if (r <= 0) break;
+
+                        while (cancel.IsCancellationRequested == false)
+                        {
+                            lock (RecvTcpFifo)
+                            {
+                                if (RecvTcpFifo.Size <= MaxRecvFifoSize)
+                                {
+                                    RecvTcpFifo.Write(TmpRecvBuffer, r);
+                                    break;
+                                }
+                            }
+
+                            await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
+                                timeout: 10);
+                        }
+
+                        EventRecvReady.Set();
+                    }
+
+                    return 0;
+                },
+                cancel: Watcher.CancelToken
+                );
+            }
+            finally
+            {
+                this.Watcher.Cancel();
+                EventSendReady.Set();
+                EventRecvReady.Set();
+            }
+        }
+
+        async Task UDP_RecvLoop()
+        {
+            try
+            {
+                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                {
+                    while (cancel.IsCancellationRequested == false)
+                    {
+                        SocketReceiveFromResult r = await Sock.ReceiveFromSafeUdpErrorAsync(new ArraySegment<byte>(TmpRecvBuffer).Slice(0), SocketFlags.None);
+
+                        while (cancel.IsCancellationRequested == false)
+                        {
+                            lock (RecvUdpQueue)
+                            {
+                                if (RecvUdpQueue.Count <= MaxRecvUdpQueueSize)
+                                {
+                                    RecvUdpQueue.Enqueue(new UdpPacket(TmpRecvBuffer.AsSpan(0, r.ReceivedBytes).ToArray(), (IPEndPoint)r.RemoteEndPoint));
+                                    break;
+                                }
+                            }
+
+                            await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
+                                timeout: 10);
+                        }
+
+                        EventRecvReady.Set();
+                    }
+
+                    return 0;
+                },
+                cancel: Watcher.CancelToken
+                );
+            }
+            finally
+            {
+                this.Watcher.Cancel();
+                EventSendReady.Set();
+                EventRecvReady.Set();
+            }
+        }
+
+        async Task TCP_SendLoop()
+        {
+            try
+            {
+                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                {
+                    while (cancel.IsCancellationRequested == false)
+                    {
+                        byte[] send_data = null;
+
+                        while (cancel.IsCancellationRequested == false)
+                        {
+                            lock (SendTcpFifo)
+                            {
+                                send_data = SendTcpFifo.Read();
+                            }
+
+                            if (send_data != null && send_data.Length >= 1)
+                            {
+                                break;
+                            }
+
+                            await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
+                                auto_events: new AsyncAutoResetEvent[] { EventSendNow });
+                        }
+
+                        int r = await Sock.SendAsync(send_data, SocketFlags.None, cancel);
+                        if (r <= 0) break;
+
+                        EventSendReady.Set();
+                    }
+
+                    return 0;
+                },
+                cancel: Watcher.CancelToken
+                );
+            }
+            finally
+            {
+                this.Watcher.Cancel();
+                EventSendReady.Set();
+                EventRecvReady.Set();
+            }
+        }
+
+        async Task UDP_SendLoop()
+        {
+            try
+            {
+                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                {
+                    while (cancel.IsCancellationRequested == false)
+                    {
+                        UdpPacket pkt = null;
+
+                        while (cancel.IsCancellationRequested == false)
+                        {
+                            lock (SendUdpQueue)
+                            {
+                                if (SendUdpQueue.Count >= 1)
+                                {
+                                    pkt = SendUdpQueue.Dequeue();
+                                }
+                            }
+
+                            if (pkt != null)
+                            {
+                                break;
+                            }
+
+                            await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
+                                auto_events: new AsyncAutoResetEvent[] { EventSendNow });
+                        }
+
+                        int r = await Sock.SendToSafeUdpErrorAsync(pkt.Data, SocketFlags.None, pkt.EndPoint);
+                        if (r <= 0) break;
+
+                        EventSendReady.Set();
+                    }
+
+                    return 0;
+                },
+                cancel: Watcher.CancelToken
+                );
+            }
+            finally
+            {
+                this.Watcher.Cancel();
+                EventSendReady.Set();
+                EventRecvReady.Set();
+            }
+        }
+
+        Once dispose;
+        public void Dispose()
+        {
+            if (dispose.IsFirstCall())
+            {
+                Watcher.DisposeSafe();
+                Sock.DisposeSafe();
+            }
+        }
+
     }
 }
 

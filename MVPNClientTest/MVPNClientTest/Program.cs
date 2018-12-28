@@ -23,8 +23,101 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            WebSocketHelper.Aead_ChaCha20Poly1305_Ietf_Test();
             //test0().Wait();
+            //nb_socket_tcp_test().Wait();
+            nb_socket_udp_proc().Wait();
+            //async_test2().LaissezFaire();
+            //async_test1().Wait();
+            //Thread.Sleep(-1);
+        }
+
+        static async Task nb_socket_udp_proc()
+        {
+            UdpClient uc = new UdpClient(AddressFamily.InterNetwork);
+            uc.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
+            Console.WriteLine($"port: {((IPEndPoint)uc.Client.LocalEndPoint).Port}");
+
+            IPAddress server_ip = IPAddress.Parse("130.158.6.60");
+
+            using (NonBlockSocket b = new NonBlockSocket(uc.Client))
+            {
+                long next_send = 0;
+                while (b.IsDisconnected == false)
+                {
+                    long now = Time.Tick64;
+                    if (next_send == 0 || next_send <= now)
+                    {
+                        next_send = now + 500;
+
+                        lock (b.SendUdpQueue)
+                        {
+                            b.SendUdpQueue.Enqueue(new UdpPacket(new byte[] { (byte)'B' }, new IPEndPoint(server_ip, 5004)));
+                        }
+
+                        b.EventSendNow.Set();
+                    }
+
+                    lock (b.RecvUdpQueue)
+                    {
+                        while (b.RecvUdpQueue.Count >= 1)
+                        {
+                            UdpPacket pkt = b.RecvUdpQueue.Dequeue();
+                            Dbg.Where($"recv: {pkt.Data.Length} {pkt.EndPoint}");
+                        }
+                    }
+
+                    await WebSocketHelper.WaitObjectsAsync(
+                        cancels: new CancellationToken[] { b.CancelToken },
+                        auto_events: new AsyncAutoResetEvent[] { b.EventRecvReady, b.EventSendReady },
+                        timeout: (int)(next_send - now));
+                    Dbg.Where();
+                }
+                Dbg.Where("Disconnected.");
+            }
+        }
+
+        static async Task nb_socket_tcp_proc(Socket s)
+        {
+            using (NonBlockSocket b = new NonBlockSocket(s))
+            {
+                while (b.IsDisconnected == false)
+                {
+                    byte[] data = null;
+                    lock (b.RecvTcpFifo)
+                    {
+                        data = b.RecvTcpFifo.Read();
+                    }
+                    if (data.Length >= 1)
+                    {
+                        string str = Encoding.UTF8.GetString(data);
+                        Console.Write(str);
+
+                        lock (b.SendTcpFifo)
+                        {
+                            b.SendTcpFifo.Write(data);
+                        }
+                        b.EventSendNow.Set();
+                    }
+                    else
+                    {
+                        await b.EventRecvReady.WaitOneAsync(out _);
+                    }
+                }
+                Dbg.Where("Disconnected.");
+            }
+        }
+
+        static async Task nb_socket_tcp_test()
+        {
+            TcpListener t = new TcpListener(IPAddress.Any, 1);
+            t.Start();
+
+            while (true)
+            {
+                Socket s = await t.AcceptSocketAsync();
+
+                nb_socket_tcp_proc(s).LaissezFaire();
+            }
         }
 
         static async Task test0()
@@ -33,7 +126,8 @@ namespace MVPNClientTest
             {
                 //await test_plain();
                 //await test_ssl();
-                await test_vpn();
+                //await test_vpn();
+                await test_udpa();
             }
             catch (Exception ex)
             {
@@ -45,6 +139,17 @@ namespace MVPNClientTest
             X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             return true;
+        }
+
+        static async Task test_udpa()
+        {
+            UdpAccel a = new UdpAccel(IPAddress.Any, false);
+
+            Console.ReadLine();
+
+            a.Dispose();
+
+            await Task.Yield();
         }
 
         static async Task test_plain()
