@@ -371,7 +371,7 @@ namespace SoftEther.WebSocket
 
             bool use_mask = true;
             byte[] mask = null;
-            if (use_mask) mask = WebSocketHelper.GenRandom(4);
+            if (use_mask) mask = WebSocketHelper.Rand(4);
 
             Buf b = new Buf();
 

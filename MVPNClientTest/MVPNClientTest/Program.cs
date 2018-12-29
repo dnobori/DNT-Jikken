@@ -23,21 +23,11 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            byte[] a = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
-
-            var mem = a.AsMemory().Slice(6);
-
-            int pin = mem.WalkGetPin();
-
-            var slice = mem.WalkAuto(4);
-            mem.WalkAutoWrite((ushort)65535);
-            slice = mem.WalkAuto(4);
-            slice = mem.WalkAuto(4);
-            slice = mem.WalkAuto(4);
-            slice = mem.WalkAuto(4);
-            slice = mem.WalkAuto(4);
-
-            var s2 = mem.SliceWithPin(0, 24);
+            while (true)
+            {
+                long a = WebSocketHelper.Rand32();
+                Console.WriteLine(a);
+            }
 
             return;
 
@@ -219,7 +209,6 @@ namespace MVPNClientTest
                     }
                     else
                     {
-                        int num = 0;
                         AsyncBulkReader<byte[], int> reader = new AsyncBulkReader<byte[], int>(async state =>
                         {
                             //num++;
@@ -293,7 +282,6 @@ namespace MVPNClientTest
                         }
                         else
                         {
-                            int num = 0;
                             AsyncBulkReader<byte[], int> reader = new AsyncBulkReader<byte[], int>(async state =>
                             {
                                 //num++;
@@ -454,7 +442,7 @@ namespace MVPNClientTest
                 eth.Write(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, });
                 eth.Write(new byte[] { 0x00, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, });
                 eth.WriteShort(0x0800);
-                eth.Write(WebSocketHelper.GenRandom(32));
+                eth.Write(WebSocketHelper.Rand(32));
 
                 this.p.SendPackets(new VpnPacket[] { new VpnPacket(VpnProtocolPacketType.Ethernet, eth.ByteData) });
 

@@ -718,15 +718,179 @@ namespace SoftEther.WebSocket.Helper
             catch { }
         }
 
-        public static byte[] GenRandom(int size)
+        public static byte[] Rand(int size) { byte[] r = new byte[size]; Rand(r); return r; }
+
+        public static void Rand(Span<byte> dest)
         {
             lock (random)
             {
-                byte[] ret = new byte[size];
-                random.NextBytes(ret);
-                return ret;
+                random.NextBytes(dest);
             }
         }
+
+        public static byte Rand8()
+        {
+            Span<byte> mem = stackalloc byte[1];
+            Rand(mem);
+            return mem.ToByte();
+        }
+
+        public static ushort Rand16()
+        {
+            Span<byte> mem = stackalloc byte[2];
+            Rand(mem);
+            return mem.ToUShort();
+        }
+
+        public static uint Rand32()
+        {
+            Span<byte> mem = stackalloc byte[4];
+            Rand(mem);
+            return mem.ToUInt();
+        }
+
+        public static ulong Rand64()
+        {
+            Span<byte> mem = stackalloc byte[8];
+            Rand(mem);
+            return mem.ToUInt64();
+        }
+
+        public static byte Rand7()
+        {
+            Span<byte> mem = stackalloc byte[1];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToByte();
+        }
+
+        public static ushort Rand15()
+        {
+            Span<byte> mem = stackalloc byte[2];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToUShort();
+        }
+
+        public static uint Rand31()
+        {
+            Span<byte> mem = stackalloc byte[4];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToUInt();
+        }
+
+        public static ulong Rand63()
+        {
+            Span<byte> mem = stackalloc byte[8];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToUInt64();
+        }
+
+        public static sbyte Rand8i()
+        {
+            Span<byte> mem = stackalloc byte[1];
+            Rand(mem);
+            return mem.ToSByte();
+        }
+
+        public static short Rand16i()
+        {
+            Span<byte> mem = stackalloc byte[2];
+            Rand(mem);
+            return mem.ToSShort();
+        }
+
+        public static int Rand32i()
+        {
+            Span<byte> mem = stackalloc byte[4];
+            Rand(mem);
+            return mem.ToSInt();
+        }
+
+        public static long Rand64i()
+        {
+            Span<byte> mem = stackalloc byte[8];
+            Rand(mem);
+            return mem.ToSInt64();
+        }
+
+        public static sbyte Rand7i()
+        {
+            Span<byte> mem = stackalloc byte[1];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToSByte();
+        }
+
+        public static short Rand15i()
+        {
+            Span<byte> mem = stackalloc byte[2];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToSShort();
+        }
+
+        public static int Rand31i()
+        {
+            Span<byte> mem = stackalloc byte[4];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToSInt();
+        }
+
+        public static long Rand63i()
+        {
+            Span<byte> mem = stackalloc byte[8];
+            Rand(mem);
+            mem[0] &= 0x7F;
+            return mem.ToSInt64();
+        }
+
+        public static bool Rand2()
+        {
+            return (Rand32() % 2) == 0;
+        }
+
+        public static int GenRandInterval(int min, int max)
+        {
+            int a = Math.Min(min, max);
+            int b = Math.Max(min, max);
+
+            if (a == b)
+            {
+                return a;
+            }
+
+            return (Rand31i() % (b - 1)) + a;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort Endian16(this ushort v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short Endian16(this short v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint Endian32(this uint v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int Endian32(this int v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong Endian64(this ulong v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long Endian64(this long v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ReverseEndian16(this ushort v) => BinaryPrimitives.ReverseEndianness(v);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short ReverseEndian16(this short v) => BinaryPrimitives.ReverseEndianness(v);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ReverseEndian32(this uint v) => BinaryPrimitives.ReverseEndianness(v);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ReverseEndian32(this int v) => BinaryPrimitives.ReverseEndianness(v);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ReverseEndian64(this ulong v) => BinaryPrimitives.ReverseEndianness(v);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long EndiaReverseEndian64n64(this long v) => BinaryPrimitives.ReverseEndianness(v);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static byte[] ToBinary(this byte value) { var r = new byte[1]; value.ToBinary(r); return r; }
@@ -892,9 +1056,6 @@ namespace SoftEther.WebSocket.Helper
         public static long WalkReadSInt64(ref this Span<byte> span) => span.WalkRead(8).ToSInt64();
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkWrite(ref this Memory<byte> memory, Memory<byte> data) => data.CopyTo(memory.Walk(data.Length));
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Memory<byte> Walk(ref this Memory<byte> memory, int size)
         {
             if (size == 0) return Memory<byte>.Empty;
@@ -933,7 +1094,16 @@ namespace SoftEther.WebSocket.Helper
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Memory<byte> WalkAuto(ref this Memory<byte> memory, int size)
+        public static void WalkAutoRynamicEnsureReserveBuffer(ref this Memory<byte> memory, int size) => memory.WalkAutoInternal(size, false, true);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Memory<byte> WalkAutoDynamic(ref this Memory<byte> memory, int size) => memory.WalkAutoInternal(size, false, false);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Memory<byte> WalkAutoStatic(ref this Memory<byte> memory, int size) => memory.WalkAutoInternal(size, true, false);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static Memory<byte> WalkAutoInternal(ref this Memory<byte> memory, int size, bool no_realloc, bool no_step)
         {
             if (size == 0) return Memory<byte>.Empty;
             if (size < 0) throw new ArgumentOutOfRangeException("size");
@@ -957,19 +1127,36 @@ namespace SoftEther.WebSocket.Helper
             byte[] new_array = a.Array;
             if (new_array.Length < new_len)
             {
-                Dbg.Where($"realloc {new_len}");
+                if (no_realloc)
+                {
+                    throw new ArgumentOutOfRangeException("Internal byte array overflow: array.Length < new_len");
+                }
                 new_array = a.Array.ReAlloc(new_len);
             }
 
-            a = new ArraySegment<byte>(new_array, a.Offset, Math.Max(a.Count, size));
+            if (no_step == false)
+            {
+                a = new ArraySegment<byte>(new_array, a.Offset, Math.Max(a.Count, size));
+            }
+            else
+            {
+                a = new ArraySegment<byte>(new_array, a.Offset, a.Count);
+            }
+
             var m = a.AsMemory();
 
-            var ret = m.Walk(size);
-
-            memory = m;
-            return ret;
+            if (no_step == false)
+            {
+                var ret = m.Walk(size);
+                memory = m;
+                return ret;
+            }
+            else
+            {
+                memory = m;
+                return Memory<byte>.Empty;
+            }
         }
-
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WalkWrite(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.Walk(1));
@@ -987,24 +1174,58 @@ namespace SoftEther.WebSocket.Helper
         public static void WalkWrite(ref this Memory<byte> memory, int value) => value.ToBinary(memory.Walk(4));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static void WalkWrite(ref this Memory<byte> memory, long value) => value.ToBinary(memory.Walk(8));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, Memory<byte> data) => data.CopyTo(memory.Walk(data.Length));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, Span<byte> data) => data.CopyTo(memory.Walk(data.Length).Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, byte[] data) => data.CopyTo(memory.Walk(data.Length).Span);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAuto(1));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAutoDynamic(1));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAuto(2));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAutoDynamic(2));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAuto(4));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAutoDynamic(4));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAuto(8));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAutoDynamic(8));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAuto(1));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAutoDynamic(1));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAuto(2));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAutoDynamic(2));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAuto(4));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAutoDynamic(4));
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static void WalkAutoWrite(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAuto(8));
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAutoDynamic(8));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, Memory<byte> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, Span<byte> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoDynamicWrite(ref this Memory<byte> memory, byte[] data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
 
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAutoStatic(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAutoStatic(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAutoStatic(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAutoStatic(8));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAutoStatic(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAutoStatic(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAutoStatic(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAutoStatic(8));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, Memory<byte> data) => data.CopyTo(memory.WalkAutoStatic(data.Length));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, Span<byte> data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoStaticWrite(ref this Memory<byte> memory, byte[] data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static Memory<byte> WalkRead(ref this Memory<byte> memory, int size) => memory.Walk(size);
@@ -2066,7 +2287,18 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void Set()
+        volatile bool queued_set = false;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void QueueSet() => queued_set = true;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public void SetIfQueued(bool softly = false)
+        {
+            if (queued_set) Set(softly);
+        }
+
+        public void Set(bool softly = false)
         {
             AsyncManualResetEvent ev = null;
             lock (lockobj)
@@ -2085,7 +2317,7 @@ namespace SoftEther.WebSocket.Helper
 
             if (ev != null)
             {
-                ev.Set();
+                ev.Set(softly);
             }
         }
     }
@@ -2132,8 +2364,14 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void Set()
+        public void Set(bool softly = false)
         {
+            if (softly)
+            {
+                Task.Factory.StartNew(() => Set());
+                return;
+            }
+
             lock (lockobj)
             {
                 if (is_set == false)
@@ -2282,7 +2520,7 @@ namespace SoftEther.WebSocket.Helper
         public Queue<UdpPacket> SendUdpQueue { get; } = new Queue<UdpPacket>();
 
         int MaxRecvFifoSize;
-        int MaxRecvUdpQueueSize;
+        public int MaxRecvUdpQueueSize { get; }
 
         Task RecvLoopTask = null;
         Task SendLoopTask = null;

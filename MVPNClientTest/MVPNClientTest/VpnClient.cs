@@ -356,7 +356,7 @@ namespace SoftEther.VpnClient
             VpnJsonClientHello client_hello = new VpnJsonClientHello()
             {
                 MvpnProtocolVersion_u32 = 100,
-                Nonce_bin = WebSocketHelper.GenRandom(128),
+                Nonce_bin = WebSocketHelper.Rand(128),
                 Implementation_str = ".NET Test Client",
                 NetworkName_str = "DEFAULT",
             };
@@ -695,7 +695,7 @@ namespace SoftEther.VpnClient
             }
             else
             {
-                tmp = WebSocketHelper.ByteToHex(WebSocketHelper.GenRandom(4));
+                tmp = WebSocketHelper.ByteToHex(WebSocketHelper.Rand(4));
             }
             tmp = tmp.ToLowerInvariant();
             return $"x{tmp[2]}.x{tmp[3]}.servers.nat-traversal.softether-network.net.";
