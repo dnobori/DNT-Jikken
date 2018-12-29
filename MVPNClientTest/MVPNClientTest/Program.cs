@@ -23,6 +23,24 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
+            byte[] a = new byte[] { 1, 2, 3, 4, 5, 6, 7, 8 };
+
+            var mem = a.AsMemory().Slice(6);
+
+            int pin = mem.WalkGetPin();
+
+            var slice = mem.WalkAuto(4);
+            mem.WalkAutoWrite((ushort)65535);
+            slice = mem.WalkAuto(4);
+            slice = mem.WalkAuto(4);
+            slice = mem.WalkAuto(4);
+            slice = mem.WalkAuto(4);
+            slice = mem.WalkAuto(4);
+
+            var s2 = mem.SliceWithPin(0, 24);
+
+            return;
+
             //test0().Wait();
             //nb_socket_tcp_test().Wait();
             nb_socket_udp_proc().Wait();
@@ -63,6 +81,10 @@ namespace MVPNClientTest
                         {
                             UdpPacket pkt = b.RecvUdpQueue.Dequeue();
                             Dbg.Where($"recv: {pkt.Data.Length} {pkt.EndPoint}");
+
+                            string tmp = Encoding.ASCII.GetString(pkt.Data);
+                            var ep = UdpAccel.ParseIPAndPortStr(tmp);
+                            Console.WriteLine(ep);
                         }
                     }
 
@@ -125,9 +147,17 @@ namespace MVPNClientTest
             try
             {
                 //await test_plain();
-                //await test_ssl();
                 //await test_vpn();
                 await test_udpa();
+            }
+            catch (Exception ex)
+            {
+                WriteLine(ex.ToString());
+            }
+
+            try
+            {
+                await test_ssl();
             }
             catch (Exception ex)
             {
@@ -154,7 +184,7 @@ namespace MVPNClientTest
 
         static async Task test_plain()
         {
-            string hostname = "echo.websocket.org";
+            string hostname = "jp.softether-download.com";
             int port = 80;
 
             using (TcpClient tc = new TcpClient())
@@ -164,34 +194,65 @@ namespace MVPNClientTest
 
                 WriteLine("connected.");
 
-                using (NetworkStream st = tc.GetStream())
+                using (NetworkStream ssl = tc.GetStream())
                 {
-                    using (WebSocketStream s = new WebSocketStream(st))
+                    string text = $"GET /files/softether/v4.28-9669-beta-2018.09.11-tree/Windows/Admin_Tools/VPN_Server_Manager_and_Command-line_Utility_Package/softether-vpn_admin_tools-v4.28-9669-beta-2018.09.11-win32.zip HTTP/1.1\r\nHOST: {hostname}\r\n\r\n";
+                    byte[] bin = Encoding.UTF8.GetBytes(text);
+
+                    //await ssl.WriteAsync(bin, 0, bin.Length);
+
+                    for (int i = 0; i < bin.Length; i++)
                     {
-                        await s.OpenAsync("ws://echo.websocket.org");
-                        WriteLine("opened.");
-
-                        while (true)
-                        {
-                            string hello = "Hello World";
-                            byte[] hello_bytes = hello.AsciiToByteArray();
-                            await s.WriteAsync(hello_bytes.AsMemory());
-                            WriteLine("Sent.");
-
-                            byte[] recv_buffer = new byte[128];
-                            int recv_ret = await s.ReadAsync(recv_buffer, 0, recv_buffer.Length);
-                            WriteLine($"Recv: \"{recv_buffer.AsSpan(0, recv_ret).ToArray().ByteArrayToAscii()}\"");
-                        }
-
-                        Thread.Sleep(-1);
+                        await ssl.WriteAsyncWithTimeout(new byte[1] { bin[i] }, timeout: 1000);
+                        WriteLine("send: " + i);
                     }
+
+                    if (false)
+                    {
+                        int total_size = 0;
+                        for (int i = 0; ; i++)
+                        {
+                            byte[] ret = await ssl.ReadAsyncWithTimeout(65536, read_all: false, timeout: 10000);
+                            total_size += ret.Length;
+                            WriteLine("recv: " + i + " " + ret.Length + "    total: " + total_size);
+                        }
+                    }
+                    else
+                    {
+                        int num = 0;
+                        AsyncBulkReader<byte[], int> reader = new AsyncBulkReader<byte[], int>(async state =>
+                        {
+                            //num++;
+                            //if ((num % 3) == 0) await Task.Yield();
+                            //if (num >= 20) await Task.Delay(-1);
+                            //return new byte[65536];
+                            //return await ssl.ReadAsyncWithTimeout(1, read_all: false, timeout: -1);
+
+                            byte[] ret = new byte[1];
+                            int r = await ssl.ReadAsync(ret);
+                            return ret;
+                            //byte[] ret = new byte[65536];
+                            //int r = await ssl.ReadAsync(ret);
+                            //return ret.AsSpan().Slice(0, r).ToArray();
+                        });
+
+                        int total_size = 0;
+                        for (int i = 0; ; i++)
+                        {
+                            byte[][] ret = await reader.Read(max_count: 100000);
+                            total_size += ret.Length;
+                            WriteLine("recv_bulk: " + i + " " + ret.Length + "    total: " + total_size);
+                        }
+                    }
+
+                    WriteLine();
                 }
             }
         }
 
         static async Task test_ssl()
         {
-            string hostname = "www.google.com";
+            string hostname = "jp.softether-download.com";
             int port = 443;
 
             using (TcpClient tc = new TcpClient())
@@ -209,7 +270,7 @@ namespace MVPNClientTest
                         await ssl.AuthenticateAsClientAsync(hostname);
                         WriteLine("end ssl");
 
-                        string text = "GET / HTTP/1.1\r\nHOST: www.google.com\r\n\r\n";
+                        string text = $"GET /files/softether/v4.28-9669-beta-2018.09.11-tree/Windows/Admin_Tools/VPN_Server_Manager_and_Command-line_Utility_Package/softether-vpn_admin_tools-v4.28-9669-beta-2018.09.11-win32.zip HTTP/1.1\r\nHOST: {hostname}\r\n\r\n";
                         byte[] bin = Encoding.UTF8.GetBytes(text);
 
                         //await ssl.WriteAsync(bin, 0, bin.Length);
@@ -220,10 +281,39 @@ namespace MVPNClientTest
                             WriteLine("send: " + i);
                         }
 
-                        for (int i =0; ;i++)
+                        if (false)
                         {
-                            byte[] ret = await ssl.ReadAsyncWithTimeout(1, read_all: true, timeout: 1000);
-                            WriteLine("recv: " + i + " " + ret.Length);
+                            int total_size = 0;
+                            for (int i = 0; ; i++)
+                            {
+                                byte[] ret = await ssl.ReadAsyncWithTimeout(65536, read_all: false, timeout: 10000);
+                                total_size += ret.Length;
+                                WriteLine("recv: " + i + " " + ret.Length + "    total: " + total_size);
+                            }
+                        }
+                        else
+                        {
+                            int num = 0;
+                            AsyncBulkReader<byte[], int> reader = new AsyncBulkReader<byte[], int>(async state =>
+                            {
+                                //num++;
+                                //if ((num % 3) == 0) await Task.Yield();
+                                //if (num >= 20) await Task.Delay(-1);
+                                //return new byte[65536];
+                                return await ssl.ReadAsyncWithTimeout(1, read_all: false, timeout: 3000);
+
+                                //byte[] ret = new byte[65536];
+                                //int r = await ssl.ReadAsync(ret);
+                                //return ret.AsSpan().Slice(0, r).ToArray();
+                            });
+
+                            int total_size = 0;
+                            for (int i = 0; ; i++)
+                            {
+                                byte[][] ret = await reader.Read(max_count: 100000);
+                                total_size += ret.Length;
+                                WriteLine("recv_bulk: " + i + " " + ret.Length);
+                            }
                         }
 
                         WriteLine();

@@ -310,17 +310,17 @@ namespace SoftEther.WebSocket
 
                 if (buf.Length <= 2) return null;
 
-                byte flag_and_opcode = buf.ReadByte();
-                byte mask_and_payload_len = buf.ReadByte();
+                byte flag_and_opcode = buf.WalkReadByte();
+                byte mask_and_payload_len = buf.WalkReadByte();
                 int mask_flag = mask_and_payload_len & 0x80;
                 int payload_len = mask_and_payload_len & 0x7F;
                 if (payload_len == 126)
                 {
-                    payload_len = buf.ReadShort();
+                    payload_len = buf.WalkReadUShort();
                 }
                 else if (payload_len == 127)
                 {
-                    ulong u64 = buf.ReadInt64();
+                    ulong u64 = buf.WalkReadUInt64();
                     if (u64 >= int.MaxValue)
                     {
                         this.HasError = true;
@@ -338,12 +338,12 @@ namespace SoftEther.WebSocket
                 var mask_key = Span<byte>.Empty;
                 if (mask_flag != 0)
                 {
-                    mask_key = buf.Read(4);
+                    mask_key = buf.WalkRead(4);
                 }
 
                 Frame f = new Frame()
                 {
-                    Data = buf.Read(payload_len).ToArray(),
+                    Data = buf.WalkRead(payload_len).ToArray(),
                     Opcode = (WebSocketOpcode)(flag_and_opcode & 0xF),
                 };
 

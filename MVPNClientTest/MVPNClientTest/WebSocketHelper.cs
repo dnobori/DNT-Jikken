@@ -20,6 +20,7 @@ using Org.BouncyCastle.Crypto.Engines;
 using Org.BouncyCastle.Crypto.Macs;
 using Org.BouncyCastle.Crypto.Parameters;
 using System.Runtime.InteropServices;
+using System.Buffers.Binary;
 
 #pragma warning disable CS0162, CS1998
 
@@ -631,7 +632,7 @@ namespace SoftEther.WebSocket.Helper
 
         static readonly IPEndPoint udp_ep_ipv4 = new IPEndPoint(IPAddress.Any, 0);
         static readonly IPEndPoint udp_ep_ipv6 = new IPEndPoint(IPAddress.IPv6Any, 0);
-        const int udp_max_retry_on_ignore_error = 5;
+        const int udp_max_retry_on_ignore_error = 1000;
         public static async Task<SocketReceiveFromResult> ReceiveFromSafeUdpErrorAsync(this Socket socket, ArraySegment<byte> buffer, SocketFlags socketFlags)
         {
             int num_retry = 0;
@@ -641,17 +642,16 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 Task<SocketReceiveFromResult> t = socket.ReceiveFromAsync(buffer, socketFlags, socket.AddressFamily == AddressFamily.InterNetworkV6 ? udp_ep_ipv6 : udp_ep_ipv4);
-                if (t.IsCompleted)
-                {
-                    return t.Result;
-                }
-                else
+                if (t.IsCompleted == false)
                 {
                     num_retry = 0;
-                    return await t;
+                    await t;
                 }
+                SocketReceiveFromResult ret = t.Result;
+                if (ret.ReceivedBytes <= 0) throw new ApplicationException("UDP socket is disconnected.");
+                return ret;
             }
-            catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e))
+            catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e) || socket.Available >= 1)
             {
                 num_retry++;
                 if (num_retry >= udp_max_retry_on_ignore_error)
@@ -671,15 +671,14 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 Task<int> t = socket.SendToAsync(buffer, socketFlags, remoteEP);
-                if (t.IsCompleted)
-                {
-                    return t.Result;
-                }
-                else
+                if (t.IsCompleted == false)
                 {
                     num_retry = 0;
-                    return await t;
+                    await t;
                 }
+                int ret = t.Result;
+                if (ret <= 0) throw new ApplicationException("UDP socket is disconnected.");
+                return ret;
             }
             catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e))
             {
@@ -730,80 +729,327 @@ namespace SoftEther.WebSocket.Helper
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ushort ToShort(this byte[] data)
-        {
-            data = (byte[])data.Clone();
-            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
-            return BitConverter.ToUInt16(data, 0);
-        }
+        public static byte[] ToBinary(this byte value) { var r = new byte[1]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ToBinary(this ushort value) { var r = new byte[2]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ToBinary(this uint value) { var r = new byte[4]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ToBinary(this ulong value) { var r = new byte[8]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ToBinary(this sbyte value) { var r = new byte[1]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ToBinary(this short value) { var r = new byte[2]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ToBinary(this int value) { var r = new byte[4]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ToBinary(this long value) { var r = new byte[8]; value.ToBinary(r); return r; }
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this byte value, byte[] dest) => dest[0] = value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this ushort value, byte[] dest) => BinaryPrimitives.WriteUInt16BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this uint value, byte[] dest) => BinaryPrimitives.WriteUInt32BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this ulong value, byte[] dest) => BinaryPrimitives.WriteUInt64BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this sbyte value, byte[] dest) => dest[0] = (byte)value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this short value, byte[] dest) => BinaryPrimitives.WriteInt16BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this int value, byte[] dest) => BinaryPrimitives.WriteInt32BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this long value, byte[] dest) => BinaryPrimitives.WriteInt64BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this byte value, Span<byte> dest) => dest[0] = value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this ushort value, Span<byte> dest) => BinaryPrimitives.WriteUInt16BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this uint value, Span<byte> dest) => BinaryPrimitives.WriteUInt32BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this ulong value, Span<byte> dest) => BinaryPrimitives.WriteUInt64BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this sbyte value, Span<byte> dest) => dest[0] = (byte)value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this short value, Span<byte> dest) => BinaryPrimitives.WriteInt16BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this int value, Span<byte> dest) => BinaryPrimitives.WriteInt32BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this long value, Span<byte> dest) => BinaryPrimitives.WriteInt64BigEndian(dest, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this byte value, Memory<byte> dest) => dest.Span[0] = value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this ushort value, Memory<byte> dest) => BinaryPrimitives.WriteUInt16BigEndian(dest.Span, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this uint value, Memory<byte> dest) => BinaryPrimitives.WriteUInt32BigEndian(dest.Span, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this ulong value, Memory<byte> dest) => BinaryPrimitives.WriteUInt64BigEndian(dest.Span, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this sbyte value, Memory<byte> dest) => dest.Span[0] = (byte)value;
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this short value, Memory<byte> dest) => BinaryPrimitives.WriteInt16BigEndian(dest.Span, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this int value, Memory<byte> dest) => BinaryPrimitives.WriteInt32BigEndian(dest.Span, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void ToBinary(this long value, Memory<byte> dest) => BinaryPrimitives.WriteInt64BigEndian(dest.Span, value);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte ToByte(this Span<byte> data) => data[0];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte ToByte(this Memory<byte> data) => data.Span[0];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte ToByte(this byte[] data) => data[0];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ToUShort(this Span<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ToUShort(this Memory<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data.Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort ToUShort(this byte[] data) => BinaryPrimitives.ReadUInt16BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ToUInt(this Span<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ToUInt(this Memory<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data.Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint ToUInt(this byte[] data) => BinaryPrimitives.ReadUInt32BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ToUInt64(this Span<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ToUInt64(this Memory<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data.Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong ToUInt64(this byte[] data) => BinaryPrimitives.ReadUInt64BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte ToSByte(this Span<byte> data) => (sbyte)data[0];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte ToSByte(this Memory<byte> data) => (sbyte)data.Span[0];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte ToSByte(this byte[] data) => (sbyte)data[0];
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short ToSShort(this Span<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short ToSShort(this Memory<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data.Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short ToSShort(this byte[] data) => BinaryPrimitives.ReadInt16BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ToSInt(this Span<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ToSInt(this Memory<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data.Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int ToSInt(this byte[] data) => BinaryPrimitives.ReadInt32BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long ToSInt64(this Span<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long ToSInt64(this Memory<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data.Span);
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long ToSInt64(this byte[] data) => BinaryPrimitives.ReadInt64BigEndian(data);
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ToInt(this byte[] data)
-        {
-            data = (byte[])data.Clone();
-            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
-            return BitConverter.ToUInt32(data, 0);
-        }
+        public static void WalkWrite(ref this Span<byte> span, Span<byte> data) => data.CopyTo(span.Walk(data.Length));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong ToInt64(this byte[] data)
+        public static Span<byte> Walk(ref this Span<byte> span, int size)
         {
-            data = (byte[])data.Clone();
-            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
-            return BitConverter.ToUInt64(data, 0);
-        }
-
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static Span<byte> Read(ref this Span<byte> span, int size)
-        {
-            if (size < 0) throw new ArgumentOutOfRangeException();
             if (size == 0) return Span<byte>.Empty;
-            Span<byte> ret = span.Slice(0, size);
+            if (size < 0) throw new ArgumentOutOfRangeException("size");
+            var original = span;
             span = span.Slice(size);
+            return original.Slice(0, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, byte value) => value.ToBinary(span.Walk(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, ushort value) => value.ToBinary(span.Walk(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, uint value) => value.ToBinary(span.Walk(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, ulong value) => value.ToBinary(span.Walk(8));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, sbyte value) => value.ToBinary(span.Walk(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, short value) => value.ToBinary(span.Walk(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, int value) => value.ToBinary(span.Walk(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Span<byte> span, long value) => value.ToBinary(span.Walk(8));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Span<byte> WalkRead(ref this Span<byte> span, int size) => span.Walk(size);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte WalkReadByte(ref this Span<byte> span) => span.WalkRead(1).ToByte();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort WalkReadUShort(ref this Span<byte> span) => span.WalkRead(2).ToUShort();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint WalkReadUInt(ref this Span<byte> span) => span.WalkRead(4).ToUInt();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong WalkReadUInt64(ref this Span<byte> span) => span.WalkRead(8).ToUInt64();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte WalkReadSByte(ref this Span<byte> span) => span.WalkRead(1).ToSByte();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short WalkReadSShort(ref this Span<byte> span) => span.WalkRead(2).ToSShort();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int WalkReadSInt(ref this Span<byte> span) => span.WalkRead(4).ToSInt();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long WalkReadSInt64(ref this Span<byte> span) => span.WalkRead(8).ToSInt64();
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, Memory<byte> data) => data.CopyTo(memory.Walk(data.Length));
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Memory<byte> Walk(ref this Memory<byte> memory, int size)
+        {
+            if (size == 0) return Memory<byte>.Empty;
+            if (size < 0) throw new ArgumentOutOfRangeException("size");
+            var original = memory;
+            memory = memory.Slice(size);
+            return original.Slice(0, size);
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int WalkGetPin(this Memory<byte> memory) => memory.AsSegment().Offset;
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Memory<byte> SliceWithPin(this Memory<byte> memory, int pin, int? size = null)
+        {
+            if (size == 0) return Memory<byte>.Empty;
+            if (pin < 0) throw new ArgumentOutOfRangeException("pin");
+
+            ArraySegment<byte> a = memory.AsSegment();
+            if (size == null)
+            {
+                size = a.Offset + a.Count - pin;
+            }
+            if (size < 0) throw new ArgumentOutOfRangeException("size");
+            if ((a.Offset + a.Count) < pin)
+            {
+                throw new ArgumentOutOfRangeException("(a.Offset + a.Count) < pin");
+            }
+            if ((a.Offset + a.Count) < (pin + size))
+            {
+                throw new ArgumentOutOfRangeException("(a.Offset + a.Count) < (pin + size)");
+            }
+
+            ArraySegment<byte> b = new ArraySegment<byte>(a.Array, pin, size ?? 0);
+            return b.AsMemory();
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static Memory<byte> WalkAuto(ref this Memory<byte> memory, int size)
+        {
+            if (size == 0) return Memory<byte>.Empty;
+            if (size < 0) throw new ArgumentOutOfRangeException("size");
+            if (memory.Length >= size)
+            {
+                return memory.Walk(size);
+            }
+
+            if (((long)memory.Length + (long)size) > int.MaxValue) throw new OverflowException("size");
+
+            ArraySegment<byte> a = memory.AsSegment();
+            long required_len = (long)a.Offset + (long)a.Count + (long)size;
+            if (required_len > int.MaxValue) throw new OverflowException("size");
+
+            int new_len = a.Array.Length;
+            while (new_len < required_len)
+            {
+                new_len = (int)Math.Min(Math.Max((long)new_len, 1) * 2L, int.MaxValue);
+            }
+
+            byte[] new_array = a.Array;
+            if (new_array.Length < new_len)
+            {
+                Dbg.Where($"realloc {new_len}");
+                new_array = a.Array.ReAlloc(new_len);
+            }
+
+            a = new ArraySegment<byte>(new_array, a.Offset, Math.Max(a.Count, size));
+            var m = a.AsMemory();
+
+            var ret = m.Walk(size);
+
+            memory = m;
             return ret;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static byte ReadByte(ref this Span<byte> span)
-        {
-            byte[] data = span.Read(1).ToArray();
-            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
-            return (byte)data[0];
-        }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ushort ReadShort(ref this Span<byte> span)
-        {
-            byte[] data = span.Read(2).ToArray();
-            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
-            return BitConverter.ToUInt16(data, 0);
-        }
+        public static void WalkWrite(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.Walk(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.Walk(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.Walk(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.Walk(8));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.Walk(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, short value) => value.ToBinary(memory.Walk(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, int value) => value.ToBinary(memory.Walk(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkWrite(ref this Memory<byte> memory, long value) => value.ToBinary(memory.Walk(8));
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static uint ReadInt(ref this Span<byte> span)
-        {
-            byte[] data = span.Read(4).ToArray();
-            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
-            return BitConverter.ToUInt32(data, 0);
-        }
+        public static void WalkAutoWrite(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAuto(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoWrite(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAuto(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoWrite(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAuto(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoWrite(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAuto(8));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoWrite(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAuto(1));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoWrite(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAuto(2));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoWrite(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAuto(4));
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static void WalkAutoWrite(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAuto(8));
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
-        public static ulong ReadInt64(ref this Span<byte> span)
-        {
-            byte[] data = span.Read(8).ToArray();
-            if (WebSocketHelper.IsLittleEndian) Array.Reverse(data);
-            return BitConverter.ToUInt64(data, 0);
-        }
+        public static Memory<byte> WalkRead(ref this Memory<byte> memory, int size) => memory.Walk(size);
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte WalkReadByte(ref this Memory<byte> memory) => memory.WalkRead(1).ToByte();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ushort WalkReadUShort(ref this Memory<byte> memory) => memory.WalkRead(2).ToUShort();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static uint WalkReadUInt(ref this Memory<byte> memory) => memory.WalkRead(4).ToUInt();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static ulong WalkReadUInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToUInt64();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static sbyte WalkReadSByte(ref this Memory<byte> memory) => memory.WalkRead(1).ToSByte();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static short WalkReadSShort(ref this Memory<byte> memory) => memory.WalkRead(2).ToSShort();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static int WalkReadSInt(ref this Memory<byte> memory) => memory.WalkRead(4).ToSInt();
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static long WalkReadSInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToSInt64();
+
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
         public static ArraySegment<T> AsSegment<T>(this Memory<T> memory)
         {
             if (MemoryMarshal.TryGetArray(memory, out ArraySegment<T> seg) == false)
-            {
                 throw new ArgumentException("Memory<T> memory cannot be converted to ArraySegment<T>.");
-            }
 
             return seg;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static byte[] ReAlloc(this byte[] src, int new_size)
+        {
+            if (new_size < 0) throw new ArgumentOutOfRangeException("new_size");
+            if (new_size == src.Length)
+            {
+                return src;
+            }
+            else
+            {
+                byte[] ret = new byte[new_size];
+                Buffer.BlockCopy(src, 0, ret, 0, Math.Min(src.Length, ret.Length));
+                return ret;
+            }
         }
 
         public static string ByteToHex(byte[] data)
@@ -2041,6 +2287,8 @@ namespace SoftEther.WebSocket.Helper
         Task RecvLoopTask = null;
         Task SendLoopTask = null;
 
+        AsyncBulkReader<UdpPacket, int> UdpBulkReader;
+
         public NonBlockSocket(Socket s, CancellationToken cancel = default(CancellationToken), int tmp_buffer_size = 65536, int max_recv_buffer_size = 65536, int max_recv_udp_queue_size = 4096)
         {
             if (tmp_buffer_size < 65536) tmp_buffer_size = 65536;
@@ -2062,6 +2310,12 @@ namespace SoftEther.WebSocket.Helper
             }
             else
             {
+                UdpBulkReader = new AsyncBulkReader<UdpPacket, int>(async x =>
+                {
+                    SocketReceiveFromResult ret = await Sock.ReceiveFromSafeUdpErrorAsync(TmpRecvBuffer, SocketFlags.None);
+                    return new UdpPacket(TmpRecvBuffer.AsSpan().Slice(0, ret.ReceivedBytes).ToArray(), (IPEndPoint)ret.RemoteEndPoint);
+                });
+
                 RecvLoopTask = UDP_RecvLoop();
                 SendLoopTask = UDP_SendLoop();
             }
@@ -2117,24 +2371,38 @@ namespace SoftEther.WebSocket.Helper
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
-                        SocketReceiveFromResult r = await Sock.ReceiveFromSafeUdpErrorAsync(new ArraySegment<byte>(TmpRecvBuffer).Slice(0), SocketFlags.None);
+                        UdpPacket[] recv_packets = await UdpBulkReader.Read();
 
-                        while (cancel.IsCancellationRequested == false)
+                        bool full_queue = false;
+                        bool pkt_received = false;
+
+                        lock (RecvUdpQueue)
                         {
-                            lock (RecvUdpQueue)
+                            foreach (UdpPacket p in recv_packets)
                             {
                                 if (RecvUdpQueue.Count <= MaxRecvUdpQueueSize)
                                 {
-                                    RecvUdpQueue.Enqueue(new UdpPacket(TmpRecvBuffer.AsSpan(0, r.ReceivedBytes).ToArray(), (IPEndPoint)r.RemoteEndPoint));
+                                    RecvUdpQueue.Enqueue(p);
+                                    pkt_received = true;
+                                }
+                                else
+                                {
+                                    full_queue = true;
                                     break;
                                 }
                             }
+                        }
 
+                        if (full_queue)
+                        {
                             await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
                                 timeout: 10);
                         }
 
-                        EventRecvReady.Set();
+                        if (pkt_received)
+                        {
+                            EventRecvReady.Set();
+                        }
                     }
 
                     return 0;
@@ -2243,6 +2511,19 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        public UdpPacket RecvFromNonBlock()
+        {
+            if (IsDisconnected) return null;
+            lock (RecvUdpQueue)
+            {
+                if (RecvUdpQueue.TryDequeue(out UdpPacket ret))
+                {
+                    return ret;
+                }
+            }
+            return null;
+        }
+
         Once dispose;
         public void Dispose()
         {
@@ -2252,7 +2533,64 @@ namespace SoftEther.WebSocket.Helper
                 Sock.DisposeSafe();
             }
         }
+    }
 
+    public class AsyncBulkReader<TUserReturnElement, TUserState>
+    {
+        public delegate Task<TUserReturnElement> AsyncReadProcDelegate(TUserState state);
+
+        public int DefaultMaxCount { get; } = 1024;
+
+        AsyncReadProcDelegate AsyncReadProc;
+
+        public AsyncBulkReader(AsyncReadProcDelegate async_read_proc, int default_max_count = 1024)
+        {
+            DefaultMaxCount = default_max_count;
+            AsyncReadProc = async_read_proc;
+        }
+
+        Task<TUserReturnElement> pushed_user_task = null;
+
+        public async Task<TUserReturnElement[]> Read(TUserState state = default(TUserState), int? max_count = null)
+        {
+            if (max_count == null) max_count = DefaultMaxCount;
+            if (max_count <= 0) max_count = int.MaxValue;
+            List<TUserReturnElement> ret = new List<TUserReturnElement>();
+
+            while (true)
+            {
+                Task<TUserReturnElement> user_task;
+                if (pushed_user_task != null)
+                {
+                    user_task = pushed_user_task;
+                    pushed_user_task = null;
+                }
+                else
+                {
+                    user_task = AsyncReadProc(state);
+                }
+                if (user_task.IsCompleted == false)
+                {
+                    if (ret.Count >= 1)
+                    {
+                        pushed_user_task = user_task;
+                        break;
+                    }
+                    else
+                    {
+                        await user_task;
+                        ret.Add(user_task.Result);
+                    }
+                }
+                else
+                {
+                    ret.Add(user_task.Result);
+                }
+                if (ret.Count >= max_count) break;
+            }
+
+            return ret.ToArray();
+        }
     }
 }
 
