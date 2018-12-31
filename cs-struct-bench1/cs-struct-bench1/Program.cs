@@ -139,58 +139,10 @@ namespace cs_struct_bench1
             }
         }
 
-        static int ReadTest(Span<byte> span) => (int)ToUInt64(span);
-
-        static byte ToUInt8(Span<byte> span)
-        {
-            return span[0];
-        }
-        static sbyte ToSInt8(Span<byte> span) => (sbyte)ToUInt8(span);
-
-        static unsafe ushort ToUInt16(Span<byte> span)
-        {
-            if (span.Length < 2) throw new ArgumentOutOfRangeException("span.Length is too small");
-            fixed (byte* p = span)
-            {
-                return (ushort)((ushort)(p[0] << 8) + (ushort)p[1]);
-            }
-        }
-        static unsafe short ToSInt16(Span<byte> span) => (short)ToUInt16(span);
-
-        static unsafe uint ToUInt32(Span<byte> span)
-        {
-            if (span.Length < 4) throw new ArgumentOutOfRangeException("span.Length is too small");
-            fixed (byte* p = span)
-            {
-                return (uint)((uint)(p[0] << 24) + (uint)(p[1] << 16) + (uint)(p[2] << 8) + (uint)p[3]);
-            }
-        }
-        static unsafe int ToSInt32(Span<byte> span) => (int)ToUInt32(span);
-
-        static unsafe ulong ToUInt64(Span<byte> span)
-        {
-            if (span.Length < 8) throw new ArgumentOutOfRangeException("span.Length is too small");
-            fixed (byte* p = span)
-            {
-                return (ulong)((ulong)(p[0] << 56) + (ulong)(p[1] << 48) + (ulong)(p[2] << 40) + (ulong)(p[3] << 32) +
-                               (ulong)(p[4] << 24) + (ulong)(p[5] << 16) + (ulong)(p[6] << 8) + (ulong)(p[7]));
-            }
-        }
-        static unsafe long ToSInt64(Span<byte> span) => (long)ToUInt64(span);
-
-        //static int ReadInt32(Span<byte> span) => ReadRaw<int>(span);
-
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
 
-            if (false)
-            {
-                var neko = new byte[] { 0x81, 2, 3, 4 }.AsSpan();
-                var ret = ToUInt32(neko);
-                Console.WriteLine(ret);
-                return;
-            }
 
             WriteLine($"{SizeOfStruct<Struct1>()}");
 
@@ -211,7 +163,6 @@ namespace cs_struct_bench1
                 WriteLine("Memory Walk: " + do_test(30000000, count =>
                 {
                     var span = memory.Span;
-                    var span_buffer = span.AsSpanBuffer();
 
 //                    a(count).Wait();
 
@@ -255,73 +206,27 @@ namespace cs_struct_bench1
                         }
                         else if (true)
                         {
-                            var span2 = span;
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
-                            Util.Volatile += ReadTest(span2);
+                            var buf = memory.AsMemoryBuffer();
+
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
+                            buf.ReadSInt8();
                         }
                         else if (true)
                         {
-                            //var memory2 = memory;
-                            //var memory3 = memory2.Walk(64);
-
-                            //Util.Volatile += (int)memory2.WalkReadUInt32();
-                            //Util.Volatile += (int)memory3.WalkReadUInt64();
-
-                            var span_buffer2 = span_buffer;
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
-                            span_buffer2.Seek(0, System.IO.SeekOrigin.Begin);
-
-                            //for (int j = 0; j < 2; j++)
-                            {
-                                span_buffer2.ReadSInt32();
-                            }
-                            span_buffer2.ReadSInt32();
-                            span_buffer2.ReadSInt32();
-                            span_buffer2.ReadSInt32();
-                            span_buffer2.ReadSInt32();
-                            span_buffer2.ReadSInt32();
-                            span_buffer2.ReadSInt32();
-                            span_buffer2.ReadSInt32();
-                            span_buffer2.ReadSInt32();
 
                         }
                         else if (false)

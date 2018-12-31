@@ -931,112 +931,112 @@ namespace SoftEther.WebSocket.Helper
             return (RandSInt31() % (b - 1)) + a;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this Memory<T> memory) => memory;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlySpan<T> AsReadOnlySpan<T>(this Span<T> span) => span;
+        public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this Memory<T> memory) => memory;
+        public static ReadOnlySpan<T> AsReadOnlySpan<T>(this Span<T> span) => span;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this ArraySegment<T> segment) => segment.AsMemory();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this ArraySegment<T> segment, int start) => segment.AsMemory(start);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this ArraySegment<T> segment, int start, int length) => segment.AsMemory(start, length);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this T[] array) => array.AsMemory();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this T[] array, int start) => array.AsMemory(start);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this T[] array, int start, int length) => array.AsMemory(start, length);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlySpan<T> AsReadOnlySpan<T>(this T[] array, int start) => array.AsSpan(start);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlySpan<T> AsReadOnlySpan<T>(this T[] array) => array.AsSpan();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlySpan<T> AsReadOnlySpan<T>(this ArraySegment<T> segment, int start, int length) => segment.AsSpan(start, length);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlySpan<T> AsReadOnlySpan<T>(this ArraySegment<T> segment, int start) => segment.AsSpan(start);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlySpan<T> AsReadOnlySpan<T>(this T[] array, int start, int length) => array.AsSpan(start, length);
+        public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this ArraySegment<T> segment) => segment.AsMemory();
+        public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this ArraySegment<T> segment, int start) => segment.AsMemory(start);
+        public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this ArraySegment<T> segment, int start, int length) => segment.AsMemory(start, length);
+        public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this T[] array) => array.AsMemory();
+        public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this T[] array, int start) => array.AsMemory(start);
+        public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this T[] array, int start, int length) => array.AsMemory(start, length);
+        public static ReadOnlySpan<T> AsReadOnlySpan<T>(this T[] array, int start) => array.AsSpan(start);
+        public static ReadOnlySpan<T> AsReadOnlySpan<T>(this T[] array) => array.AsSpan();
+        public static ReadOnlySpan<T> AsReadOnlySpan<T>(this ArraySegment<T> segment, int start, int length) => segment.AsSpan(start, length);
+        public static ReadOnlySpan<T> AsReadOnlySpan<T>(this ArraySegment<T> segment, int start) => segment.AsSpan(start);
+        public static ReadOnlySpan<T> AsReadOnlySpan<T>(this T[] array, int start, int length) => array.AsSpan(start, length);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort Endian16(this ushort v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short Endian16(this short v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint Endian32(this uint v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int Endian32(this int v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong Endian64(this ulong v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long Endian64(this long v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        public static ushort Endian16(this ushort v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        public static short Endian16(this short v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        public static uint Endian32(this uint v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        public static int Endian32(this int v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        public static ulong Endian64(this ulong v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
+        public static long Endian64(this long v) => BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(v) : v;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort ReverseEndian16(this ushort v) => BinaryPrimitives.ReverseEndianness(v);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short ReverseEndian16(this short v) => BinaryPrimitives.ReverseEndianness(v);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint ReverseEndian32(this uint v) => BinaryPrimitives.ReverseEndianness(v);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int ReverseEndian32(this int v) => BinaryPrimitives.ReverseEndianness(v);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong ReverseEndian64(this ulong v) => BinaryPrimitives.ReverseEndianness(v);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long EndiaReverseEndian64n64(this long v) => BinaryPrimitives.ReverseEndianness(v);
+        public static ushort ReverseEndian16(this ushort v) => BinaryPrimitives.ReverseEndianness(v);
+        public static short ReverseEndian16(this short v) => BinaryPrimitives.ReverseEndianness(v);
+        public static uint ReverseEndian32(this uint v) => BinaryPrimitives.ReverseEndianness(v);
+        public static int ReverseEndian32(this int v) => BinaryPrimitives.ReverseEndianness(v);
+        public static ulong ReverseEndian64(this ulong v) => BinaryPrimitives.ReverseEndianness(v);
+        public static long ReverseEndian64(this long v) => BinaryPrimitives.ReverseEndianness(v);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this byte value) { var r = new byte[1]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this ushort value) { var r = new byte[2]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this uint value) { var r = new byte[4]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this ulong value) { var r = new byte[8]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this sbyte value) { var r = new byte[1]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this short value) { var r = new byte[2]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this int value) { var r = new byte[4]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte[] ToBinary(this long value) { var r = new byte[8]; value.ToBinary(r); return r; }
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this byte value, byte[] dest) => dest[0] = value;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this ushort value, byte[] dest) => BinaryPrimitives.WriteUInt16BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this uint value, byte[] dest) => BinaryPrimitives.WriteUInt32BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this ulong value, byte[] dest) => BinaryPrimitives.WriteUInt64BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this sbyte value, byte[] dest) => dest[0] = (byte)value;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this short value, byte[] dest) => BinaryPrimitives.WriteInt16BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this int value, byte[] dest) => BinaryPrimitives.WriteInt32BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this long value, byte[] dest) => BinaryPrimitives.WriteInt64BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this byte value, Span<byte> dest) => dest[0] = value;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this ushort value, Span<byte> dest) => BinaryPrimitives.WriteUInt16BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this uint value, Span<byte> dest) => BinaryPrimitives.WriteUInt32BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this ulong value, Span<byte> dest) => BinaryPrimitives.WriteUInt64BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this sbyte value, Span<byte> dest) => dest[0] = (byte)value;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this short value, Span<byte> dest) => BinaryPrimitives.WriteInt16BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this int value, Span<byte> dest) => BinaryPrimitives.WriteInt32BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this long value, Span<byte> dest) => BinaryPrimitives.WriteInt64BigEndian(dest, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this byte value, Memory<byte> dest) => dest.Span[0] = value;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this ushort value, Memory<byte> dest) => BinaryPrimitives.WriteUInt16BigEndian(dest.Span, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this uint value, Memory<byte> dest) => BinaryPrimitives.WriteUInt32BigEndian(dest.Span, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this ulong value, Memory<byte> dest) => BinaryPrimitives.WriteUInt64BigEndian(dest.Span, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this sbyte value, Memory<byte> dest) => dest.Span[0] = (byte)value;
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this short value, Memory<byte> dest) => BinaryPrimitives.WriteInt16BigEndian(dest.Span, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this int value, Memory<byte> dest) => BinaryPrimitives.WriteInt32BigEndian(dest.Span, value);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void ToBinary(this long value, Memory<byte> dest) => BinaryPrimitives.WriteInt64BigEndian(dest.Span, value);
+        public static byte[] ToBinary(this byte value) { var r = new byte[1]; value.ToBinary(r); return r; }
+        public static byte[] ToBinary(this ushort value) { var r = new byte[2]; value.ToBinary(r); return r; }
+        public static byte[] ToBinary(this uint value) { var r = new byte[4]; value.ToBinary(r); return r; }
+        public static byte[] ToBinary(this ulong value) { var r = new byte[8]; value.ToBinary(r); return r; }
+        public static byte[] ToBinary(this sbyte value) { var r = new byte[1]; value.ToBinary(r); return r; }
+        public static byte[] ToBinary(this short value) { var r = new byte[2]; value.ToBinary(r); return r; }
+        public static byte[] ToBinary(this int value) { var r = new byte[4]; value.ToBinary(r); return r; }
+        public static byte[] ToBinary(this long value) { var r = new byte[8]; value.ToBinary(r); return r; }
+        public static void ToBinary(this byte value, byte[] dest) => dest[0] = value;
+        public static void ToBinary(this ushort value, byte[] dest) => BinaryPrimitives.WriteUInt16BigEndian(dest, value);
+        public static void ToBinary(this uint value, byte[] dest) => BinaryPrimitives.WriteUInt32BigEndian(dest, value);
+        public static void ToBinary(this ulong value, byte[] dest) => BinaryPrimitives.WriteUInt64BigEndian(dest, value);
+        public static void ToBinary(this sbyte value, byte[] dest) => dest[0] = (byte)value;
+        public static void ToBinary(this short value, byte[] dest) => BinaryPrimitives.WriteInt16BigEndian(dest, value);
+        public static void ToBinary(this int value, byte[] dest) => BinaryPrimitives.WriteInt32BigEndian(dest, value);
+        public static void ToBinary(this long value, byte[] dest) => BinaryPrimitives.WriteInt64BigEndian(dest, value);
+        public static void ToBinary(this byte value, Span<byte> dest) => dest[0] = value;
+        public static void ToBinary(this ushort value, Span<byte> dest) => BinaryPrimitives.WriteUInt16BigEndian(dest, value);
+        public static void ToBinary(this uint value, Span<byte> dest) => BinaryPrimitives.WriteUInt32BigEndian(dest, value);
+        public static void ToBinary(this ulong value, Span<byte> dest) => BinaryPrimitives.WriteUInt64BigEndian(dest, value);
+        public static void ToBinary(this sbyte value, Span<byte> dest) => dest[0] = (byte)value;
+        public static void ToBinary(this short value, Span<byte> dest) => BinaryPrimitives.WriteInt16BigEndian(dest, value);
+        public static void ToBinary(this int value, Span<byte> dest) => BinaryPrimitives.WriteInt32BigEndian(dest, value);
+        public static void ToBinary(this long value, Span<byte> dest) => BinaryPrimitives.WriteInt64BigEndian(dest, value);
+        public static void ToBinary(this byte value, Memory<byte> dest) => dest.Span[0] = value;
+        public static void ToBinary(this ushort value, Memory<byte> dest) => BinaryPrimitives.WriteUInt16BigEndian(dest.Span, value);
+        public static void ToBinary(this uint value, Memory<byte> dest) => BinaryPrimitives.WriteUInt32BigEndian(dest.Span, value);
+        public static void ToBinary(this ulong value, Memory<byte> dest) => BinaryPrimitives.WriteUInt64BigEndian(dest.Span, value);
+        public static void ToBinary(this sbyte value, Memory<byte> dest) => dest.Span[0] = (byte)value;
+        public static void ToBinary(this short value, Memory<byte> dest) => BinaryPrimitives.WriteInt16BigEndian(dest.Span, value);
+        public static void ToBinary(this int value, Memory<byte> dest) => BinaryPrimitives.WriteInt32BigEndian(dest.Span, value);
+        public static void ToBinary(this long value, Memory<byte> dest) => BinaryPrimitives.WriteInt64BigEndian(dest.Span, value);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte ToUINT8(this Span<byte> data) => data[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte ToUINT8(this Memory<byte> data) => data.Span[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte ToUINT8(this ReadOnlySpan<byte> data) => data[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte ToUINT8(this ReadOnlyMemory<byte> data) => data.Span[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte ToUInt8(this byte[] data) => data[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort ToUInt16(this Span<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort ToUInt16(this Memory<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort ToUInt16(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort ToUInt16(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort ToUInt16(this byte[] data) => BinaryPrimitives.ReadUInt16BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint ToUInt32(this Span<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint ToUInt32(this Memory<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint ToUInt32(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint ToUInt32(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint ToUInt32(this byte[] data) => BinaryPrimitives.ReadUInt32BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong ToUInt64(this Span<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong ToUInt64(this Memory<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong ToUInt64(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong ToUInt64(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong ToUInt64(this byte[] data) => BinaryPrimitives.ReadUInt64BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte ToSInt8(this ReadOnlySpan<byte> data) => (sbyte)data[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte ToSInt8(this ReadOnlyMemory<byte> data) => (sbyte)data.Span[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte ToSInt8(this Span<byte> data) => (sbyte)data[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte ToSInt8(this Memory<byte> data) => (sbyte)data.Span[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte ToSInt8(this byte[] data) => (sbyte)data[0];
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short ToSInt16(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short ToSInt16(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short ToSInt16(this Span<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short ToSInt16(this Memory<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short ToSInt16(this byte[] data) => BinaryPrimitives.ReadInt16BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int ToSInt32(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int ToSInt32(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int ToSInt32(this Span<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int ToSInt32(this Memory<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int ToSInt32(this byte[] data) => BinaryPrimitives.ReadInt32BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long ToSInt64(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long ToSInt64(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long ToSInt64(this Span<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long ToSInt64(this Memory<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data.Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long ToSInt64(this byte[] data) => BinaryPrimitives.ReadInt64BigEndian(data);
+        public static byte ToUINT8(this Span<byte> data) => data[0];
+        public static byte ToUINT8(this Memory<byte> data) => data.Span[0];
+        public static byte ToUINT8(this ReadOnlySpan<byte> data) => data[0];
+        public static byte ToUINT8(this ReadOnlyMemory<byte> data) => data.Span[0];
+        public static byte ToUInt8(this byte[] data) => data[0];
+        public static ushort ToUInt16(this Span<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data);
+        public static ushort ToUInt16(this Memory<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data.Span);
+        public static ushort ToUInt16(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data);
+        public static ushort ToUInt16(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadUInt16BigEndian(data.Span);
+        public static ushort ToUInt16(this byte[] data) => BinaryPrimitives.ReadUInt16BigEndian(data);
+        public static uint ToUInt32(this Span<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data);
+        public static uint ToUInt32(this Memory<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data.Span);
+        public static uint ToUInt32(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data);
+        public static uint ToUInt32(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadUInt32BigEndian(data.Span);
+        public static uint ToUInt32(this byte[] data) => BinaryPrimitives.ReadUInt32BigEndian(data);
+        public static ulong ToUInt64(this Span<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data);
+        public static ulong ToUInt64(this Memory<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data.Span);
+        public static ulong ToUInt64(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data);
+        public static ulong ToUInt64(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadUInt64BigEndian(data.Span);
+        public static ulong ToUInt64(this byte[] data) => BinaryPrimitives.ReadUInt64BigEndian(data);
+        public static sbyte ToSInt8(this ReadOnlySpan<byte> data) => (sbyte)data[0];
+        public static sbyte ToSInt8(this ReadOnlyMemory<byte> data) => (sbyte)data.Span[0];
+        public static sbyte ToSInt8(this Span<byte> data) => (sbyte)data[0];
+        public static sbyte ToSInt8(this Memory<byte> data) => (sbyte)data.Span[0];
+        public static sbyte ToSInt8(this byte[] data) => (sbyte)data[0];
+        public static short ToSInt16(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data);
+        public static short ToSInt16(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data.Span);
+        public static short ToSInt16(this Span<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data);
+        public static short ToSInt16(this Memory<byte> data) => BinaryPrimitives.ReadInt16BigEndian(data.Span);
+        public static short ToSInt16(this byte[] data) => BinaryPrimitives.ReadInt16BigEndian(data);
+        public static int ToSInt32(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data);
+        public static int ToSInt32(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data.Span);
+        public static int ToSInt32(this Span<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data);
+        public static int ToSInt32(this Memory<byte> data) => BinaryPrimitives.ReadInt32BigEndian(data.Span);
+        public static int ToSInt32(this byte[] data) => BinaryPrimitives.ReadInt32BigEndian(data);
+        public static long ToSInt64(this ReadOnlySpan<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data);
+        public static long ToSInt64(this ReadOnlyMemory<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data.Span);
+        public static long ToSInt64(this Span<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data);
+        public static long ToSInt64(this Memory<byte> data) => BinaryPrimitives.ReadInt64BigEndian(data.Span);
+        public static long ToSInt64(this byte[] data) => BinaryPrimitives.ReadInt64BigEndian(data);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWrite<T>(ref this Span<T> span, Span<T> data) => data.CopyTo(span.Walk(data.Length));
+        public static void WalkWrite<T>(ref this Span<T> span, Span<T> data) => data.CopyTo(span.Walk(data.Length));
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static ReadOnlySpan<T> Walk<T>(ref this ReadOnlySpan<T> span, int size)
         {
             if (size == 0) return Span<T>.Empty;
@@ -1046,7 +1046,7 @@ namespace SoftEther.WebSocket.Helper
             return original.Slice(0, size);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static Span<T> Walk<T>(ref this Span<T> span, int size)
         {
             if (size == 0) return Span<T>.Empty;
@@ -1056,38 +1056,38 @@ namespace SoftEther.WebSocket.Helper
             return original.Slice(0, size);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt8(ref this Span<byte> span, byte value) => value.ToBinary(span.Walk(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt16(ref this Span<byte> span, ushort value) => value.ToBinary(span.Walk(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt32(ref this Span<byte> span, uint value) => value.ToBinary(span.Walk(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt64(ref this Span<byte> span, ulong value) => value.ToBinary(span.Walk(8));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt8(ref this Span<byte> span, sbyte value) => value.ToBinary(span.Walk(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt16(ref this Span<byte> span, short value) => value.ToBinary(span.Walk(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt32(ref this Span<byte> span, int value) => value.ToBinary(span.Walk(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt64(ref this Span<byte> span, long value) => value.ToBinary(span.Walk(8));
+        public static void WalkWriteUInt8(ref this Span<byte> span, byte value) => value.ToBinary(span.Walk(1));
+        public static void WalkWriteUInt16(ref this Span<byte> span, ushort value) => value.ToBinary(span.Walk(2));
+        public static void WalkWriteUInt32(ref this Span<byte> span, uint value) => value.ToBinary(span.Walk(4));
+        public static void WalkWriteUInt64(ref this Span<byte> span, ulong value) => value.ToBinary(span.Walk(8));
+        public static void WalkWriteSInt8(ref this Span<byte> span, sbyte value) => value.ToBinary(span.Walk(1));
+        public static void WalkWriteSInt16(ref this Span<byte> span, short value) => value.ToBinary(span.Walk(2));
+        public static void WalkWriteSInt32(ref this Span<byte> span, int value) => value.ToBinary(span.Walk(4));
+        public static void WalkWriteSInt64(ref this Span<byte> span, long value) => value.ToBinary(span.Walk(8));
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Span<T> WalkRead<T>(ref this Span<T> span, int size) => span.Walk(size);
+        public static Span<T> WalkRead<T>(ref this Span<T> span, int size) => span.Walk(size);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlySpan<T> WalkRead<T>(ref this ReadOnlySpan<T> span, int size) => span.Walk(size);
+        public static ReadOnlySpan<T> WalkRead<T>(ref this ReadOnlySpan<T> span, int size) => span.Walk(size);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte WalkReadUInt8(ref this Span<byte> span) => span.WalkRead(1).ToUINT8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort WalkReadUInt16(ref this Span<byte> span) => span.WalkRead(2).ToUInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint WalkReadUInt32(ref this Span<byte> span) => span.WalkRead(4).ToUInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong WalkReadUInt64(ref this Span<byte> span) => span.WalkRead(8).ToUInt64();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte WalkReadSInt8(ref this Span<byte> span) => span.WalkRead(1).ToSInt8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short WalkReadSInt16(ref this Span<byte> span) => span.WalkRead(2).ToSInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int WalkReadSInt32(ref this Span<byte> span) => span.WalkRead(4).ToSInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long WalkReadSInt64(ref this Span<byte> span) => span.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this Span<byte> span) => span.WalkRead(1).ToUINT8();
+        public static ushort WalkReadUInt16(ref this Span<byte> span) => span.WalkRead(2).ToUInt16();
+        public static uint WalkReadUInt32(ref this Span<byte> span) => span.WalkRead(4).ToUInt32();
+        public static ulong WalkReadUInt64(ref this Span<byte> span) => span.WalkRead(8).ToUInt64();
+        public static sbyte WalkReadSInt8(ref this Span<byte> span) => span.WalkRead(1).ToSInt8();
+        public static short WalkReadSInt16(ref this Span<byte> span) => span.WalkRead(2).ToSInt16();
+        public static int WalkReadSInt32(ref this Span<byte> span) => span.WalkRead(4).ToSInt32();
+        public static long WalkReadSInt64(ref this Span<byte> span) => span.WalkRead(8).ToSInt64();
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte WalkReadUInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).ToUINT8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort WalkReadUInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).ToUInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint WalkReadUInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).ToUInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong WalkReadUInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).ToUInt64();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte WalkReadSInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).ToSInt8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short WalkReadSInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).ToSInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int WalkReadSInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).ToSInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long WalkReadSInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).ToUINT8();
+        public static ushort WalkReadUInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).ToUInt16();
+        public static uint WalkReadUInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).ToUInt32();
+        public static ulong WalkReadUInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).ToUInt64();
+        public static sbyte WalkReadSInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).ToSInt8();
+        public static short WalkReadSInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).ToSInt16();
+        public static int WalkReadSInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).ToSInt32();
+        public static long WalkReadSInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).ToSInt64();
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static Memory<T> Walk<T>(ref this Memory<T> memory, int size)
         {
             if (size == 0) return Memory<T>.Empty;
@@ -1097,7 +1097,7 @@ namespace SoftEther.WebSocket.Helper
             return original.Slice(0, size);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static ReadOnlyMemory<T> Walk<T>(ref this ReadOnlyMemory<T> memory, int size)
         {
             if (size == 0) return ReadOnlyMemory<T>.Empty;
@@ -1107,12 +1107,12 @@ namespace SoftEther.WebSocket.Helper
             return original.Slice(0, size);
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int WalkGetPin<T>(this Memory<T> memory) => WalkGetPin(memory.AsReadOnlyMemory());
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int WalkGetPin<T>(this ReadOnlyMemory<T> memory) => memory.AsSegment().Offset;
+        public static int WalkGetPin<T>(this Memory<T> memory) => WalkGetPin(memory.AsReadOnlyMemory());
+        public static int WalkGetPin<T>(this ReadOnlyMemory<T> memory) => memory.AsSegment().Offset;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int WalkGetCurrentLength<T>(this Memory<T> memory, int compare_target_pin) => WalkGetCurrentLength(memory.AsReadOnlyMemory(), compare_target_pin);
+        public static int WalkGetCurrentLength<T>(this Memory<T> memory, int compare_target_pin) => WalkGetCurrentLength(memory.AsReadOnlyMemory(), compare_target_pin);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static int WalkGetCurrentLength<T>(this ReadOnlyMemory<T> memory, int compare_target_pin)
         {
             int current_pin = memory.WalkGetPin();
@@ -1120,7 +1120,7 @@ namespace SoftEther.WebSocket.Helper
             return current_pin - compare_target_pin;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static Memory<T> SliceWithPin<T>(this Memory<T> memory, int pin, int? size = null)
         {
             if (size == 0) return Memory<T>.Empty;
@@ -1145,7 +1145,7 @@ namespace SoftEther.WebSocket.Helper
             return b.AsMemory();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static ReadOnlyMemory<T> SliceWithPin<T>(this ReadOnlyMemory<T> memory, int pin, int? size = null)
         {
             if (size == 0) return Memory<T>.Empty;
@@ -1170,11 +1170,11 @@ namespace SoftEther.WebSocket.Helper
             return b.AsMemory();
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoRynamicEnsureReserveBuffer<T>(ref this Memory<T> memory, int size) => memory.WalkAutoInternal(size, false, true);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Memory<T> WalkAutoDynamic<T>(ref this Memory<T> memory, int size) => memory.WalkAutoInternal(size, false, false);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Memory<T> WalkAutoStatic<T>(ref this Memory<T> memory, int size) => memory.WalkAutoInternal(size, true, false);
+        public static void WalkAutoRynamicEnsureReserveBuffer<T>(ref this Memory<T> memory, int size) => memory.WalkAutoInternal(size, false, true);
+        public static Memory<T> WalkAutoDynamic<T>(ref this Memory<T> memory, int size) => memory.WalkAutoInternal(size, false, false);
+        public static Memory<T> WalkAutoStatic<T>(ref this Memory<T> memory, int size) => memory.WalkAutoInternal(size, true, false);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         static Memory<T> WalkAutoInternal<T>(ref this Memory<T> memory, int size, bool no_realloc, bool no_step)
         {
             if (size == 0) return Memory<T>.Empty;
@@ -1230,65 +1230,65 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.Walk(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.Walk(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.Walk(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.Walk(8));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.Walk(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinary(memory.Walk(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinary(memory.Walk(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinary(memory.Walk(8));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.Walk(data.Length));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.Walk(data.Length).Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.Walk(data.Length).Span);
+        public static void WalkWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.Walk(1));
+        public static void WalkWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.Walk(2));
+        public static void WalkWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.Walk(4));
+        public static void WalkWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.Walk(8));
+        public static void WalkWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.Walk(1));
+        public static void WalkWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinary(memory.Walk(2));
+        public static void WalkWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinary(memory.Walk(4));
+        public static void WalkWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinary(memory.Walk(8));
+        public static void WalkWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.Walk(data.Length));
+        public static void WalkWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.Walk(data.Length).Span);
+        public static void WalkWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.Walk(data.Length).Span);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAutoDynamic(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAutoDynamic(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAutoDynamic(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAutoDynamic(8));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAutoDynamic(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAutoDynamic(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAutoDynamic(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAutoDynamic(8));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
+        public static void WalkAutoDynamicWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAutoDynamic(1));
+        public static void WalkAutoDynamicWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAutoDynamic(2));
+        public static void WalkAutoDynamicWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAutoDynamic(4));
+        public static void WalkAutoDynamicWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAutoDynamic(8));
+        public static void WalkAutoDynamicWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAutoDynamic(1));
+        public static void WalkAutoDynamicWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAutoDynamic(2));
+        public static void WalkAutoDynamicWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAutoDynamic(4));
+        public static void WalkAutoDynamicWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAutoDynamic(8));
+        public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length));
+        public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
+        public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAutoStatic(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAutoStatic(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAutoStatic(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAutoStatic(8));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAutoStatic(1));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAutoStatic(2));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAutoStatic(4));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAutoStatic(8));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.WalkAutoStatic(data.Length));
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
+        public static void WalkAutoStaticWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinary(memory.WalkAutoStatic(1));
+        public static void WalkAutoStaticWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinary(memory.WalkAutoStatic(2));
+        public static void WalkAutoStaticWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinary(memory.WalkAutoStatic(4));
+        public static void WalkAutoStaticWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinary(memory.WalkAutoStatic(8));
+        public static void WalkAutoStaticWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinary(memory.WalkAutoStatic(1));
+        public static void WalkAutoStaticWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinary(memory.WalkAutoStatic(2));
+        public static void WalkAutoStaticWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinary(memory.WalkAutoStatic(4));
+        public static void WalkAutoStaticWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinary(memory.WalkAutoStatic(8));
+        public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.WalkAutoStatic(data.Length));
+        public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
+        public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ReadOnlyMemory<T> WalkRead<T>(ref this ReadOnlyMemory<T> memory, int size) => memory.Walk(size);
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static Memory<T> WalkRead<T>(ref this Memory<T> memory, int size) => memory.Walk(size);
+        public static ReadOnlyMemory<T> WalkRead<T>(ref this ReadOnlyMemory<T> memory, int size) => memory.Walk(size);
+        public static Memory<T> WalkRead<T>(ref this Memory<T> memory, int size) => memory.Walk(size);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte WalkReadUInt8(ref this Memory<byte> memory) => memory.WalkRead(1).ToUINT8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort WalkReadUInt16(ref this Memory<byte> memory) => memory.WalkRead(2).ToUInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint WalkReadUInt32(ref this Memory<byte> memory) => memory.WalkRead(4).ToUInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong WalkReadUInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToUInt64();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte WalkReadSInt8(ref this Memory<byte> memory) => memory.WalkRead(1).ToSInt8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short WalkReadSInt16(ref this Memory<byte> memory) => memory.WalkRead(2).ToSInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int WalkReadSInt32(ref this Memory<byte> memory) => memory.WalkRead(4).ToSInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long WalkReadSInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this Memory<byte> memory) => memory.WalkRead(1).ToUINT8();
+        public static ushort WalkReadUInt16(ref this Memory<byte> memory) => memory.WalkRead(2).ToUInt16();
+        public static uint WalkReadUInt32(ref this Memory<byte> memory) => memory.WalkRead(4).ToUInt32();
+        public static ulong WalkReadUInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToUInt64();
+        public static sbyte WalkReadSInt8(ref this Memory<byte> memory) => memory.WalkRead(1).ToSInt8();
+        public static short WalkReadSInt16(ref this Memory<byte> memory) => memory.WalkRead(2).ToSInt16();
+        public static int WalkReadSInt32(ref this Memory<byte> memory) => memory.WalkRead(4).ToSInt32();
+        public static long WalkReadSInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToSInt64();
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static byte WalkReadUInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).ToUINT8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ushort WalkReadUInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).ToUInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static uint WalkReadUInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).ToUInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static ulong WalkReadUInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).ToUInt64();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static sbyte WalkReadSInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).ToSInt8();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static short WalkReadSInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).ToSInt16();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static int WalkReadSInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).ToSInt32();
-        [MethodImpl(MethodImplOptions.AggressiveInlining)] public static long WalkReadSInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).ToUINT8();
+        public static ushort WalkReadUInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).ToUInt16();
+        public static uint WalkReadUInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).ToUInt32();
+        public static ulong WalkReadUInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).ToUInt64();
+        public static sbyte WalkReadSInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).ToSInt8();
+        public static short WalkReadSInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).ToSInt16();
+        public static int WalkReadSInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).ToSInt32();
+        public static long WalkReadSInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).ToSInt64();
 
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static ArraySegment<T> AsSegment<T>(this Memory<T> memory)
         {
             if (MemoryMarshal.TryGetArray(memory, out ArraySegment<T> seg) == false)
@@ -1297,16 +1297,16 @@ namespace SoftEther.WebSocket.Helper
             return seg;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static ArraySegment<T> AsSegment<T>(this ReadOnlyMemory<T> memory)
         {
             if (MemoryMarshal.TryGetArray(memory, out ArraySegment<T> seg) == false)
                 throw new ArgumentException("Memory<T> cannot be converted to ArraySegment<T>.");
-            
+
             return seg;
         }
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public static T[] ReAlloc<T>(this T[] src, int new_size)
         {
             if (new_size < 0) throw new ArgumentOutOfRangeException("new_size");
@@ -2322,10 +2322,10 @@ namespace SoftEther.WebSocket.Helper
 
         volatile int lazy_queued_set = 0;
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public void SetLazy() => Interlocked.Exchange(ref lazy_queued_set, 1);
 
-        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+
         public void SetIfLazyQueued(bool softly = false)
         {
             if (Interlocked.CompareExchange(ref lazy_queued_set, 0, 1) == 1)

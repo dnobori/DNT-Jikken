@@ -1,0 +1,25 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.28307.168
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "cs-codegen-helper1", "cs-codegen-helper1\cs-codegen-helper1.csproj", "{D36873AC-C6AE-4DCB-BE82-BD61DFD6E921}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D36873AC-C6AE-4DCB-BE82-BD61DFD6E921}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D36873AC-C6AE-4DCB-BE82-BD61DFD6E921}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D36873AC-C6AE-4DCB-BE82-BD61DFD6E921}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D36873AC-C6AE-4DCB-BE82-BD61DFD6E921}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {382E6D92-AEC7-409D-B0B4-2E7D4A4FD2E5}
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,12 @@
+﻿■ マウント
+cd ~/
+umount /git/
+mkdir -p /git/
+mount -t cifs -o username=****,password=****,domain=pc34 //pc34.sec.softether.co.jp/c$/git /git
+
+
+■ 実行
+mkdir ~/a/
+
+cp -v -u /git/DNT-Jikken/cs-unsafe-test1/cs-unsafe-test1/bin/Release/netcoreapp2.1/publish/* ~/a/ && ~/a/cs-unsafe-test1
+
