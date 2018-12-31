@@ -60,6 +60,7 @@ namespace cs_struct_bench1
             if (offset == 0) return Span<byte>.Empty;
             Span<byte> ret = span.Slice(0, offset);
             span = span.Slice(offset);
+
             return ret;
         }
     }
@@ -143,7 +144,6 @@ namespace cs_struct_bench1
         {
             Console.WriteLine("Hello World!");
 
-
             WriteLine($"{SizeOfStruct<Struct1>()}");
 
             Stopwatch stopwatch = new Stopwatch();
@@ -164,6 +164,7 @@ namespace cs_struct_bench1
                 {
                     var span = memory.Span;
 
+                    ref byte xx = ref MemoryMarshal.GetReference(span);
 //                    a(count).Wait();
 
                     for (int i = 0; i < count; i++)
@@ -208,26 +209,155 @@ namespace cs_struct_bench1
                         {
                             var buf = memory.AsMemoryBuffer();
 
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
-                            buf.ReadSInt8();
+                            if (true)
+                            {
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                                buf.WriteSInt32(123);
+                            }
+                            else
+                            {
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                                buf.Walk(4);
+                            }
                         }
                         else if (true)
                         {
+                            if (false)
+                            {
+                                var buf = span.AsSpanBuffer();
 
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                                buf.WriteSInt8(123);
+                            }
+                            else
+                            {
+                                var buf = span.AsSpanBuffer();
+
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                                buf.ReadSInt32();
+                            }
                         }
                         else if (false)
                         {

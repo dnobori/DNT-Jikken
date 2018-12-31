@@ -36,7 +36,11 @@ namespace cs_struct_bench1
         public Span<T> Walk(int size)
         {
             int new_size = checked(CurrentPosition + size);
-            EnsureInternalBufferReserved(new_size);
+
+            if (InternalBuffer.Length < new_size)
+            {
+                EnsureInternalBufferReserved(new_size);
+            }
             var ret = InternalBuffer.Slice(CurrentPosition, size);
             Size = Math.Max(new_size, Size);
             CurrentPosition += size;
@@ -58,7 +62,7 @@ namespace cs_struct_bench1
             data.CopyTo(span);
         }
 
-        public Span<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
         {
             int size_read = size;
             if (checked(CurrentPosition + size) > Size)
@@ -118,6 +122,7 @@ namespace cs_struct_bench1
             Size = 0;
         }
     }
+
 
     public ref struct ReadOnlySpanBuffer<T>
     {
@@ -190,10 +195,10 @@ namespace cs_struct_bench1
 
 
 
-
-    public struct MemoryBuffer<T>
+    public ref struct MemoryBuffer<T>
     {
         Memory<T> InternalBuffer;
+        Span<T> InternalSpan;
         public int CurrentPosition { get; private set; }
         public int Size { get; private set; }
 
@@ -206,13 +211,17 @@ namespace cs_struct_bench1
             InternalBuffer = base_span;
             CurrentPosition = 0;
             Size = base_span.Length;
+            InternalSpan = InternalBuffer.Span;
         }
 
-        public Memory<T> Walk(int size)
+        public Span<T> Walk(int size)
         {
             int new_size = checked(CurrentPosition + size);
-            EnsureInternalBufferReserved(new_size);
-            var ret = InternalBuffer.Slice(CurrentPosition, size);
+            if (InternalBuffer.Length < new_size)
+            {
+                EnsureInternalBufferReserved(new_size);
+            }
+            var ret = InternalSpan.Slice(CurrentPosition, size);
             Size = Math.Max(new_size, Size);
             CurrentPosition += size;
             return ret;
@@ -224,16 +233,16 @@ namespace cs_struct_bench1
         public void Write(Span<T> data)
         {
             var span = Walk(data.Length);
-            data.CopyTo(span.Span);
+            data.CopyTo(span);
         }
 
         public void Write(ReadOnlySpan<T> data)
         {
             var span = Walk(data.Length);
-            data.CopyTo(span.Span);
+            data.CopyTo(span);
         }
 
-        public Memory<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
         {
             int size_read = size;
             if (checked(CurrentPosition + size) > Size)
@@ -242,76 +251,12 @@ namespace cs_struct_bench1
                 size_read = Size - CurrentPosition;
             }
 
-            Memory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
             CurrentPosition += size_read;
             return ret;
         }
 
-        public void Seek(int offset, SeekOrigin mode)
-        {
-            int new_position = 0;
-            if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
-            else if (mode == SeekOrigin.End)
-                new_position = checked(Size + offset);
-            else
-                new_position = offset;
-
-            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Size) throw new ArgumentOutOfRangeException("new_position > Size");
-
-            CurrentPosition = new_position;
-        }
-
-        public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
-
-        public void SeekToEnd() => Seek(0, SeekOrigin.End);
-
-        public int Read(int size, Memory<T> dest)
-        {
-            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
-            var span = Read(size);
-            span.CopyTo(dest);
-            return span.Length;
-        }
-
-        public void EnsureInternalBufferReserved(int new_size)
-        {
-            if (InternalBuffer.Length >= new_size) return;
-
-            int new_internal_size = InternalBuffer.Length;
-            while (new_internal_size < new_size)
-                new_internal_size = checked(Math.Max(new_internal_size, 1) * 2);
-
-            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
-        }
-
-        public void Clear()
-        {
-            InternalBuffer = new Memory<T>();
-            CurrentPosition = 0;
-            Size = 0;
-        }
-    }
-
-    public struct ReadOnlyMemoryBuffer<T>
-    {
-        ReadOnlyMemory<T> InternalBuffer;
-        public int CurrentPosition { get; private set; }
-        public int Size { get; private set; }
-
-        public ReadOnlyMemory<T> ReadOnlyMemory { get => InternalBuffer.Slice(0, Size); }
-        public ReadOnlyMemory<T> ReadOnlyMemoryBefore { get => ReadOnlyMemory.Slice(0, CurrentPosition); }
-        public ReadOnlyMemory<T> ReadOnlyMemoryAfter { get => ReadOnlyMemory.Slice(CurrentPosition); }
-
-        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_span)
-        {
-            InternalBuffer = base_span;
-            CurrentPosition = 0;
-            Size = base_span.Length;
-        }
-
-        public ReadOnlyMemory<T> Read(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
         {
             int size_read = size;
             if (checked(CurrentPosition + size) > Size)
@@ -345,10 +290,128 @@ namespace cs_struct_bench1
 
         public void SeekToEnd() => Seek(0, SeekOrigin.End);
 
-        public int Read(int size, Memory<T> dest)
+        public int Read(int size, Span<T> dest)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Read(int size, Memory<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = ReadAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public void EnsureInternalBufferReserved(int new_size)
+        {
+            if (InternalBuffer.Length >= new_size) return;
+
+            int new_internal_size = InternalBuffer.Length;
+            while (new_internal_size < new_size)
+                new_internal_size = checked(Math.Max(new_internal_size, 1) * 2);
+
+            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
+            InternalSpan = InternalBuffer.Span;
+        }
+
+        public void Clear()
+        {
+            InternalBuffer = new Memory<T>();
+            CurrentPosition = 0;
+            Size = 0;
+            InternalSpan = new Span<T>();
+        }
+    }
+
+
+
+
+
+
+
+    public ref struct ReadOnlyMemoryBuffer<T>
+    {
+        ReadOnlyMemory<T> InternalBuffer;
+        ReadOnlySpan<T> InternalSpan;
+        public int CurrentPosition { get; private set; }
+        public int Size { get; private set; }
+
+        public ReadOnlyMemory<T> ReadOnlyMemory { get => InternalBuffer.Slice(0, Size); }
+        public ReadOnlyMemory<T> ReadOnlyMemoryBefore { get => ReadOnlyMemory.Slice(0, CurrentPosition); }
+        public ReadOnlyMemory<T> ReadOnlyMemoryAfter { get => ReadOnlyMemory.Slice(CurrentPosition); }
+
+        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_span)
+        {
+            InternalBuffer = base_span;
+            CurrentPosition = 0;
+            Size = base_span.Length;
+            InternalSpan = InternalBuffer.Span;
+        }
+
+        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public void Seek(int offset, SeekOrigin mode)
+        {
+            int new_position = 0;
+            if (mode == SeekOrigin.Current)
+                new_position = checked(CurrentPosition + offset);
+            else if (mode == SeekOrigin.End)
+                new_position = checked(Size + offset);
+            else
+                new_position = offset;
+
+            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
+            if (new_position > Size) throw new ArgumentOutOfRangeException("new_position > Size");
+
+            CurrentPosition = new_position;
+        }
+
+        public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
+
+        public void SeekToEnd() => Seek(0, SeekOrigin.End);
+
+        public int Read(int size, Span<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Read(int size, Memory<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = ReadAsMemory(size);
             span.CopyTo(dest);
             return span.Length;
         }
@@ -358,8 +421,10 @@ namespace cs_struct_bench1
             InternalBuffer = new ReadOnlyMemory<T>();
             CurrentPosition = 0;
             Size = 0;
+            InternalSpan = new Span<T>();
         }
     }
+
 
 
 
@@ -1189,12 +1254,10 @@ namespace cs_struct_bench1
             {
                 return src;
             }
-            else
-            {
-                T[] ret = new T[new_size];
-                Buffer.BlockCopy(src, 0, ret, 0, Math.Min(src.Length, ret.Length));
-                return ret;
-            }
+
+            T[] ret = src;
+            Array.Resize(ref ret, new_size);
+            return ret;
         }
 
         public static Span<T> ReAlloc<T>(this Span<T> src, int new_size)
