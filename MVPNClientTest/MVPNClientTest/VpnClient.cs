@@ -45,6 +45,7 @@ namespace SoftEther.VpnClient
     {
         public int TimeoutConnect = 15 * 1000;
         public int TimeoutComm = 15 * 1000;
+        public bool UseUdpAcceleration = true;
     }
 
     public class VpnSessionSetting
@@ -202,7 +203,7 @@ namespace SoftEther.VpnClient
         public async Task<T> RecvJsonAsync<T>(bool no_error_check = false)
             where T : VpnJsonResponse
         {
-            ushort size = (await RecvAsync(2, true)).ToUShort();
+            ushort size = (await RecvAsync(2, true)).ToUInt16();
             byte[] data = await RecvAsync(size, true);
             string json_string = Encoding.UTF8.GetString(data);
 
@@ -244,7 +245,6 @@ namespace SoftEther.VpnClient
         Ethernet = 0,
         IPv4 = 1,
         HeartBeat = 254,
-        Disconnect = 255,
     }
 
     public class VpnJsonClientHello
@@ -255,6 +255,12 @@ namespace SoftEther.VpnClient
         public string NetworkName_str = null;
         public uint HeartBeatInterval_u32 = 0;
         public uint DisconnectTimeout_u32 = 0;
+
+        public bool UseUdpAcceleration_bool = false;
+        public string UdpAccelerationClientIp_ip = null;
+        public uint UdpAccelerationClientPort_u32 = 0;
+        public byte[] UdpAccelerationClientKey_bin = null;
+
         public bool L3HelperIPv4Enable_bool = false;
         public string L3HelperIPv4AddressType_str = null;
         public string L3HelperIPv4Address_ip = null;
@@ -283,6 +289,14 @@ namespace SoftEther.VpnClient
         public uint HeartBeatInterval_u32 = 0;
         public uint DisconnectTimeout_u32 = 0;
         public string NetworkName_str = null;
+
+        public bool UseUdpAcceleration_bool = false;
+        public string UdpAccelerationServerIp_ip = null;
+        public uint UdpAccelerationServerPort_u32 = 0;
+        public byte[] UdpAccelerationServerKey_bin = null;
+        public uint UdpAccelerationServerCookie_u32 = 0;
+        public uint UdpAccelerationClientCookie_u32 = 0;
+
         public bool L3HelperIPv4Enable_bool = false;
         public string L3HelperIPv4AddressType_str = null;
         public string L3HelperIPv4Address_ip = null;
@@ -313,37 +327,43 @@ namespace SoftEther.VpnClient
         public int HeartBeatInterval;
         public int DisconnectTimeout;
         public DateTimeOffset LastCommunicationDateTime;
+        public bool UdpAccelerationIsEnabled;
+        public bool UdpAccelerationIsActuallyUsed;
     }
 
     public class VpnConnection : IDisposable
     {
         public VpnSession Session { get; }
         public VpnSessionSetting Setting { get; }
-        VpnSocket socket;
-        CancellationToken cancel_by_parent;
-        CancelWatcher cancel_watcher;
-        TimeoutDetector timeout_detector = null;
+        VpnSocket Socket;
+        CancellationToken CancelByParent;
+        CancelWatcher CancelWatcher;
+        TimeoutDetector TimeoutDetector = null;
 
         VpnConnectionInfo info = new VpnConnectionInfo();
         public VpnConnectionInfo Info { get => info; }
 
-        VpnVirtualNetworkAdapter network_adapter;
+        VpnVirtualNetworkAdapter NetworkAdapter;
+
+        UdpAccel UdpAccel = null;
 
         public VpnConnection(VpnSession session, CancellationToken cancel, VpnVirtualNetworkAdapter network_adapter)
         {
-            this.Session = session;
-            this.Setting = session.Setting.ClonePublics();
-            this.cancel_by_parent = cancel;
-            this.cancel_watcher = new CancelWatcher(this.cancel_by_parent);
-            this.network_adapter = network_adapter;
+            Session = session;
+            Setting = session.Setting.ClonePublics();
+            CancelByParent = cancel;
+            CancelWatcher = new CancelWatcher(CancelByParent);
+            NetworkAdapter = network_adapter;
 
             info.Settings = this.Setting.ClonePublics();
         }
 
         public async Task ConnectAsync()
         {
-            VpnSocket s = new VpnSocket(Session.Setting, this.cancel_watcher.CancelToken);
-            this.socket = s;
+            UdpAccel udp_accel = null;
+
+            VpnSocket s = new VpnSocket(Session.Setting, CancelWatcher.CancelToken);
+            this.Socket = s;
 
             await s.ConnectAsync();
 
@@ -351,6 +371,11 @@ namespace SoftEther.VpnClient
             info.RemoteEndPoint = s.RemoteEndPoint;
 
             Session.notify_event(new VpnSessionEventArgs(VpnSessionEventType.SessionNegotiating));
+
+            if (Setting.Details.UseUdpAcceleration)
+            {
+                udp_accel = new UdpAccel(Socket.LocalEndPoint.Address, true, false, CancelWatcher.CancelToken);
+            }
 
             // Phase 1: Send a Client Hello JSON message
             VpnJsonClientHello client_hello = new VpnJsonClientHello()
@@ -360,6 +385,14 @@ namespace SoftEther.VpnClient
                 Implementation_str = ".NET Test Client",
                 NetworkName_str = "DEFAULT",
             };
+
+            if (udp_accel != null)
+            {
+                client_hello.UseUdpAcceleration_bool = true;
+                client_hello.UdpAccelerationClientIp_ip = udp_accel.MyEndPoint.Address.ToString();
+                client_hello.UdpAccelerationClientPort_u32 = (uint)udp_accel.MyEndPoint.Port;
+                client_hello.UdpAccelerationClientKey_bin = udp_accel.MyKey;
+            }
 
             await s.SendJsonAsync(client_hello);
 
@@ -383,6 +416,27 @@ namespace SoftEther.VpnClient
             // Phase 4: Receive a Server Auth Response JSON message
             VpnJsonServerAuthResponse server_auth_response = await s.RecvJsonAsync<VpnJsonServerAuthResponse>();
 
+            if (server_auth_response.UseUdpAcceleration_bool == false)
+            {
+                if (udp_accel != null)
+                {
+                    udp_accel.DisposeSafe();
+                    udp_accel = null;
+                }
+            }
+            else
+            {
+                if (udp_accel != null)
+                {
+                    udp_accel.InitClient(server_auth_response.UdpAccelerationServerKey_bin,
+                        new IPEndPoint(IPAddress.Parse(server_auth_response.UdpAccelerationServerIp_ip), (int)server_auth_response.UdpAccelerationServerPort_u32),
+                        server_auth_response.UdpAccelerationServerCookie_u32,
+                        server_auth_response.UdpAccelerationClientCookie_u32);
+
+                    UdpAccel = udp_accel;
+                }
+            }
+
             info.NetworkName = server_auth_response.NetworkName_str;
             info.HeartBeatInterval = (int)server_auth_response.HeartBeatInterval_u32;
             info.DisconnectTimeout = (int)server_auth_response.DisconnectTimeout_u32;
@@ -399,57 +453,88 @@ namespace SoftEther.VpnClient
             if (disconnect_reason == null) disconnect_reason = e;
         }
 
+        async Task sessionUdpAccelRecvLoopAsync()
+        {
+            try
+            {
+                while (CancelWatcher.CancelToken.IsCancellationRequested == false)
+                {
+                    try
+                    {
+                        UdpAccel.Poll();
+                        UdpAccel.SendFinish();
+
+                        while (UdpAccel.RecvBlockQueue.TryDequeue(out UdpPacket pkt))
+                        {
+                            this.info.LastCommunicationDateTime = DateTimeOffset.Now;
+
+                            var packet_data = pkt.Data;
+                            VpnProtocolPacketType packet_type = (VpnProtocolPacketType)pkt.Flag;
+
+                            if (packet_type == VpnProtocolPacketType.Ethernet || packet_type == VpnProtocolPacketType.IPv4)
+                            {
+                                await this.NetworkAdapter.OnPacketsReceived(VnState, VnParam, new VpnPacket[] { new VpnPacket(packet_type, packet_data) });
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Dbg.Where(ex.ToString());
+                    }
+
+                    await WebSocketHelper.WaitObjectsAsync(
+                        cancels: new CancellationToken[] { this.CancelWatcher.CancelToken },
+                        auto_events: new AsyncAutoResetEvent[] { UdpAccel.EventRecvReady },
+                        timeout: 256);
+                }
+            }
+            catch (Exception ex) { set_disconnect_reason(ex); }
+        }
+
         async Task sessionSockRecvLoopAsync()
         {
             try
             {
-                while (cancel_watcher.CancelToken.IsCancellationRequested == false)
+                while (CancelWatcher.CancelToken.IsCancellationRequested == false)
                 {
-                    byte[] signature_bin = await this.socket.RecvAsync(4, true);
-                    if (signature_bin.ToUInt() != 0xCAFEBEEF)
+                    byte[] signature_bin = await this.Socket.RecvAsync(4, true);
+                    if (signature_bin.ToUInt32() != 0xCAFEBEEF)
                     {
                         throw new ApplicationException("VPN protocol error.");
                     }
 
-                    byte[] packet_type_bin = await this.socket.RecvAsync(1, true);
+                    byte[] packet_type_bin = await this.Socket.RecvAsync(1, true);
                     VpnProtocolPacketType packet_type = (VpnProtocolPacketType)packet_type_bin[0];
 
-                    byte[] packet_data_size_bin = await this.socket.RecvAsync(2, true);
-                    ushort packet_data_size = packet_data_size_bin.ToUShort();
+                    byte[] packet_data_size_bin = await this.Socket.RecvAsync(2, true);
+                    ushort packet_data_size = packet_data_size_bin.ToUInt16();
 
-                    byte[] packet_data = await this.socket.RecvAsync(packet_data_size, true);
+                    byte[] packet_data = await this.Socket.RecvAsync(packet_data_size, true);
 
-                    if (packet_type == VpnProtocolPacketType.Disconnect)
-                    {
-                        throw new ApplicationException("VPN session is disconnected.");
-                    }
-
-                    Dbg.Where($"packet_size = {packet_data_size}");
-
-                    this.timeout_detector.Keep();
+                    this.TimeoutDetector.Keep();
                     this.info.LastCommunicationDateTime = DateTimeOffset.Now;
 
-                    if (packet_type == VpnProtocolPacketType.Ethernet)
+                    if (packet_type == VpnProtocolPacketType.Ethernet || packet_type == VpnProtocolPacketType.IPv4)
                     {
-                        await this.network_adapter.OnPacketsReceived(vn_state, vn_param, new VpnPacket[] { new VpnPacket(packet_type, packet_data) });
+                        await this.NetworkAdapter.OnPacketsReceived(VnState, VnParam, new VpnPacket[] { new VpnPacket(packet_type, packet_data) });
                     }
                 }
             }
             catch (Exception ex) { set_disconnect_reason(ex); }
         }
 
-        Fifo sock_send_fifo = new Fifo();
-        AsyncAutoResetEvent sock_send_event = new AsyncAutoResetEvent();
+        Fifo SockSendFifo = new Fifo();
+        AsyncAutoResetEvent SockSendEvent = new AsyncAutoResetEvent();
 
-        object vn_state = null;
-        VpnVirtualNetworkAdapterParam vn_param = null;
+        object VnState = null;
+        VpnVirtualNetworkAdapterParam VnParam = null;
 
         async Task sessionSockGenerateHeartBeatLoopAsync()
         {
-            while (cancel_watcher.CancelToken.IsCancellationRequested == false)
+            while (CancelWatcher.CancelToken.IsCancellationRequested == false)
             {
                 await WebSocketHelper.WaitObjectsAsync(
-                    cancels: new CancellationToken[] { this.cancel_watcher.CancelToken },
+                    cancels: new CancellationToken[] { this.CancelWatcher.CancelToken },
                     timeout: Info.HeartBeatInterval);
 
                 Buf buf = new Buf();
@@ -457,12 +542,12 @@ namespace SoftEther.VpnClient
                 buf.WriteByte((byte)VpnProtocolPacketType.HeartBeat);
                 buf.WriteShort(0);
 
-                lock (sock_send_fifo)
+                lock (SockSendFifo)
                 {
-                    if (sock_send_fifo.Size <= VpnProtocolConsts.MaxBufferingPacketSize)
-                        sock_send_fifo.Write(buf);
+                    if (SockSendFifo.Size <= VpnProtocolConsts.MaxBufferingPacketSize)
+                        SockSendFifo.Write(buf);
                 }
-                sock_send_event.Set();
+                SockSendEvent.Set();
 
                 //Buf eth = new Buf();
                 //eth.Write(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, });
@@ -487,24 +572,24 @@ namespace SoftEther.VpnClient
 
         async Task sessionSockSendLoopAsync()
         {
-            while (cancel_watcher.CancelToken.IsCancellationRequested == false)
+            while (CancelWatcher.CancelToken.IsCancellationRequested == false)
             {
                 byte[] send_buf;
 
-                lock (sock_send_fifo)
+                lock (SockSendFifo)
                 {
-                    send_buf = sock_send_fifo.Read();
+                    send_buf = SockSendFifo.Read();
                 }
 
                 if (send_buf.Length >= 1)
                 {
-                    await this.socket.SendAsync(send_buf, 0, send_buf.Length);
-                    Dbg.Where($"send: {send_buf.Length}");
+                    await this.Socket.SendAsync(send_buf, 0, send_buf.Length);
+                    Dbg.Where($"sock send: {send_buf.Length}");
                 }
 
                 await WebSocketHelper.WaitObjectsAsync(
-                    cancels: new CancellationToken[] { this.cancel_watcher.CancelToken },
-                    auto_events: new AsyncAutoResetEvent[] { sock_send_event });
+                    cancels: new CancellationToken[] { this.CancelWatcher.CancelToken },
+                    auto_events: new AsyncAutoResetEvent[] { SockSendEvent });
             }
         }
 
@@ -512,46 +597,53 @@ namespace SoftEther.VpnClient
         {
             int num = 0;
 
+            if (UdpAccel != null) UdpAccel.SetTick(Time.Tick64);
+
             foreach (VpnPacket p in packets)
             {
-                Buf buf = new Buf();
-                buf.WriteInt(VpnProtocolConsts.PacketMagicNumber);
-                buf.WriteByte((byte)p.Type);
-                buf.WriteShort((ushort)p.Data.Length);
-                buf.Write(p.Data);
-
-                lock (sock_send_fifo)
+                if (UdpAccel != null && UdpAccel.IsSendReady(true))
                 {
-                    if (sock_send_fifo.Size <= VpnProtocolConsts.MaxBufferingPacketSize) 
-                        sock_send_fifo.Write(buf);
+                    UdpAccel.Send(p.Data, (byte)p.Type);
+                }
+                else
+                {
+                    Buf buf = new Buf();
+                    buf.WriteInt(VpnProtocolConsts.PacketMagicNumber);
+                    buf.WriteByte((byte)p.Type);
+                    buf.WriteShort((ushort)p.Data.Length);
+                    buf.Write(p.Data);
+
+                    lock (SockSendFifo)
+                    {
+                        if (SockSendFifo.Size <= VpnProtocolConsts.MaxBufferingPacketSize)
+                            SockSendFifo.Write(buf);
+                    }
                 }
 
                 num++;
-
-                //Dbg.Where(sock_send_fifo.Size.ToString());
             }
 
-            if (num >= 1) sock_send_event.Set();
+            if (num >= 1) SockSendEvent.Set();
         }
 
-        Once disconnected_by_vn;
+        Once DisconnectedByVn;
         public void VnDisconnectCallback()
         {
-            if (disconnected_by_vn.IsFirstCall())
+            if (DisconnectedByVn.IsFirstCall())
             {
                 set_disconnect_reason(new ApplicationException("The user disconnected the VPN session."));
-                this.cancel_watcher.Cancel();
+                this.CancelWatcher.Cancel();
             }
         }
 
         public async Task SessionMainLoopAsync()
         {
-            vn_param = new VpnVirtualNetworkAdapterParam(this.Session, VnPacketsSendCallback, VnDisconnectCallback);
-            vn_state = await network_adapter.OnConnected(vn_param);
+            VnParam = new VpnVirtualNetworkAdapterParam(this.Session, VnPacketsSendCallback, VnDisconnectCallback);
+            VnState = await NetworkAdapter.OnConnected(VnParam);
 
             try
             {
-                this.timeout_detector = new TimeoutDetector(Info.DisconnectTimeout,
+                this.TimeoutDetector = new TimeoutDetector(Info.DisconnectTimeout,
                     callme: () =>
                     {
                         set_disconnect_reason(new ApplicationException("VPN transport communication timed out."));
@@ -561,36 +653,40 @@ namespace SoftEther.VpnClient
                 Task sock_generate_heartbeat_task = sessionSockGenerateHeartBeatLoopAsync();
                 Task sock_send_task = sessionSockSendLoopAsync();
 
+                Task udp_accel_recv_task = UdpAccel != null ? sessionUdpAccelRecvLoopAsync() : null;
+
                 await WebSocketHelper.WaitObjectsAsync(
-                    tasks: new Task[] { sock_recv_task, sock_generate_heartbeat_task, sock_send_task, this.timeout_detector.TaskWaitMe },
-                    cancels: new CancellationToken[] { this.cancel_watcher.CancelToken }
+                    tasks: new Task[] { sock_recv_task, sock_generate_heartbeat_task, sock_send_task, udp_accel_recv_task, this.TimeoutDetector.TaskWaitMe },
+                    cancels: new CancellationToken[] { this.CancelWatcher.CancelToken }
                     );
 
-                this.cancel_watcher.Cancel();
+                this.CancelWatcher.Cancel();
 
                 await sock_recv_task.TryWaitAsync();
                 await sock_generate_heartbeat_task.TryWaitAsync();
                 await sock_send_task.TryWaitAsync();
+                await udp_accel_recv_task.TryWaitAsync();
 
-                this.timeout_detector.DisposeSafe();
+                this.TimeoutDetector.DisposeSafe();
 
                 if (this.disconnect_reason != null) throw this.disconnect_reason;
             }
             finally
             {
-                await network_adapter.OnDisconnected(vn_state, vn_param).TryWaitAsync();
-                vn_state = null;
+                await NetworkAdapter.OnDisconnected(VnState, VnParam).TryWaitAsync();
+                VnState = null;
             }
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
-                this.socket.DisposeSafe();
-                this.cancel_watcher.DisposeSafe();
-                this.timeout_detector.DisposeSafe();
+                UdpAccel.DisposeSafe();
+                Socket.DisposeSafe();
+                CancelWatcher.DisposeSafe();
+                TimeoutDetector.DisposeSafe();
             }
         }
     }
@@ -637,27 +733,27 @@ namespace SoftEther.VpnClient
         public VpnSessionSetting Setting { get; }
         public VpnSessionNotify Notify { get; }
 
-        VpnVirtualNetworkAdapter network_adapter;
-        VpnConnection current_connection = null;
+        VpnVirtualNetworkAdapter NetworkAdapter;
+        VpnConnection CurrentConnection = null;
 
         public VpnSession(VpnSessionSetting setting, VpnSessionNotify notify, VpnVirtualNetworkAdapter network_adapter)
         {
             this.Setting = setting.ClonePublics();
             this.Notify = notify;
-            this.network_adapter = network_adapter;
+            this.NetworkAdapter = network_adapter;
 
             this.notify_event(new VpnSessionEventArgs(VpnSessionEventType.Init));
         }
 
-        public VpnConnectionInfo ConnectionInfo { get => current_connection.Info; }
+        public VpnConnectionInfo ConnectionInfo { get => CurrentConnection.Info; }
 
         internal void notify_event(VpnSessionEventArgs e)
         {
             this.Notify.Fire(this, e);
         }
 
-        Task main_loop_task = null;
-        CancellationTokenSource cancel = null;
+        Task MainLoopTask = null;
+        CancellationTokenSource Cancel = null;
 
         AsyncLock LockObj = new AsyncLock();
 
@@ -665,10 +761,10 @@ namespace SoftEther.VpnClient
         {
             using (await LockObj.LockWithAwait())
             {
-                if (main_loop_task == null)
+                if (MainLoopTask == null)
                 {
-                    cancel = new CancellationTokenSource();
-                    main_loop_task = main_loop();
+                    Cancel = new CancellationTokenSource();
+                    MainLoopTask = main_loop();
                 }
                 await Task.CompletedTask;
             }
@@ -678,11 +774,11 @@ namespace SoftEther.VpnClient
         {
             using (await LockObj.LockWithAwait())
             {
-                if (main_loop_task == null) return;
-                cancel.Cancel();
-                await main_loop_task;
-                main_loop_task = null;
-                cancel = null;
+                if (MainLoopTask == null) return;
+                Cancel.Cancel();
+                await MainLoopTask;
+                MainLoopTask = null;
+                Cancel = null;
             }
         }
 
@@ -725,9 +821,9 @@ namespace SoftEther.VpnClient
 
         async Task do_vpn_session()
         {
-            using (VpnConnection c = new VpnConnection(this, this.cancel.Token, this.network_adapter))
+            using (VpnConnection c = new VpnConnection(this, this.Cancel.Token, this.NetworkAdapter))
             {
-                current_connection = c;
+                CurrentConnection = c;
                 try
                 {
                     notify_event(new VpnSessionEventArgs(VpnSessionEventType.SessionConnectingToServer));
@@ -740,7 +836,7 @@ namespace SoftEther.VpnClient
                 }
                 finally
                 {
-                    current_connection = null;
+                    CurrentConnection = null;
                 }
             }
         }

@@ -310,13 +310,13 @@ namespace SoftEther.WebSocket
 
                 if (buf.Length <= 2) return null;
 
-                byte flag_and_opcode = buf.WalkReadByte();
-                byte mask_and_payload_len = buf.WalkReadByte();
+                byte flag_and_opcode = buf.WalkReadUInt8();
+                byte mask_and_payload_len = buf.WalkReadUInt8();
                 int mask_flag = mask_and_payload_len & 0x80;
                 int payload_len = mask_and_payload_len & 0x7F;
                 if (payload_len == 126)
                 {
-                    payload_len = buf.WalkReadUShort();
+                    payload_len = buf.WalkReadUInt16();
                 }
                 else if (payload_len == 127)
                 {

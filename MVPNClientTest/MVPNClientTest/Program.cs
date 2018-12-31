@@ -23,17 +23,13 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            while (true)
-            {
-                long a = WebSocketHelper.Rand32();
-                Console.WriteLine(a);
-            }
+            string s = "Hello";
 
-            return;
+            System.String s2 = s;
 
-            //test0().Wait();
+            test0().Wait();
             //nb_socket_tcp_test().Wait();
-            nb_socket_udp_proc().Wait();
+//            nb_socket_udp_proc().Wait();
             //async_test2().LaissezFaire();
             //async_test1().Wait();
             //Thread.Sleep(-1);
@@ -137,22 +133,22 @@ namespace MVPNClientTest
             try
             {
                 //await test_plain();
-                //await test_vpn();
-                await test_udpa();
+                await test_vpn();
+                //await test_udpa();
             }
             catch (Exception ex)
             {
                 WriteLine(ex.ToString());
             }
 
-            try
-            {
-                await test_ssl();
-            }
-            catch (Exception ex)
-            {
-                WriteLine(ex.ToString());
-            }
+            //try
+            //{
+            //    await test_ssl();
+            //}
+            //catch (Exception ex)
+            //{
+            //    WriteLine(ex.ToString());
+            //}
         }
 
         private static Boolean check_cert(Object sender, X509Certificate certificate,
@@ -209,7 +205,7 @@ namespace MVPNClientTest
                     }
                     else
                     {
-                        AsyncBulkReader<byte[], int> reader = new AsyncBulkReader<byte[], int>(async state =>
+                        AsyncBulkReceiver<byte[], int> reader = new AsyncBulkReceiver<byte[], int>(async state =>
                         {
                             //num++;
                             //if ((num % 3) == 0) await Task.Yield();
@@ -282,7 +278,7 @@ namespace MVPNClientTest
                         }
                         else
                         {
-                            AsyncBulkReader<byte[], int> reader = new AsyncBulkReader<byte[], int>(async state =>
+                            AsyncBulkReceiver<byte[], int> reader = new AsyncBulkReceiver<byte[], int>(async state =>
                             {
                                 //num++;
                                 //if ((num % 3) == 0) await Task.Yield();
@@ -417,7 +413,7 @@ namespace MVPNClientTest
 
     public class NetworkAdapterDummy : VpnVirtualNetworkAdapter
     {
-        VpnVirtualNetworkAdapterParam p;
+        VpnVirtualNetworkAdapterParam Param;
 
         CancellationTokenSource cancel = new CancellationTokenSource();
 
@@ -427,7 +423,7 @@ namespace MVPNClientTest
 
             cancel = new CancellationTokenSource();
 
-            this.p = param;
+            this.Param = param;
 
             test().LaissezFaire();
 
@@ -444,12 +440,10 @@ namespace MVPNClientTest
                 eth.WriteShort(0x0800);
                 eth.Write(WebSocketHelper.Rand(32));
 
-                this.p.SendPackets(new VpnPacket[] { new VpnPacket(VpnProtocolPacketType.Ethernet, eth.ByteData) });
+                Param.SendPackets(new VpnPacket[] { new VpnPacket(VpnProtocolPacketType.Ethernet, eth.ByteData) });
 
-                await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel.Token }, timeout: 100);
+                await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel.Token }, timeout: 1000);
             }
-
-            Dbg.Where();
         }
 
         public override async Task OnDisconnected(object state, VpnVirtualNetworkAdapterParam param)
@@ -461,7 +455,8 @@ namespace MVPNClientTest
 
         public override async Task OnPacketsReceived(object state, VpnVirtualNetworkAdapterParam param, VpnPacket[] packets)
         {
-            Console.WriteLine($"recv packets: {packets[0].Data.Length}");
+            Console.WriteLine($"recv packet: {packets[0].Data.Length}");
         }
     }
 }
+
