@@ -533,7 +533,6 @@ namespace SoftEther.VpnClient
                     }
                     else
                     {
-                        return true; //bugbug
                         return false;
                     }
                 }

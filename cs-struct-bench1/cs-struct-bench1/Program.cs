@@ -7,6 +7,11 @@ using System.Runtime.InteropServices;
 using System.Runtime.CompilerServices;
 using static System.Console;
 using static cs_struct_bench1.Util;
+using System.Collections.Concurrent;
+using System.Collections;
+using System.IO.Pipelines;
+using System.Buffers;
+using System.Buffers.Binary;
 
 namespace cs_struct_bench1
 {
@@ -124,13 +129,232 @@ namespace cs_struct_bench1
 
     class Program
     {
+        static Semaphore s = new Semaphore(1, 1);
+        static async Task a(int count)
+        {
+            for (int i = 0; i < count; i++)
+            {
+                s.WaitOne();
+                s.Release();
+            }
+        }
+
+        static int ReadTest(Span<byte> span) => (int)ToUInt64(span);
+
+        static byte ToUInt8(Span<byte> span)
+        {
+            return span[0];
+        }
+        static sbyte ToSInt8(Span<byte> span) => (sbyte)ToUInt8(span);
+
+        static unsafe ushort ToUInt16(Span<byte> span)
+        {
+            if (span.Length < 2) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* p = span)
+            {
+                return (ushort)((ushort)(p[0] << 8) + (ushort)p[1]);
+            }
+        }
+        static unsafe short ToSInt16(Span<byte> span) => (short)ToUInt16(span);
+
+        static unsafe uint ToUInt32(Span<byte> span)
+        {
+            if (span.Length < 4) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* p = span)
+            {
+                return (uint)((uint)(p[0] << 24) + (uint)(p[1] << 16) + (uint)(p[2] << 8) + (uint)p[3]);
+            }
+        }
+        static unsafe int ToSInt32(Span<byte> span) => (int)ToUInt32(span);
+
+        static unsafe ulong ToUInt64(Span<byte> span)
+        {
+            if (span.Length < 8) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* p = span)
+            {
+                return (ulong)((ulong)(p[0] << 56) + (ulong)(p[1] << 48) + (ulong)(p[2] << 40) + (ulong)(p[3] << 32) +
+                               (ulong)(p[4] << 24) + (ulong)(p[5] << 16) + (ulong)(p[6] << 8) + (ulong)(p[7]));
+            }
+        }
+        static unsafe long ToSInt64(Span<byte> span) => (long)ToUInt64(span);
+
+        //static int ReadInt32(Span<byte> span) => ReadRaw<int>(span);
+
         static void Main(string[] args)
         {
             Console.WriteLine("Hello World!");
 
+            if (false)
+            {
+                var neko = new byte[] { 0x81, 2, 3, 4 }.AsSpan();
+                var ret = ToUInt32(neko);
+                Console.WriteLine(ret);
+                return;
+            }
+
             WriteLine($"{SizeOfStruct<Struct1>()}");
 
+            Stopwatch stopwatch = new Stopwatch();
+            stopwatch.Start();
+
+            var dataslot = Thread.AllocateDataSlot();
+            Thread.SetData(dataslot, 1);
+
             Test1 t1 = new Test1();
+
+            {
+                byte[] data = new byte[128];
+                var memory = data.AsMemory();
+                byte[] tmp = new byte[1000];
+
+                Func<int, int> tmp_proc = (x) => x + 1;
+                WriteLine("Memory Walk: " + do_test(30000000, count =>
+                {
+                    var span = memory.Span;
+                    var span_buffer = span.AsSpanBuffer();
+
+//                    a(count).Wait();
+
+                    for (int i = 0; i < count; i++)
+                    {
+                        if (false)
+                        {
+                            var span2 = span;
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                            BinaryPrimitives.ReadInt32LittleEndian(span2);
+                        }
+                        else if (true)
+                        {
+                            var span2 = span;
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                            Util.Volatile += ReadTest(span2);
+                        }
+                        else if (true)
+                        {
+                            //var memory2 = memory;
+                            //var memory3 = memory2.Walk(64);
+
+                            //Util.Volatile += (int)memory2.WalkReadUInt32();
+                            //Util.Volatile += (int)memory3.WalkReadUInt64();
+
+                            var span_buffer2 = span_buffer;
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            //Util.Volatile += (int)span_buffer2.ReadUInt32();
+                            span_buffer2.Seek(0, System.IO.SeekOrigin.Begin);
+
+                            //for (int j = 0; j < 2; j++)
+                            {
+                                span_buffer2.ReadSInt32();
+                            }
+                            span_buffer2.ReadSInt32();
+                            span_buffer2.ReadSInt32();
+                            span_buffer2.ReadSInt32();
+                            span_buffer2.ReadSInt32();
+                            span_buffer2.ReadSInt32();
+                            span_buffer2.ReadSInt32();
+                            span_buffer2.ReadSInt32();
+                            span_buffer2.ReadSInt32();
+
+                        }
+                        else if (false)
+                        {
+                            unsafe
+                            {
+                                fixed (byte* p = data)
+                                {
+                                    uint* p2 = (uint*)p;
+                                    uint r = (*p2);
+                                    Util.Volatile += (int)r;
+                                }
+                            }
+                        }
+                        else
+                        {
+                            //var memory2 = memory;
+                            //var memory3 = memory2.Slice(64);
+
+                            Util.Volatile += (int)(BinaryPrimitives.ReadUInt32LittleEndian(span.Slice(12)));
+
+                            //Util.Volatile += proc(123);
+
+                            //span.Slice(1).CopyTo(tmp);
+                            //span.Slice(1).CopyTo(tmp);
+
+                            //memory2.Slice(8);
+                            //Util.Volatile += (int)(BinaryPrimitives.ReadUInt32LittleEndian(memory3.Span));
+                            //memory3.Slice(8);
+                        }
+                    }
+                }).ToString("#,0"));
+            }
 
             WriteLine("sizeof: " + do_test(100000, count =>
             {
@@ -258,6 +482,85 @@ namespace cs_struct_bench1
                 }
             }).ToString("#,0"));
 
+            WriteLine("span access: " + do_test(10000000, count =>
+            {
+                byte[] a = new byte[1000];
+                var span = a.AsSpan();
+                for (int i = 0; i < count; i++)
+                {
+                    Util.Volatile += span[i % span.Length];
+                }
+            }).ToString("#,0"));
+
+            WriteLine("memory access: " + do_test(10000000, count =>
+            {
+                byte[] a = new byte[1000];
+                var memory = a.AsMemory();
+                for (int i = 0; i < count; i++)
+                {
+                    Util.Volatile += memory.Span[i % memory.Length];
+                }
+            }).ToString("#,0"));
+
+            List<byte[]> keys = new List<byte[]>();
+            Dictionary<byte[], int> hash = new Dictionary<byte[], int>();
+            for (int i = 0; i < 65536; i++)
+            {
+                byte[] key = new byte[] { (byte)(i / 256), (byte)(i % 256) };
+                keys.Add(key);
+                hash[key] = i;
+            }
+
+            WriteLine("Hashtable lookup: " + do_test(10000000, count =>
+            {
+                int num_keys = keys.Count;
+                var keys2 = keys.ToArray();
+                for (int i = 0; i < count; i++)
+                {
+                    var key = keys[i % num_keys];
+                    Util.Volatile += hash[key];
+                }
+            }).ToString("#,0"));
+
+            WriteLine("Hashtable scan: " + do_test(10000, count =>
+            {
+                int num_keys = keys.Count;
+                var keys2 = keys.ToArray();
+                var values_array = new int[hash.Keys.Count];
+                for (int i = 0; i < count; i++)
+                {
+                    hash.Values.CopyTo(values_array, 0);
+                }
+            }).ToString("#,0"));
+
+
+            WriteLine("stopwatch read: " + do_test(10000000, count =>
+            {
+                Stopwatch w = new Stopwatch();
+                w.Start();
+                for (int i = 0; i < count; i++)
+                {
+                    Util.Volatile += (int)w.ElapsedTicks;
+                }
+            }).ToString("#,0"));
+
+            WriteLine("TickCount read: " + do_test(10000000, count =>
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    Util.Volatile += (int)Environment.TickCount;
+                }
+            }).ToString("#,0"));
+
+            WriteLine("DateTime read: " + do_test(10000000, count =>
+            {
+                for (int i = 0; i < count; i++)
+                {
+                    Util.Volatile += (int)DateTime.Now.Ticks;
+                }
+            }).ToString("#,0"));
+
+
             WriteLine("copy advance: " + do_test(10000000, count =>
             {
                 for (int i = 0; i < count; i++)
@@ -268,8 +571,6 @@ namespace cs_struct_bench1
                     Util.Volatile += aa[0];
                 }
             }).ToString("#,0"));
-
-            System.IO.Stream st;st.Write(
         }
 
         static int do_test(int count, Action<int> action)

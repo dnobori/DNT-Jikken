@@ -547,26 +547,8 @@ namespace SoftEther.VpnClient
                     if (SockSendFifo.Size <= VpnProtocolConsts.MaxBufferingPacketSize)
                         SockSendFifo.Write(buf);
                 }
+
                 SockSendEvent.Set();
-
-                //Buf eth = new Buf();
-                //eth.Write(new byte[] { 0xff, 0xff, 0xff, 0xff, 0xff, 0xff, });
-                //eth.Write(new byte[] { 0x00, 0xaa, 0xaa, 0xaa, 0xaa, 0xaa, });
-                //eth.WriteShort(0x0800);
-                //eth.Write(WebSocketHelper.GenRandom(32));
-
-                //buf = new Buf();
-                //buf.WriteInt(VpnProtocolConsts.PacketMagicNumber);
-                //buf.WriteByte((byte)VpnProtocolPacketType.Ethernet);
-                //byte[] eth_data = eth.ByteData;
-                //buf.WriteShort((ushort)eth_data.Length);
-                //buf.Write(eth_data);
-
-                //lock (sock_send_fifo)
-                //{
-                //    sock_send_fifo.Write(buf);
-                //}
-                //sock_send_event.Set();
             }
         }
 
@@ -623,7 +605,11 @@ namespace SoftEther.VpnClient
                 num++;
             }
 
-            if (num >= 1) SockSendEvent.Set();
+            if (num >= 1)
+            {
+                SockSendEvent.Set();
+                if (UdpAccel != null) UdpAccel.SendFinish();
+            }
         }
 
         Once DisconnectedByVn;
