@@ -11,6 +11,7 @@ using System.Collections.Concurrent;
 using System.Collections;
 using System.IO.Pipelines;
 using System.Buffers;
+using System.Linq;
 using System.Buffers.Binary;
 
 namespace cs_struct_bench1
@@ -128,6 +129,150 @@ namespace cs_struct_bench1
         public ref Struct1 Struct1Ref { get => ref GetStructWithUnsafe(); }
     }
 
+    public class MicroBenchmarkQueue
+    {
+        List<(IMicroBenchmark bm, int priority, int index)> List = new List<(IMicroBenchmark bm, int priority, int index)>();
+
+        public MicroBenchmarkQueue Add(IMicroBenchmark benchmark, bool enabled = true, int priority = 0)
+        {
+            if (enabled)
+                List.Add((benchmark, priority, List.Count));
+            return this;
+        }
+
+        public void Run()
+        {
+            foreach (var a in List.OrderBy(x => x.index).OrderBy(x => -x.priority).Select(x => x.bm))
+                a.StartAndPrint();
+        }
+    }
+
+    public static class Limbo
+    {
+        public static long SInt = 0;
+        public static ulong UInt = 0;
+        public volatile static object ObjectSlow = null;
+    }
+
+    public class MicroBenchmarkGlobalParam
+    {
+        public static int DefaultDurationMSecs = 250;
+        public static readonly double EmptyBaseLine;
+
+        //static MicroBenchmarkGlobalParam()
+        //{
+        //    EmptyBaseLine = new MicroBenchmark<int>("EmptyBaseLine", 1, (state, count) => { }).Start();
+        //}
+    }
+
+    public interface IMicroBenchmark
+    {
+        double Start(int duration = 0);
+        double StartAndPrint(int duration = 0);
+    }
+
+    public class MicroBenchmark<TUserVariable> : IMicroBenchmark
+    {
+        public readonly string Name;
+        volatile bool StopFlag;
+        object LockObj = new object();
+        public readonly int Iterations;
+
+        //public static double EmptyBaseLine { get; } = MicroBenchmarkGlobalParam.EmptyBaseLine;
+
+        public readonly Func<TUserVariable> Init;
+        public readonly Action<TUserVariable, int> Proc;
+
+        public MicroBenchmark(string name, int iterations, Action<TUserVariable, int> proc, Func<TUserVariable> init = null)
+        {
+            Name = name;
+            Init = init;
+            Proc = proc;
+            Iterations = Math.Max(iterations, 1);
+        }
+
+        public double StartAndPrint(int duration = 0)
+        {
+            double ret = Start(duration);
+
+            Console.WriteLine($"{Name}: {ret.ToString("#,0.00")} ns");
+
+            return ret;
+        }
+
+        double MeasureInternal(int duration, TUserVariable state, Action<TUserVariable, int> proc, int interations_pass_value)
+        {
+            StopFlag = false;
+
+            ManualResetEventSlim ev = new ManualResetEventSlim();
+
+            Thread thread = new Thread(() =>
+            {
+                ev.Wait();
+                Thread.Sleep(duration);
+                StopFlag = true;
+            });
+
+            thread.IsBackground = true;
+            thread.Priority = ThreadPriority.Highest;
+            thread.Start();
+
+            long count = 0;
+            Stopwatch sw = new Stopwatch();
+            ev.Set();
+            sw.Start();
+            TimeSpan ts1 = sw.Elapsed;
+            while (StopFlag == false)
+            {
+                if (Init == null && interations_pass_value == 0)
+                {
+                    for (int i = 0; i < Iterations; i++) Limbo.SInt++;
+                }
+                else
+                {
+                    proc(state, interations_pass_value);
+                    if (interations_pass_value == 0)
+                    {
+                        for (int i = 0; i < Iterations; i++) Limbo.SInt++;
+                    }
+                }
+                count += Iterations;
+            }
+            TimeSpan ts2 = sw.Elapsed;
+            TimeSpan ts = ts2 - ts1;
+            thread.Join();
+
+            double nano = (double)ts.Ticks * 100.0;
+            double nano_per_call = nano / (double)count;
+
+            return nano_per_call;
+        }
+
+        public double Start(int duration = 0)
+        {
+            lock (LockObj)
+            {
+                if (duration <= 0) duration = MicroBenchmarkGlobalParam.DefaultDurationMSecs;
+
+                TUserVariable state = default(TUserVariable);
+
+                double v1 = 0;
+                double v2 = 0;
+
+                if (Init != null) state = Init();
+                v2 = MeasureInternal(duration, state, Proc, 0);
+
+                if (Init != null) state = Init();
+                v1 = MeasureInternal(duration, state, Proc, Iterations);
+
+                double v = Math.Max(v1 - v2, 0);
+                //v -= EmptyBaseLine;
+                v = Math.Max(v, 0);
+                return v;
+            }
+        }
+    }
+
     class Program
     {
         static Semaphore s = new Semaphore(1, 1);
@@ -140,9 +285,78 @@ namespace cs_struct_bench1
             }
         }
 
+
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            WriteLine("Started.");
+            WriteLine();
+
+            var q = new MicroBenchmarkQueue()
+
+                .Add(new MicroBenchmark<Memory<byte>>("MemoryBuffer WriteSInt32", 32, (state, iterations) =>
+                {
+                    var buf = state.AsMemoryBuffer();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        buf.WriteSInt32(i);
+                    }
+                },
+                () =>
+                {
+                    byte[] data = new byte[128];
+                    return data.AsMemory();
+                }
+                ), true)
+
+                .Add(new MicroBenchmark<Memory<byte>>("SpanBuffer WriteSInt32", 32,
+                (state, iterations) =>
+                {
+                    var buf = state.AsSpanBuffer();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        buf.WriteSInt32(i);
+                    }
+                },
+                () =>
+                {
+                    byte[] data = new byte[128];
+                    return data.AsMemory();
+                }
+                ), true)
+
+                .Add(new MicroBenchmark<Memory<byte>>("BinaryPrimitives.WriteInt32LittleEndian", 32,
+                (state, iterations) =>
+                {
+                    byte[] x = new byte[32];
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                    BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32); BinaryPrimitives.WriteInt32LittleEndian(x, 32);
+                }), true)
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("byte[].SetSInt32", 32,
+                (state, iterations) =>
+                {
+                    byte[] x = new byte[32];
+                    x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32);
+                    x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32);
+                    x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32);
+                    x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32);
+                }), true)
+
+                ;
+
+            q.Run();
+
+            WriteLine();
+
+            return;
+
 
             WriteLine($"{SizeOfStruct<Struct1>()}");
 
@@ -153,6 +367,24 @@ namespace cs_struct_bench1
             Thread.SetData(dataslot, 1);
 
             Test1 t1 = new Test1();
+
+
+            WriteLine("Test: " + do_test(10000000, count =>
+            {
+                Span<byte> ba = new byte[16];
+                for (int i = 0; i < count; i++)
+                {
+                    unsafe
+                    {
+                        fixed (byte* ptr = ba)
+                        {
+                            int* u = (int*)(ptr + 1);
+                            Util.Volatile += *u;
+                        }
+                    }
+                }
+            }).ToString("#,0"));
+
 
             {
                 byte[] data = new byte[128];
@@ -209,7 +441,7 @@ namespace cs_struct_bench1
                         {
                             var buf = memory.AsMemoryBuffer();
 
-                            if (false)
+                            if (true)
                             {
                                 buf.WriteSInt32(123);
                                 buf.WriteSInt32(123);
