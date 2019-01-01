@@ -404,46 +404,47 @@ namespace SoftEther.VpnClient
         {
             if (max_size == 0) max_size = MaxUdpPacketSize;
 
-            Memory<byte> buf = new Memory<byte>();
-            int buf_pin = buf.WalkGetPin();
+            MemoryBuffer<byte> buf = new MemoryBuffer<byte>();
 
             // IV
             if (PlainTextMode == false)
             {
-                buf.WalkAutoDynamicWrite(NextIv);
+                buf.Write(NextIv);
             }
 
-            int iv_pin = buf.WalkGetPin();
+            int iv_pin = buf.CurrentPosition;
 
             // Cookie
-            buf.WalkAutoDynamicWriteUInt32(YourCookie);
+            buf.WriteUInt32(YourCookie);
 
             // My Tick
-            buf.WalkAutoDynamicWriteUInt64((ulong)Math.Max(Now, 1));
+            buf.WriteUInt64((ulong)Math.Max(Now, 1));
 
             // Your Tick
-            buf.WalkAutoDynamicWriteUInt64((ulong)LastRecvYourTick);
+            buf.WriteUInt64((ulong)LastRecvYourTick);
 
             // Size
-            buf.WalkAutoDynamicWriteUInt16((ushort)data.Length);
+            buf.WriteUInt16((ushort)data.Length);
 
             // Flag
-            buf.WalkAutoDynamicWriteUInt8(flag);
+            buf.WriteUInt8(flag);
 
             // Data
-            buf.WalkAutoDynamicWrite(data);
+            buf.Write(data);
 
             if (PlainTextMode == false)
             {
                 // Padding
-                int current_length = buf.WalkGetPin() - buf_pin;
+                int current_length = buf.CurrentPosition;
 
                 if (current_length < max_size)
                 {
                     int pad_size = Math.Min(max_size - current_length, MaxPaddingSize);
                     pad_size = WebSocketHelper.RandSInt31() % pad_size;
                     Span<byte> pad = stackalloc byte[pad_size];
-                    buf.WalkAutoDynamicWrite(pad);
+                    //buf.Write(pad);
+                    //MemoryBuffer<byte>.Test(buf, pad);
+                    buf.Test(pad);
                 }
 
                 buf.WalkAutoDynamic(PacketMacSize);

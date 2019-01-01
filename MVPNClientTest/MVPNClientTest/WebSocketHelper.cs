@@ -59,6 +59,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void Write(Memory<T> data) => Write(data.Span);
         public void Write(ReadOnlyMemory<T> data) => Write(data.Span);
+        public void Write(T[] data, int offset = 0, int? length = 0) => Write(data.AsSpan(offset, length ?? data.Length - offset));
 
         public void Write(Span<T> data)
         {
@@ -119,7 +120,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void SeekToEnd() => Seek(0, SeekOrigin.End);
 
-        public int Read(int size, Span<T> dest)
+        public int Read(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Read(size);
@@ -127,7 +128,7 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Peek(int size, Span<T> dest)
+        public int Peek(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Peek(size);
@@ -135,13 +136,16 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
         public void EnsureInternalBufferReserved(int new_size)
         {
             if (InternalBuffer.Length >= new_size) return;
 
             int new_internal_size = InternalBuffer.Length;
             while (new_internal_size < new_size)
-                new_internal_size = checked(Math.Max(new_internal_size, 1) * 2);
+                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
 
             InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
         }
@@ -219,7 +223,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void SeekToEnd() => Seek(0, SeekOrigin.End);
 
-        public int Read(int size, Span<T> dest)
+        public int Read(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Read(size);
@@ -227,13 +231,17 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Peek(int size, Span<T> dest)
+        public int Peek(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Peek(size);
             span.CopyTo(dest);
             return span.Length;
         }
+
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
 
         public void Clear()
         {
@@ -279,6 +287,7 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
+        public void Write(T[] data, int offset = 0, int? length = 0) => Write(data.AsSpan(offset, length ?? data.Length - offset));
         public void Write(Memory<T> data) => Write(data.Span);
         public void Write(ReadOnlyMemory<T> data) => Write(data.Span);
 
@@ -368,7 +377,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void SeekToEnd() => Seek(0, SeekOrigin.End);
 
-        public int Read(int size, Span<T> dest)
+        public int Read(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Read(size);
@@ -376,7 +385,7 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Peek(int size, Span<T> dest)
+        public int Peek(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Peek(size);
@@ -384,7 +393,10 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Read(int size, Memory<T> dest)
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
+        public int Read(Memory<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = PeekAsMemory(size);
@@ -392,7 +404,7 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Peek(int size, Memory<T> dest)
+        public int Peek(Memory<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = PeekAsMemory(size);
@@ -406,7 +418,7 @@ namespace SoftEther.WebSocket.Helper
 
             int new_internal_size = InternalBuffer.Length;
             while (new_internal_size < new_size)
-                new_internal_size = checked(Math.Max(new_internal_size, 1) * 2);
+                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
 
             InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
             InternalSpan = InternalBuffer.Span;
@@ -520,7 +532,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void SeekToEnd() => Seek(0, SeekOrigin.End);
 
-        public int Read(int size, Span<T> dest)
+        public int Read(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Read(size);
@@ -528,7 +540,7 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Peek(int size, Span<T> dest)
+        public int Peek(Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Peek(size);
@@ -536,7 +548,10 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Read(int size, Memory<T> dest)
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
+        public int Read(Memory<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = ReadAsMemory(size);
@@ -544,7 +559,7 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public int Peek(int size, Memory<T> dest)
+        public int Peek(Memory<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = PeekAsMemory(size);
@@ -1553,7 +1568,7 @@ namespace SoftEther.WebSocket.Helper
             int new_len = a.Array.Length;
             while (new_len < required_len)
             {
-                new_len = (int)Math.Min(Math.Max((long)new_len, 1) * 128L, int.MaxValue);
+                new_len = (int)Math.Min(Math.Max((long)new_len, 128) * 2, int.MaxValue);
             }
 
             T[] new_array = a.Array;
