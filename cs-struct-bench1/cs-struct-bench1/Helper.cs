@@ -254,193 +254,207 @@ namespace cs_struct_bench1
 
 
 
-    public ref struct MemoryBuffer<T>
+    public readonly ref struct MemoryBuffer<T>
     {
-        Memory<T> InternalBuffer;
-        Span<T> InternalSpan;
-        public int CurrentPosition { get; private set; }
-        public int Size { get; private set; }
+        internal readonly Memory<T> InternalMemory;
+        internal readonly Span<T> InternalSpan;
+        public readonly int CurrentPosition;
+        public readonly int Size;
 
-        public Memory<T> Memory { get => InternalBuffer.Slice(0, Size); }
+        public Memory<T> Memory { get => InternalMemory.Slice(0, Size); }
         public Memory<T> MemoryBefore { get => Memory.Slice(0, CurrentPosition); }
         public Memory<T> MemoryAfter { get => Memory.Slice(CurrentPosition); }
 
+        internal MemoryBuffer(Memory<T> internal_memory, Span<T> internal_span, int current_position, int size)
+        {
+            if (internal_memory.Length < size)
+            {
+                int new_internal_size = internal_memory.Length;
+                while (new_internal_size < size)
+                    new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
+
+                InternalMemory = internal_memory.ReAlloc(new_internal_size);
+                InternalSpan = InternalMemory.Span;
+            }
+            else
+            {
+                InternalMemory = internal_memory;
+                InternalSpan = internal_span;
+            }
+
+            CurrentPosition = current_position;
+            Size = size;
+        }
+
         public MemoryBuffer(Memory<T> base_span)
         {
-            InternalBuffer = base_span;
+            InternalMemory = base_span;
+            InternalSpan = InternalMemory.Span;
             CurrentPosition = 0;
             Size = base_span.Length;
-            InternalSpan = InternalBuffer.Span;
         }
+    }
 
-        public Span<T> Walk(int size)
+    public static class MemoryBufferHelper
+    {
+        public static Span<T> Walk<T>(ref this MemoryBuffer<T> buf, int size)
         {
-            int new_size = checked(CurrentPosition + size);
-            if (InternalBuffer.Length < new_size)
-            {
-                EnsureInternalBufferReserved(new_size);
-            }
-            var ret = InternalSpan.Slice(CurrentPosition, size);
-            Size = Math.Max(new_size, Size);
-            CurrentPosition += size;
+            int new_position = checked(buf.CurrentPosition + size);
+            int new_size = Math.Max(buf.Size, new_position);
+            var ret = buf.InternalSpan.Slice(buf.CurrentPosition, size);
+            buf = new MemoryBuffer<T>(buf.InternalMemory, buf.InternalSpan, new_position, new_size);
             return ret;
         }
 
-        public Span<T> WalkNoMove(int size)
+        public static Span<T> WalkStay<T>(ref this MemoryBuffer<T> buf, int size)
         {
-            int new_size = checked(CurrentPosition + size);
-            if (InternalBuffer.Length < new_size)
+            int new_position = checked(buf.CurrentPosition + size);
+            var ret = buf.InternalSpan.Slice(buf.CurrentPosition, size);
+            if (buf.Size < new_position)
             {
-                EnsureInternalBufferReserved(new_size);
+                buf = new MemoryBuffer<T>(buf.InternalMemory, buf.InternalSpan, buf.CurrentPosition, new_position);
             }
-            var ret = InternalSpan.Slice(CurrentPosition, size);
-            Size = Math.Max(new_size, Size);
             return ret;
         }
 
-        public void Write(T[] data, int offset = 0, int? length = 0) => Write(data.AsSpan(offset, length ?? data.Length - offset));
-        public void Write(Memory<T> data) => Write(data.Span);
-        public void Write(ReadOnlyMemory<T> data) => Write(data.Span);
+        public static void Write<T>(ref this MemoryBuffer<T> buf, Span<T> data) => data.CopyTo(buf.Walk(data.Length));
+        public static void Write<T>(ref this MemoryBuffer<T> buf, ReadOnlySpan<T> data) => data.CopyTo(buf.Walk(data.Length));
+        public static void Write<T>(ref this MemoryBuffer<T> buf, Memory<T> data) => buf.Write(data.Span);
+        public static void Write<T>(ref this MemoryBuffer<T> buf, ReadOnlyMemory<T> data) => buf.Write(data.Span);
+        public static void Write<T>(ref this MemoryBuffer<T> buf, T[] data, int offset = 0, int? length = 0) => buf.Write(data.AsSpan(offset, length ?? data.Length - offset));
 
-        public void Write(Span<T> data)
+        public static ReadOnlySpan<T> Read<T>(ref this MemoryBuffer<T> buf, int size)
         {
-            var span = Walk(data.Length);
-            data.CopyTo(span);
-        }
-
-        public void Write(ReadOnlySpan<T> data)
-        {
-            var span = Walk(data.Length);
-            data.CopyTo(span);
-        }
-
-        public ReadOnlySpan<T> Read(int size)
-        {
-            int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
-            {
-                throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-            }
-
-            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            int new_position = checked(buf.CurrentPosition + size);
+            if (buf.Size < new_position) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+            var ret = buf.InternalSpan.Slice(buf.CurrentPosition, size);
+            buf = new MemoryBuffer<T>(buf.InternalMemory, buf.InternalSpan, new_position, buf.Size);
             return ret;
         }
 
-        public ReadOnlySpan<T> Peek(int size)
+        public static ReadOnlyMemory<T> ReadAsMemory<T>(ref this MemoryBuffer<T> buf, int size)
         {
-            int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
-            {
-                throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-            }
-
-            Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            int new_position = checked(buf.CurrentPosition + size);
+            if (buf.Size < new_position) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+            var ret = buf.InternalMemory.Slice(buf.CurrentPosition, size);
+            buf = new MemoryBuffer<T>(buf.InternalMemory, buf.InternalSpan, new_position, buf.Size);
             return ret;
         }
 
-        public ReadOnlyMemory<T> ReadAsMemory(int size)
+        public static ReadOnlySpan<T> Peek<T>(ref this MemoryBuffer<T> buf, int size)
         {
-            int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
-            {
-                throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-            }
-
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            int new_position = checked(buf.CurrentPosition + size);
+            if (buf.Size < new_position) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+            var ret = buf.InternalSpan.Slice(buf.CurrentPosition, size);
             return ret;
         }
 
-        public ReadOnlyMemory<T> PeekAsMemory(int size)
+        public static ReadOnlyMemory<T> PeekAsMemory<T>(ref this MemoryBuffer<T> buf, int size)
         {
-            int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
-            {
-                throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-            }
-
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            int new_position = checked(buf.CurrentPosition + size);
+            if (buf.Size < new_position) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+            var ret = buf.InternalMemory.Slice(buf.CurrentPosition, size);
             return ret;
         }
 
-        public void Seek(int offset, SeekOrigin mode)
+        public static void Seek<T>(ref this MemoryBuffer<T> buf, int offset, SeekOrigin mode)
         {
             int new_position = 0;
             if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
+                new_position = checked(buf.CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Size + offset);
+                new_position = checked(buf.Size + offset);
             else
                 new_position = offset;
 
             if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Size) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (new_position > buf.Size) throw new ArgumentOutOfRangeException("new_position > Size");
 
-            CurrentPosition = new_position;
+            buf = new MemoryBuffer<T>(buf.InternalMemory, buf.InternalSpan, new_position, buf.Size);
         }
 
-        public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
+        public static void SeekToBegin<T>(ref this MemoryBuffer<T> buf) => buf.Seek(0, SeekOrigin.Begin);
+        public static void SeekToEnd<T>(ref this MemoryBuffer<T> buf) => buf.Seek(0, SeekOrigin.End);
 
-        public void SeekToEnd() => Seek(0, SeekOrigin.End);
-
-        public int Read(Span<T> dest, int size)
+        public static int Read<T>(ref this MemoryBuffer<T> buf, Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
-            var span = Read(size);
+            var span = buf.Read(size);
             span.CopyTo(dest);
             return span.Length;
         }
 
-        public int Peek(Span<T> dest, int size)
+        public static int Peek<T>(ref this MemoryBuffer<T> buf, Span<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
-            var span = Peek(size);
+            var span = buf.Peek(size);
             span.CopyTo(dest);
             return span.Length;
         }
 
-        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
-        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+        public static int Read<T>(ref this MemoryBuffer<T> buf, T[] dest, int offset, int size) => buf.Read(dest.AsSpan(offset, size), size);
+        public static int Peek<T>(ref this MemoryBuffer<T> buf, T[] dest, int offset, int size) => buf.Peek(dest.AsSpan(offset, size), size);
 
-        public int Read(Memory<T> dest, int size)
+        public static int Read<T>(ref this MemoryBuffer<T> buf, Memory<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
-            var span = PeekAsMemory(size);
+            var span = buf.PeekAsMemory(size);
             span.CopyTo(dest);
             return span.Length;
         }
 
-        public int Peek(Memory<T> dest, int size)
+        public static int Peek<T>(ref this MemoryBuffer<T> buf, Memory<T> dest, int size)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
-            var span = PeekAsMemory(size);
+            var span = buf.PeekAsMemory(size);
             span.CopyTo(dest);
             return span.Length;
         }
 
-        public void EnsureInternalBufferReserved(int new_size)
+        public static void Clear<T>(ref this MemoryBuffer<T> buf)
         {
-            if (InternalBuffer.Length >= new_size) return;
-
-            int new_internal_size = InternalBuffer.Length;
-            while (new_internal_size < new_size)
-                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
-
-            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
-            InternalSpan = InternalBuffer.Span;
+            buf = new MemoryBuffer<T>(new Memory<T>());
         }
 
-        public void Clear()
-        {
-            InternalBuffer = new Memory<T>();
-            CurrentPosition = 0;
-            Size = 0;
-            InternalSpan = new Span<T>();
-        }
+        public static MemoryBuffer<T> AsMemoryBuffer<T>(this Memory<T> memory) => new MemoryBuffer<T>(memory);
+        public static MemoryBuffer<T> AsMemoryBuffer<T>(this T[] data, int offset, int size) => new MemoryBuffer<T>(data.AsMemory(offset, size));
+
+        public static void WriteUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1));
+        public static void WriteUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2));
+        public static void WriteUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4));
+        public static void WriteUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8));
+        public static void WriteSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1));
+        public static void WriteSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2));
+        public static void WriteSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4));
+        public static void WriteSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8));
+
+        public static void SetUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.WalkStay(1));
+        public static void SetUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.WalkStay(2));
+        public static void SetUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.WalkStay(4));
+        public static void SetUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.WalkStay(8));
+        public static void SetSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.WalkStay(1));
+        public static void SetSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.WalkStay(2));
+        public static void SetSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.WalkStay(4));
+        public static void SetSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.WalkStay(8));
+
+        public static byte ReadUInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static byte PeekUInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
     }
-
-
 
 
 
@@ -662,44 +676,6 @@ namespace cs_struct_bench1
 
 
 
-        public static MemoryBuffer<T> AsMemoryBuffer<T>(this Memory<T> memory) => new MemoryBuffer<T>(memory);
-        public static MemoryBuffer<T> AsMemoryBuffer<T>(this T[] data, int offset, int size) => new MemoryBuffer<T>(data.AsMemory(offset, size));
-
-        public static void WriteUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1));
-        public static void WriteUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2));
-        public static void WriteUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4));
-        public static void WriteUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8));
-        public static void WriteSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1));
-        public static void WriteSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2));
-        public static void WriteSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4));
-        public static void WriteSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8));
-
-        public static void SetUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.WalkNoMove(1));
-        public static void SetUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.WalkNoMove(2));
-        public static void SetUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.WalkNoMove(4));
-        public static void SetUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.WalkNoMove(8));
-        public static void SetSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.WalkNoMove(1));
-        public static void SetSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.WalkNoMove(2));
-        public static void SetSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.WalkNoMove(4));
-        public static void SetSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.WalkNoMove(8));
-
-        public static byte ReadUInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
-        public static ushort ReadUInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
-        public static uint ReadUInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
-        public static ulong ReadUInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
-        public static sbyte ReadSInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
-        public static short ReadSInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
-        public static int ReadSInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
-        public static long ReadSInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
-
-        public static byte PeekUInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
-        public static ushort PeekUInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
-        public static uint PeekUInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
-        public static ulong PeekUInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
-        public static sbyte PeekSInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
-        public static short PeekSInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
-        public static int PeekSInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
-        public static long PeekSInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
 
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this T[] data, int offset, int size) => new ReadOnlyMemoryBuffer<T>(data.AsReadOnlyMemory(offset, size));
