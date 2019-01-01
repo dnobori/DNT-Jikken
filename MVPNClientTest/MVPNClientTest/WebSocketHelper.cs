@@ -28,38 +28,75 @@ namespace SoftEther.WebSocket.Helper
 {
     public ref struct SpanBuffer<T>
     {
-        Span<T> InternalBuffer;
+        Span<T> InternalSpan;
         public int CurrentPosition { get; private set; }
-        public int Size { get; private set; }
+        public int Length { get; private set; }
 
-        public Span<T> Span { get => InternalBuffer.Slice(0, Size); }
+        public Span<T> Span { get => InternalSpan.Slice(0, Length); }
         public Span<T> SpanBefore { get => Span.Slice(0, CurrentPosition); }
         public Span<T> SpanAfter { get => Span.Slice(CurrentPosition); }
 
         public SpanBuffer(Span<T> base_span)
         {
-            InternalBuffer = base_span;
+            InternalSpan = base_span;
             CurrentPosition = 0;
-            Size = base_span.Length;
+            Length = base_span.Length;
+        }
+
+        public static implicit operator SpanBuffer<T>(Span<T> span) => new SpanBuffer<T>(span);
+        public static implicit operator SpanBuffer<T>(Memory<T> memory) => new SpanBuffer<T>(memory.Span);
+        public static implicit operator SpanBuffer<T>(T[] array) => new SpanBuffer<T>(array.AsSpan());
+        public static implicit operator Span<T>(SpanBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlySpan<T>(SpanBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlySpanBuffer<T>(SpanBuffer<T> buf) => buf.AsReadOnly();
+
+        public SpanBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public SpanBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public SpanBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public SpanBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            SpanBuffer<T> ret = new SpanBuffer<T>(this.InternalSpan.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public SpanBuffer<T> Clone()
+        {
+            SpanBuffer<T> ret = new SpanBuffer<T>(InternalSpan.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> AsReadOnly()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
         }
 
         public Span<T> Walk(int size, bool no_move = false)
         {
             int new_size = checked(CurrentPosition + size);
 
-            if (InternalBuffer.Length < new_size)
+            if (InternalSpan.Length < new_size)
             {
                 EnsureInternalBufferReserved(new_size);
             }
-            var ret = InternalBuffer.Slice(CurrentPosition, size);
-            Size = Math.Max(new_size, Size);
+            var ret = InternalSpan.Slice(CurrentPosition, size);
+            Length = Math.Max(new_size, Length);
             if (no_move == false) CurrentPosition += size;
             return ret;
         }
 
         public void Write(Memory<T> data) => Write(data.Span);
         public void Write(ReadOnlyMemory<T> data) => Write(data.Span);
-        public void Write(T[] data, int offset = 0, int? length = 0) => Write(data.AsSpan(offset, length ?? data.Length - offset));
+        public void Write(T[] data, int offset = 0, int? length = null) => Write(data.AsSpan(offset, length ?? data.Length - offset));
 
         public void Write(Span<T> data)
         {
@@ -76,13 +113,13 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
-            Span<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
             CurrentPosition += size_read;
             return ret;
         }
@@ -90,13 +127,13 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
-            Span<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
             return ret;
         }
 
@@ -106,12 +143,12 @@ namespace SoftEther.WebSocket.Helper
             if (mode == SeekOrigin.Current)
                 new_position = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Size + offset);
+                new_position = checked(Length + offset);
             else
                 new_position = offset;
 
             if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Size) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
 
             CurrentPosition = new_position;
         }
@@ -141,51 +178,86 @@ namespace SoftEther.WebSocket.Helper
 
         public void EnsureInternalBufferReserved(int new_size)
         {
-            if (InternalBuffer.Length >= new_size) return;
+            if (InternalSpan.Length >= new_size) return;
 
-            int new_internal_size = InternalBuffer.Length;
+            int new_internal_size = InternalSpan.Length;
             while (new_internal_size < new_size)
                 new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
 
-            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
+            InternalSpan = InternalSpan.ReAlloc(new_internal_size);
         }
 
         public void Clear()
         {
-            InternalBuffer = new Span<T>();
+            InternalSpan = new Span<T>();
             CurrentPosition = 0;
-            Size = 0;
+            Length = 0;
         }
     }
 
 
     public ref struct ReadOnlySpanBuffer<T>
     {
-        ReadOnlySpan<T> InternalBuffer;
+        ReadOnlySpan<T> InternalSpan;
         public int CurrentPosition { get; private set; }
-        public int Size { get; private set; }
+        public int Length { get; private set; }
 
-        public ReadOnlySpan<T> ReadOnlySpan { get => InternalBuffer.Slice(0, Size); }
-        public ReadOnlySpan<T> ReadOnlySpanBefore { get => ReadOnlySpan.Slice(0, CurrentPosition); }
-        public ReadOnlySpan<T> ReadOnlySpanAfter { get => ReadOnlySpan.Slice(CurrentPosition); }
+        public ReadOnlySpan<T> Span { get => InternalSpan.Slice(0, Length); }
+        public ReadOnlySpan<T> SpanBefore { get => Span.Slice(0, CurrentPosition); }
+        public ReadOnlySpan<T> SpanAfter { get => Span.Slice(CurrentPosition); }
+
+        public static implicit operator ReadOnlySpanBuffer<T>(ReadOnlySpan<T> span) => new ReadOnlySpanBuffer<T>(span);
+        public static implicit operator ReadOnlySpanBuffer<T>(ReadOnlyMemory<T> memory) => new ReadOnlySpanBuffer<T>(memory.Span);
+        public static implicit operator ReadOnlySpanBuffer<T>(T[] array) => new ReadOnlySpanBuffer<T>(array.AsSpan());
+        public static implicit operator ReadOnlySpan<T>(ReadOnlySpanBuffer<T> buf) => buf.Span;
+
+        public ReadOnlySpanBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public ReadOnlySpanBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public ReadOnlySpanBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public ReadOnlySpanBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(this.InternalSpan.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> Clone()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(InternalSpan.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public SpanBuffer<T> CloneAsWritable()
+        {
+            SpanBuffer<T> ret = new SpanBuffer<T>(Span.ToArray());
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
 
         public ReadOnlySpanBuffer(ReadOnlySpan<T> base_span)
         {
-            InternalBuffer = base_span;
+            InternalSpan = base_span;
             CurrentPosition = 0;
-            Size = base_span.Length;
+            Length = base_span.Length;
         }
 
         public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
             CurrentPosition += size_read;
             return ret;
         }
@@ -193,13 +265,13 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
             return ret;
         }
 
@@ -209,12 +281,12 @@ namespace SoftEther.WebSocket.Helper
             if (mode == SeekOrigin.Current)
                 new_position = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Size + offset);
+                new_position = checked(Length + offset);
             else
                 new_position = offset;
 
             if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Size) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
 
             CurrentPosition = new_position;
         }
@@ -245,9 +317,9 @@ namespace SoftEther.WebSocket.Helper
 
         public void Clear()
         {
-            InternalBuffer = new ReadOnlySpan<T>();
+            InternalSpan = new ReadOnlySpan<T>();
             CurrentPosition = 0;
-            Size = 0;
+            Length = 0;
         }
     }
 
@@ -260,18 +332,76 @@ namespace SoftEther.WebSocket.Helper
         Memory<T> InternalBuffer;
         Span<T> InternalSpan;
         public int CurrentPosition { get; private set; }
-        public int Size { get; private set; }
+        public int Length { get; private set; }
 
-        public Memory<T> Memory { get => InternalBuffer.Slice(0, Size); }
+        public Memory<T> Memory { get => InternalBuffer.Slice(0, Length); }
         public Memory<T> MemoryBefore { get => Memory.Slice(0, CurrentPosition); }
         public Memory<T> MemoryAfter { get => Memory.Slice(CurrentPosition); }
 
-        public MemoryBuffer(Memory<T> base_span)
+        public Span<T> Span { get => InternalBuffer.Slice(0, Length).Span; }
+        public Span<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
+        public Span<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
+
+        public MemoryBuffer(Memory<T> base_memory)
         {
-            InternalBuffer = base_span;
+            InternalBuffer = base_memory;
             CurrentPosition = 0;
-            Size = base_span.Length;
+            Length = base_memory.Length;
             InternalSpan = InternalBuffer.Span;
+        }
+
+        public static implicit operator MemoryBuffer<T>(Memory<T> memory) => new MemoryBuffer<T>(memory);
+        public static implicit operator MemoryBuffer<T>(T[] array) => new MemoryBuffer<T>(array.AsMemory());
+        public static implicit operator Memory<T>(MemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator Span<T>(MemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemory<T>(MemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(MemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemoryBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnly();
+        public static implicit operator SpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsSpanBuffer();
+        public static implicit operator ReadOnlySpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+
+        public MemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public MemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public MemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public MemoryBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            MemoryBuffer <T> ret = new MemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public MemoryBuffer<T> Clone()
+        {
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(InternalSpan.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public ReadOnlyMemoryBuffer<T> AsReadOnly()
+        {
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(Memory);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public SpanBuffer<T> AsSpanBuffer()
+        {
+            SpanBuffer<T> ret = new SpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
         }
 
         public Span<T> Walk(int size, bool no_move = false)
@@ -282,12 +412,12 @@ namespace SoftEther.WebSocket.Helper
                 EnsureInternalBufferReserved(new_size);
             }
             var ret = InternalSpan.Slice(CurrentPosition, size);
-            Size = Math.Max(new_size, Size);
+            Length = Math.Max(new_size, Length);
             if (no_move == false) CurrentPosition += size;
             return ret;
         }
 
-        public void Write(T[] data, int offset = 0, int? length = 0) => Write(data.AsSpan(offset, length ?? data.Length - offset));
+        public void Write(T[] data, int offset = 0, int? length = null) => Write(data.AsSpan(offset, length ?? data.Length - offset));
         public void Write(Memory<T> data) => Write(data.Span);
         public void Write(ReadOnlyMemory<T> data) => Write(data.Span);
 
@@ -306,10 +436,10 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
@@ -320,10 +450,10 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
@@ -333,10 +463,10 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
@@ -347,10 +477,10 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
@@ -363,12 +493,12 @@ namespace SoftEther.WebSocket.Helper
             if (mode == SeekOrigin.Current)
                 new_position = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Size + offset);
+                new_position = checked(Length + offset);
             else
                 new_position = offset;
 
             if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Size) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
 
             CurrentPosition = new_position;
         }
@@ -428,7 +558,7 @@ namespace SoftEther.WebSocket.Helper
         {
             InternalBuffer = new Memory<T>();
             CurrentPosition = 0;
-            Size = 0;
+            Length = 0;
             InternalSpan = new Span<T>();
         }
     }
@@ -444,27 +574,74 @@ namespace SoftEther.WebSocket.Helper
         ReadOnlyMemory<T> InternalBuffer;
         ReadOnlySpan<T> InternalSpan;
         public int CurrentPosition { get; private set; }
-        public int Size { get; private set; }
+        public int Length { get; private set; }
 
-        public ReadOnlyMemory<T> ReadOnlyMemory { get => InternalBuffer.Slice(0, Size); }
-        public ReadOnlyMemory<T> ReadOnlyMemoryBefore { get => ReadOnlyMemory.Slice(0, CurrentPosition); }
-        public ReadOnlyMemory<T> ReadOnlyMemoryAfter { get => ReadOnlyMemory.Slice(CurrentPosition); }
+        public ReadOnlyMemory<T> Memory { get => InternalBuffer.Slice(0, Length); }
+        public ReadOnlyMemory<T> MemoryBefore { get => Memory.Slice(0, CurrentPosition); }
+        public ReadOnlyMemory<T> MemoryAfter { get => Memory.Slice(CurrentPosition); }
 
-        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_span)
+        public ReadOnlySpan<T> Span { get => InternalBuffer.Slice(0, Length).Span; }
+        public ReadOnlySpan<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
+        public ReadOnlySpan<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
+
+        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
         {
-            InternalBuffer = base_span;
+            InternalBuffer = base_memory;
             CurrentPosition = 0;
-            Size = base_span.Length;
+            Length = base_memory.Length;
             InternalSpan = InternalBuffer.Span;
+        }
+
+        public static implicit operator ReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
+        public static implicit operator ReadOnlyMemoryBuffer<T>(T[] array) => new ReadOnlyMemoryBuffer<T>(array.AsMemory());
+        public static implicit operator ReadOnlyMemory<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlySpanBuffer<T>(ReadOnlyMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+
+        public ReadOnlyMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public ReadOnlyMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public ReadOnlyMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public ReadOnlyMemoryBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public ReadOnlyMemoryBuffer<T> Clone()
+        {
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(InternalSpan.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public MemoryBuffer<T> CloneAsWritable()
+        {
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(Span.ToArray());
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
         }
 
         public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
@@ -475,10 +652,10 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
@@ -488,10 +665,10 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
@@ -502,10 +679,10 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
         {
             int size_read = size;
-            if (checked(CurrentPosition + size) > Size)
+            if (checked(CurrentPosition + size) > Length)
             {
                 if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Size - CurrentPosition;
+                size_read = Length - CurrentPosition;
             }
 
             ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
@@ -518,12 +695,12 @@ namespace SoftEther.WebSocket.Helper
             if (mode == SeekOrigin.Current)
                 new_position = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Size + offset);
+                new_position = checked(Length + offset);
             else
                 new_position = offset;
 
             if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Size) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
 
             CurrentPosition = new_position;
         }
@@ -571,7 +748,7 @@ namespace SoftEther.WebSocket.Helper
         {
             InternalBuffer = new ReadOnlyMemory<T>();
             CurrentPosition = 0;
-            Size = 0;
+            Length = 0;
             InternalSpan = new Span<T>();
         }
     }
@@ -1740,6 +1917,13 @@ namespace SoftEther.WebSocket.Helper
         public override string ToString() => this.Value.ToString();
         public int Increment() => Interlocked.Increment(ref this.Value);
         public int Decrement() => Interlocked.Decrement(ref this.Value);
+
+        public override bool Equals(object obj) => obj is RefInt x && this.Value == x.Value;
+        public override int GetHashCode() => HashCode.Combine(Value);
+        public static bool operator ==(RefInt left, int right) => left.Value == right;
+        public static bool operator !=(RefInt left, int right) => left.Value != right;
+        public static implicit operator int(RefInt r) => r.Value;
+        public static implicit operator RefInt(int value) => new RefInt(value);
     }
 
     public class RefBool
@@ -1753,6 +1937,13 @@ namespace SoftEther.WebSocket.Helper
         public void Set(bool value) => this.Value = value;
         public bool Get() => this.Value;
         public override string ToString() => this.Value.ToString();
+
+        public override bool Equals(object obj) => obj is RefBool x && this.Value == x.Value;
+        public override int GetHashCode() => HashCode.Combine(Value);
+        public static bool operator ==(RefBool left, bool right) => left.Value == right;
+        public static bool operator !=(RefBool left, bool right) => left.Value != right;
+        public static implicit operator bool(RefBool r) => r.Value;
+        public static implicit operator RefBool(bool value) => new RefBool(value);
     }
 
     public class Ref<T>

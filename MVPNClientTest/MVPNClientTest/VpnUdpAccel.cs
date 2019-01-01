@@ -304,13 +304,14 @@ namespace SoftEther.VpnClient
             }
         }
 
-        UdpPacket UdpAccelProcessRecvPacket(Memory<byte> buf, IPEndPoint src)
+        UdpPacket UdpAccelProcessRecvPacket(MemoryBuffer<byte> buf, IPEndPoint src)
         {
             UdpPacket ret;
 
             if (PlainTextMode == false)
             {
-                var iv = buf.WalkRead(PacketIvSize);
+                var iv = buf.ReadAsMemory(PacketIvSize);
+                buf = buf.SliceAfter();
                 if (WebSocketHelper.Aead_ChaCha20Poly1305_Ietf_Decrypt(buf, buf, YourKey.AsMemory().Slice(0, ChaChaKeySize), iv, null) == false)
                 {
                     throw new ApplicationException("Aead_ChaCha20Poly1305_Ietf_Decrypt failed.");
@@ -318,19 +319,19 @@ namespace SoftEther.VpnClient
                 buf = buf.Slice(0, buf.Length - PacketMacSize);
             }
 
-            uint cookie = buf.WalkReadUInt32();
+            uint cookie = buf.ReadUInt32();
 
             if (cookie != MyCookie)
             {
                 throw new ApplicationException("cookie != MyCookie");
             }
 
-            long my_tick = (long)buf.WalkReadUInt64();
-            long your_tick = (long)buf.WalkReadUInt64();
-            ushort inner_size = buf.WalkReadUInt16();
-            byte flag = buf.WalkReadUInt8();
+            long my_tick = (long)buf.ReadUInt64();
+            long your_tick = (long)buf.ReadUInt64();
+            ushort inner_size = buf.ReadUInt16();
+            byte flag = buf.ReadUInt8();
 
-            var inner_data = buf.WalkRead(inner_size);
+            var inner_data = buf.Read(inner_size);
 
             if (my_tick < LastRecvYourTick)
             {
@@ -412,7 +413,7 @@ namespace SoftEther.VpnClient
                 buf.Write(NextIv);
             }
 
-            int iv_pin = buf.CurrentPosition;
+            int iv_pos = buf.CurrentPosition;
 
             // Cookie
             buf.WriteUInt32(YourCookie);
@@ -441,22 +442,20 @@ namespace SoftEther.VpnClient
                 {
                     int pad_size = Math.Min(max_size - current_length, MaxPaddingSize);
                     pad_size = WebSocketHelper.RandSInt31() % pad_size;
-                    Span<byte> pad = stackalloc byte[pad_size];
-                    //buf.Write(pad);
-                    //MemoryBuffer<byte>.Test(buf, pad);
-                    buf.Test(pad);
+                    Span<byte> pad = new byte[pad_size];
+                    buf.Write(pad);
                 }
 
-                buf.WalkAutoDynamic(PacketMacSize);
+                buf.Walk(PacketMacSize);
 
-                var mem_dst = buf.SliceWithPin(iv_pin);
+                var mem_dst = buf.Memory.Slice(iv_pos);
                 var mem_src = mem_dst.Slice(0, mem_dst.Length - PacketMacSize);
                 var key = MyKey.AsMemory().Slice(0, ChaChaKeySize);
                 WebSocketHelper.Aead_ChaCha20Poly1305_Ietf_Encrypt(mem_dst, mem_src, key, NextIv, null);
                 mem_src.Slice(mem_src.Length - PacketIvSize, PacketIvSize).CopyTo(NextIv);
             }
 
-            var send_data = buf.SliceWithPin(buf_pin);
+            var send_data = buf.Memory;
 
             lock (Nb.SendUdpQueue)
             {
