@@ -33,7 +33,7 @@ namespace cs_struct_bench1
             Size = base_span.Length;
         }
 
-        public Span<T> Walk(int size)
+        public Span<T> Walk(int size, bool no_move = false)
         {
             int new_size = checked(CurrentPosition + size);
 
@@ -43,7 +43,7 @@ namespace cs_struct_bench1
             }
             var ret = InternalBuffer.Slice(CurrentPosition, size);
             Size = Math.Max(new_size, Size);
-            CurrentPosition += size;
+            if (no_move == false) CurrentPosition += size;
             return ret;
         }
 
@@ -76,6 +76,19 @@ namespace cs_struct_bench1
             return ret;
         }
 
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            Span<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
         public void Seek(int offset, SeekOrigin mode)
         {
             int new_position = 0;
@@ -100,6 +113,14 @@ namespace cs_struct_bench1
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(int size, Span<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
             span.CopyTo(dest);
             return span.Length;
         }
@@ -155,6 +176,19 @@ namespace cs_struct_bench1
             return ret;
         }
 
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
         public void Seek(int offset, SeekOrigin mode)
         {
             int new_position = 0;
@@ -179,6 +213,14 @@ namespace cs_struct_bench1
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(int size, Span<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
             span.CopyTo(dest);
             return span.Length;
         }
@@ -214,7 +256,7 @@ namespace cs_struct_bench1
             InternalSpan = InternalBuffer.Span;
         }
 
-        public Span<T> Walk(int size)
+        public Span<T> Walk(int size, bool no_move = false)
         {
             int new_size = checked(CurrentPosition + size);
             if (InternalBuffer.Length < new_size)
@@ -223,7 +265,7 @@ namespace cs_struct_bench1
             }
             var ret = InternalSpan.Slice(CurrentPosition, size);
             Size = Math.Max(new_size, Size);
-            CurrentPosition += size;
+            if (no_move == false) CurrentPosition += size;
             return ret;
         }
 
@@ -256,6 +298,19 @@ namespace cs_struct_bench1
             return ret;
         }
 
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
         public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
         {
             int size_read = size;
@@ -267,6 +322,19 @@ namespace cs_struct_bench1
 
             ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
             CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
             return ret;
         }
 
@@ -298,10 +366,26 @@ namespace cs_struct_bench1
             return span.Length;
         }
 
+        public int Peek(int size, Span<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
         public int Read(int size, Memory<T> dest)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
-            var span = ReadAsMemory(size);
+            var span = PeekAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(int size, Memory<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
             span.CopyTo(dest);
             return span.Length;
         }
@@ -366,6 +450,19 @@ namespace cs_struct_bench1
             return ret;
         }
 
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
         public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
         {
             int size_read = size;
@@ -377,6 +474,19 @@ namespace cs_struct_bench1
 
             ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
             CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Size)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Size - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
             return ret;
         }
 
@@ -408,10 +518,26 @@ namespace cs_struct_bench1
             return span.Length;
         }
 
+        public int Peek(int size, Span<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
         public int Read(int size, Memory<T> dest)
         {
             if (dest.Length < size) throw new ArgumentException("dest.Length < size");
             var span = ReadAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(int size, Memory<T> dest)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
             span.CopyTo(dest);
             return span.Length;
         }
@@ -442,72 +568,127 @@ namespace cs_struct_bench1
         public static SpanBuffer<T> AsSpanBuffer<T>(this Memory<T> memory) => new SpanBuffer<T>(memory.Span);
         public static SpanBuffer<T> AsSpanBuffer<T>(this T[] data, int offset, int size) => new SpanBuffer<T>(data.AsSpan(offset, size));
 
-        public static void WriteUInt8(this ref SpanBuffer<byte> buf, byte value) => value.ToBinaryUInt8(buf.Walk(1));
-        public static void WriteUInt16(this ref SpanBuffer<byte> buf, ushort value) => value.ToBinaryUInt16(buf.Walk(2));
-        public static void WriteUInt32(this ref SpanBuffer<byte> buf, uint value) => value.ToBinaryUInt32(buf.Walk(4));
-        public static void WriteUInt64(this ref SpanBuffer<byte> buf, ulong value) => value.ToBinaryUInt64(buf.Walk(8));
-        public static void WriteSInt8(this ref SpanBuffer<byte> buf, sbyte value) => value.ToBinarySInt8(buf.Walk(1));
-        public static void WriteSInt16(this ref SpanBuffer<byte> buf, short value) => value.ToBinarySInt16(buf.Walk(2));
-        public static void WriteSInt32(this ref SpanBuffer<byte> buf, int value) => value.ToBinarySInt32(buf.Walk(4));
-        public static void WriteSInt64(this ref SpanBuffer<byte> buf, long value) => value.ToBinarySInt64(buf.Walk(8));
+        public static void WriteUInt8(this ref SpanBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
+        public static void WriteUInt16(this ref SpanBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
+        public static void WriteUInt32(this ref SpanBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
+        public static void WriteUInt64(this ref SpanBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
+        public static void WriteSInt8(this ref SpanBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
+        public static void WriteSInt16(this ref SpanBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
+        public static void WriteSInt32(this ref SpanBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
+        public static void WriteSInt64(this ref SpanBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
 
-        public static byte ReadUInt8(ref this SpanBuffer<byte> buf) => buf.Read(1).ToUInt8();
-        public static ushort ReadUInt16(ref this SpanBuffer<byte> buf) => buf.Read(2).ToUInt16();
-        public static uint ReadUInt32(ref this SpanBuffer<byte> buf) => buf.Read(4).ToUInt32();
-        public static ulong ReadUInt64(ref this SpanBuffer<byte> buf) => buf.Read(8).ToUInt64();
-        public static sbyte ReadSInt8(ref this SpanBuffer<byte> buf) => buf.Read(1).ToSInt8();
-        public static short ReadSInt16(ref this SpanBuffer<byte> buf) => buf.Read(2).ToSInt16();
-        public static int ReadSInt32(ref this SpanBuffer<byte> buf) => buf.Read(4).ToSInt32();
-        public static long ReadSInt64(ref this SpanBuffer<byte> buf) => buf.Read(8).ToSInt64();
+        public static void SetUInt8(this ref SpanBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
+        public static void SetUInt16(this ref SpanBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
+        public static void SetUInt32(this ref SpanBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
+        public static void SetUInt64(this ref SpanBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
+        public static void SetSInt8(this ref SpanBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
+        public static void SetSInt16(this ref SpanBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
+        public static void SetSInt32(this ref SpanBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
+        public static void SetSInt64(this ref SpanBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
+
+        public static byte ReadUInt8(ref this SpanBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this SpanBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this SpanBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this SpanBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this SpanBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this SpanBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this SpanBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this SpanBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static byte PeekUInt8(ref this SpanBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this SpanBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this SpanBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this SpanBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this SpanBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this SpanBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this SpanBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this SpanBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+
+
 
         public static ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer<T>(this ReadOnlySpan<T> span) => new ReadOnlySpanBuffer<T>(span);
         public static ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer<T>(this ReadOnlyMemory<T> memory) => new ReadOnlySpanBuffer<T>(memory.Span);
         public static ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer<T>(this T[] data, int offset, int size) => new ReadOnlySpanBuffer<T>(data.AsReadOnlySpan(offset, size));
 
-        public static byte ReadUInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(1).ToUInt8();
-        public static ushort ReadUInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(2).ToUInt16();
-        public static uint ReadUInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(4).ToUInt32();
-        public static ulong ReadUInt64(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(8).ToUInt64();
-        public static sbyte ReadSInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(1).ToSInt8();
-        public static short ReadSInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(2).ToSInt16();
-        public static int ReadSInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(4).ToSInt32();
-        public static long ReadSInt64(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(8).ToSInt64();
+        public static byte ReadUInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static byte PeekUInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(8).GetSInt64();
 
 
 
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this Memory<T> memory) => new MemoryBuffer<T>(memory);
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this T[] data, int offset, int size) => new MemoryBuffer<T>(data.AsMemory(offset, size));
 
-        public static void WriteUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.ToBinaryUInt8(buf.Walk(1));
-        public static void WriteUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.ToBinaryUInt16(buf.Walk(2));
-        public static void WriteUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.ToBinaryUInt32(buf.Walk(4));
-        public static void WriteUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.ToBinaryUInt64(buf.Walk(8));
-        public static void WriteSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.ToBinarySInt8(buf.Walk(1));
-        public static void WriteSInt16(this ref MemoryBuffer<byte> buf, short value) => value.ToBinarySInt16(buf.Walk(2));
-        public static void WriteSInt32(this ref MemoryBuffer<byte> buf, int value) => value.ToBinarySInt32(buf.Walk(4));
-        public static void WriteSInt64(this ref MemoryBuffer<byte> buf, long value) => value.ToBinarySInt64(buf.Walk(8));
+        public static void WriteUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
+        public static void WriteUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
+        public static void WriteUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
+        public static void WriteUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
+        public static void WriteSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
+        public static void WriteSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
+        public static void WriteSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
+        public static void WriteSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
 
-        public static byte ReadUInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).ToUInt8();
-        public static ushort ReadUInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).ToUInt16();
-        public static uint ReadUInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).ToUInt32();
-        public static ulong ReadUInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).ToUInt64();
-        public static sbyte ReadSInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).ToSInt8();
-        public static short ReadSInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).ToSInt16();
-        public static int ReadSInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).ToSInt32();
-        public static long ReadSInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).ToSInt64();
+        public static void SetUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
+        public static void SetUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
+        public static void SetUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
+        public static void SetUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
+        public static void SetSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
+        public static void SetSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
+        public static void SetSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
+        public static void SetSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
+
+        public static byte ReadUInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static byte PeekUInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
 
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this T[] data, int offset, int size) => new ReadOnlyMemoryBuffer<T>(data.AsReadOnlyMemory(offset, size));
 
-        public static byte ReadUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).ToUInt8();
-        public static ushort ReadUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).ToUInt16();
-        public static uint ReadUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).ToUInt32();
-        public static ulong ReadUInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).ToUInt64();
-        public static sbyte ReadSInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).ToSInt8();
-        public static short ReadSInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).ToSInt16();
-        public static int ReadSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).ToSInt32();
-        public static long ReadSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).ToSInt64();
+        public static byte ReadUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
+        public static byte PeekUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
     }
 
     static class Helper
@@ -544,432 +725,659 @@ namespace cs_struct_bench1
 
 
 
-        public static unsafe byte ToUInt8(this byte[] data, int offset = 0)
+        public static unsafe byte GetUInt8(this byte[] data, int offset = 0)
         {
             return (byte)data[offset];
         }
 
-        public static unsafe sbyte ToSInt8(this byte[] data, int offset = 0)
+        public static unsafe sbyte GetSInt8(this byte[] data, int offset = 0)
         {
             return (sbyte)data[offset];
         }
 
-        public static unsafe ushort ToUInt16(this byte[] data, int offset = 0)
+        public static unsafe ushort GetUInt16(this byte[] data, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(ushort)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)ptr)) : *((ushort*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)(ptr + offset))) : *((ushort*)(ptr + offset));
         }
 
-        public static unsafe short ToSInt16(this byte[] data, int offset = 0)
+        public static unsafe short GetSInt16(this byte[] data, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(short)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)ptr)) : *((short*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)(ptr + offset))) : *((short*)(ptr + offset));
         }
 
-        public static unsafe uint ToUInt32(this byte[] data, int offset = 0)
+        public static unsafe uint GetUInt32(this byte[] data, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(uint)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)ptr)) : *((uint*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)(ptr + offset))) : *((uint*)(ptr + offset));
         }
 
-        public static unsafe int ToSInt32(this byte[] data, int offset = 0)
+        public static unsafe int GetSInt32(this byte[] data, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(int)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)ptr)) : *((int*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)(ptr + offset))) : *((int*)(ptr + offset));
         }
 
-        public static unsafe ulong ToUInt64(this byte[] data, int offset = 0)
+        public static unsafe ulong GetUInt64(this byte[] data, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(ulong)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)ptr)) : *((ulong*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)(ptr + offset))) : *((ulong*)(ptr + offset));
         }
 
-        public static unsafe long ToSInt64(this byte[] data, int offset = 0)
+        public static unsafe long GetSInt64(this byte[] data, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(long)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)ptr)) : *((long*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr + offset))) : *((long*)(ptr + offset));
         }
 
-        public static unsafe byte ToUInt8(this Span<byte> span)
+        public static unsafe byte GetUInt8(this Span<byte> span)
         {
             return (byte)span[0];
         }
 
-        public static unsafe sbyte ToSInt8(this Span<byte> span)
+        public static unsafe sbyte GetSInt8(this Span<byte> span)
         {
             return (sbyte)span[0];
         }
 
-        public static unsafe ushort ToUInt16(this Span<byte> span)
+        public static unsafe ushort GetUInt16(this Span<byte> span)
         {
             if (span.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)ptr)) : *((ushort*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)(ptr))) : *((ushort*)(ptr));
         }
 
-        public static unsafe short ToSInt16(this Span<byte> span)
+        public static unsafe short GetSInt16(this Span<byte> span)
         {
             if (span.Length < sizeof(short)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)ptr)) : *((short*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)(ptr))) : *((short*)(ptr));
         }
 
-        public static unsafe uint ToUInt32(this Span<byte> span)
+        public static unsafe uint GetUInt32(this Span<byte> span)
         {
             if (span.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)ptr)) : *((uint*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)(ptr))) : *((uint*)(ptr));
         }
 
-        public static unsafe int ToSInt32(this Span<byte> span)
+        public static unsafe int GetSInt32(this Span<byte> span)
         {
             if (span.Length < sizeof(int)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)ptr)) : *((int*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)(ptr))) : *((int*)(ptr));
         }
 
-        public static unsafe ulong ToUInt64(this Span<byte> span)
+        public static unsafe ulong GetUInt64(this Span<byte> span)
         {
             if (span.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)ptr)) : *((ulong*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)(ptr))) : *((ulong*)(ptr));
         }
 
-        public static unsafe long ToSInt64(this Span<byte> span)
+        public static unsafe long GetSInt64(this Span<byte> span)
         {
             if (span.Length < sizeof(long)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)ptr)) : *((long*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
         }
 
-        public static unsafe byte ToUInt8(this ReadOnlySpan<byte> span)
+        public static unsafe byte GetUInt8(this ReadOnlySpan<byte> span)
         {
             return (byte)span[0];
         }
 
-        public static unsafe sbyte ToSInt8(this ReadOnlySpan<byte> span)
+        public static unsafe sbyte GetSInt8(this ReadOnlySpan<byte> span)
         {
             return (sbyte)span[0];
         }
 
-        public static unsafe ushort ToUInt16(this ReadOnlySpan<byte> span)
+        public static unsafe ushort GetUInt16(this ReadOnlySpan<byte> span)
         {
             if (span.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)ptr)) : *((ushort*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)(ptr))) : *((ushort*)(ptr));
         }
 
-        public static unsafe short ToSInt16(this ReadOnlySpan<byte> span)
+        public static unsafe short GetSInt16(this ReadOnlySpan<byte> span)
         {
             if (span.Length < sizeof(short)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)ptr)) : *((short*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)(ptr))) : *((short*)(ptr));
         }
 
-        public static unsafe uint ToUInt32(this ReadOnlySpan<byte> span)
+        public static unsafe uint GetUInt32(this ReadOnlySpan<byte> span)
         {
             if (span.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)ptr)) : *((uint*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)(ptr))) : *((uint*)(ptr));
         }
 
-        public static unsafe int ToSInt32(this ReadOnlySpan<byte> span)
+        public static unsafe int GetSInt32(this ReadOnlySpan<byte> span)
         {
             if (span.Length < sizeof(int)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)ptr)) : *((int*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)(ptr))) : *((int*)(ptr));
         }
 
-        public static unsafe ulong ToUInt64(this ReadOnlySpan<byte> span)
+        public static unsafe ulong GetUInt64(this ReadOnlySpan<byte> span)
         {
             if (span.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)ptr)) : *((ulong*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)(ptr))) : *((ulong*)(ptr));
         }
 
-        public static unsafe long ToSInt64(this ReadOnlySpan<byte> span)
+        public static unsafe long GetSInt64(this ReadOnlySpan<byte> span)
         {
             if (span.Length < sizeof(long)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)ptr)) : *((long*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
         }
 
-        public static unsafe byte ToUInt8(this Memory<byte> memory)
+        public static unsafe byte GetUInt8(this Memory<byte> memory)
         {
             return (byte)memory.Span[0];
         }
 
-        public static unsafe sbyte ToSInt8(this Memory<byte> memory)
+        public static unsafe sbyte GetSInt8(this Memory<byte> memory)
         {
             return (sbyte)memory.Span[0];
         }
 
-        public static unsafe ushort ToUInt16(this Memory<byte> memory)
+        public static unsafe ushort GetUInt16(this Memory<byte> memory)
         {
             if (memory.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)ptr)) : *((ushort*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)(ptr))) : *((ushort*)(ptr));
         }
 
-        public static unsafe short ToSInt16(this Memory<byte> memory)
+        public static unsafe short GetSInt16(this Memory<byte> memory)
         {
             if (memory.Length < sizeof(short)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)ptr)) : *((short*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)(ptr))) : *((short*)(ptr));
         }
 
-        public static unsafe uint ToUInt32(this Memory<byte> memory)
+        public static unsafe uint GetUInt32(this Memory<byte> memory)
         {
             if (memory.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)ptr)) : *((uint*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)(ptr))) : *((uint*)(ptr));
         }
 
-        public static unsafe int ToSInt32(this Memory<byte> memory)
+        public static unsafe int GetSInt32(this Memory<byte> memory)
         {
             if (memory.Length < sizeof(int)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)ptr)) : *((int*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)(ptr))) : *((int*)(ptr));
         }
 
-        public static unsafe ulong ToUInt64(this Memory<byte> memory)
+        public static unsafe ulong GetUInt64(this Memory<byte> memory)
         {
             if (memory.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)ptr)) : *((ulong*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)(ptr))) : *((ulong*)(ptr));
         }
 
-        public static unsafe long ToSInt64(this Memory<byte> memory)
+        public static unsafe long GetSInt64(this Memory<byte> memory)
         {
             if (memory.Length < sizeof(long)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)ptr)) : *((long*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
         }
 
-        public static unsafe byte ToUInt8(this ReadOnlyMemory<byte> memory)
+        public static unsafe byte GetUInt8(this ReadOnlyMemory<byte> memory)
         {
             return (byte)memory.Span[0];
         }
 
-        public static unsafe sbyte ToSInt8(this ReadOnlyMemory<byte> memory)
+        public static unsafe sbyte GetSInt8(this ReadOnlyMemory<byte> memory)
         {
             return (sbyte)memory.Span[0];
         }
 
-        public static unsafe ushort ToUInt16(this ReadOnlyMemory<byte> memory)
+        public static unsafe ushort GetUInt16(this ReadOnlyMemory<byte> memory)
         {
             if (memory.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)ptr)) : *((ushort*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ushort*)(ptr))) : *((ushort*)(ptr));
         }
 
-        public static unsafe short ToSInt16(this ReadOnlyMemory<byte> memory)
+        public static unsafe short GetSInt16(this ReadOnlyMemory<byte> memory)
         {
             if (memory.Length < sizeof(short)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)ptr)) : *((short*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((short*)(ptr))) : *((short*)(ptr));
         }
 
-        public static unsafe uint ToUInt32(this ReadOnlyMemory<byte> memory)
+        public static unsafe uint GetUInt32(this ReadOnlyMemory<byte> memory)
         {
             if (memory.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)ptr)) : *((uint*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((uint*)(ptr))) : *((uint*)(ptr));
         }
 
-        public static unsafe int ToSInt32(this ReadOnlyMemory<byte> memory)
+        public static unsafe int GetSInt32(this ReadOnlyMemory<byte> memory)
         {
             if (memory.Length < sizeof(int)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)ptr)) : *((int*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((int*)(ptr))) : *((int*)(ptr));
         }
 
-        public static unsafe ulong ToUInt64(this ReadOnlyMemory<byte> memory)
+        public static unsafe ulong GetUInt64(this ReadOnlyMemory<byte> memory)
         {
             if (memory.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)ptr)) : *((ulong*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((ulong*)(ptr))) : *((ulong*)(ptr));
         }
 
-        public static unsafe long ToSInt64(this ReadOnlyMemory<byte> memory)
+        public static unsafe long GetSInt64(this ReadOnlyMemory<byte> memory)
         {
             if (memory.Length < sizeof(long)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)ptr)) : *((long*)ptr);
+                return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
         }
 
 
-        public static unsafe void ToBinaryUInt8(this byte value, byte[] data, int offset = 0)
+        public static unsafe void SetUInt8(this byte value, byte[] data, int offset = 0)
         {
             data[offset] = (byte)value;
         }
 
-        public static unsafe void ToBinarySInt8(this sbyte value, byte[] data, int offset = 0)
+        public static unsafe void SetUInt8(this byte[] data, byte value, int offset = 0)
         {
             data[offset] = (byte)value;
         }
 
-        public static unsafe void ToBinaryUInt16(this ushort value, byte[] data, int offset = 0)
+        public static unsafe void SetSInt8(this sbyte value, byte[] data, int offset = 0)
         {
+            data[offset] = (byte)value;
+        }
+
+        public static unsafe void SetSInt8(this byte[] data, sbyte value, int offset = 0)
+        {
+            data[offset] = (byte)value;
+        }
+
+        public static unsafe void SetUInt16(this ushort value, byte[] data, int offset = 0)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(ushort)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                *((ushort*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((ushort*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt16(this short value, byte[] data, int offset = 0)
+        public static unsafe void SetUInt16(this byte[] data, ushort value, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
+            if (checked(offset + sizeof(ushort)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
+            fixed (byte* ptr = data)
+                *((ushort*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt16(this short value, byte[] data, int offset = 0)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(short)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                *((short*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((short*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt32(this uint value, byte[] data, int offset = 0)
+        public static unsafe void SetSInt16(this byte[] data, short value, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
+            if (checked(offset + sizeof(short)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
+            fixed (byte* ptr = data)
+                *((short*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt32(this uint value, byte[] data, int offset = 0)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(uint)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                *((uint*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((uint*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt32(this int value, byte[] data, int offset = 0)
+        public static unsafe void SetUInt32(this byte[] data, uint value, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
+            if (checked(offset + sizeof(uint)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
+            fixed (byte* ptr = data)
+                *((uint*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt32(this int value, byte[] data, int offset = 0)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(int)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                *((int*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((int*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt64(this ulong value, byte[] data, int offset = 0)
+        public static unsafe void SetSInt32(this byte[] data, int value, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
+            if (checked(offset + sizeof(int)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
+            fixed (byte* ptr = data)
+                *((int*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt64(this ulong value, byte[] data, int offset = 0)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(ulong)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                *((ulong*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((ulong*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt64(this long value, byte[] data, int offset = 0)
+        public static unsafe void SetUInt64(this byte[] data, ulong value, int offset = 0)
         {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
+            if (checked(offset + sizeof(ulong)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
+            fixed (byte* ptr = data)
+                *((ulong*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt64(this long value, byte[] data, int offset = 0)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
             if (checked(offset + sizeof(long)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
             fixed (byte* ptr = data)
-                *((long*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((long*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt8(this byte value, Span<byte> span)
+        public static unsafe void SetSInt64(this byte[] data, long value, int offset = 0)
+        {
+            if (offset < 0) throw new ArgumentOutOfRangeException("offset < 0");
+            if (checked(offset + sizeof(long)) > data.Length) throw new ArgumentOutOfRangeException("data.Length is too small");
+            fixed (byte* ptr = data)
+                *((long*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt8(this byte value, Span<byte> span)
         {
             span[0] = (byte)value;
         }
 
-        public static unsafe void ToBinarySInt8(this sbyte value, Span<byte> span)
+        public static unsafe void SetUInt8(this Span<byte> span, byte value)
         {
             span[0] = (byte)value;
         }
 
-        public static unsafe void ToBinaryUInt16(this ushort value, Span<byte> span)
+        public static unsafe void SetSInt8(this sbyte value, Span<byte> span)
+        {
+            span[0] = (byte)value;
+        }
+
+        public static unsafe void SetSInt8(this Span<byte> span, sbyte value)
+        {
+            span[0] = (byte)value;
+        }
+
+        public static unsafe void SetUInt16(this ushort value, Span<byte> span)
         {
             if (span.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                *((ushort*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((ushort*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt16(this short value, Span<byte> span)
+        public static unsafe void SetUInt16(this Span<byte> span, ushort value)
+        {
+            if (span.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* ptr = span)
+                *((ushort*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt16(this short value, Span<byte> span)
         {
             if (span.Length < sizeof(short)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                *((short*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((short*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt32(this uint value, Span<byte> span)
+        public static unsafe void SetSInt16(this Span<byte> span, short value)
+        {
+            if (span.Length < sizeof(short)) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* ptr = span)
+                *((short*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt32(this uint value, Span<byte> span)
         {
             if (span.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                *((uint*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((uint*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt32(this int value, Span<byte> span)
+        public static unsafe void SetUInt32(this Span<byte> span, uint value)
+        {
+            if (span.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* ptr = span)
+                *((uint*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt32(this int value, Span<byte> span)
         {
             if (span.Length < sizeof(int)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                *((int*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((int*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt64(this ulong value, Span<byte> span)
+        public static unsafe void SetSInt32(this Span<byte> span, int value)
+        {
+            if (span.Length < sizeof(int)) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* ptr = span)
+                *((int*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt64(this ulong value, Span<byte> span)
         {
             if (span.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                *((ulong*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((ulong*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt64(this long value, Span<byte> span)
+        public static unsafe void SetUInt64(this Span<byte> span, ulong value)
+        {
+            if (span.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* ptr = span)
+                *((ulong*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt64(this long value, Span<byte> span)
         {
             if (span.Length < sizeof(long)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
-                *((long*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((long*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt8(this byte value, Memory<byte> memory)
+        public static unsafe void SetSInt64(this Span<byte> span, long value)
+        {
+            if (span.Length < sizeof(long)) throw new ArgumentOutOfRangeException("span.Length is too small");
+            fixed (byte* ptr = span)
+                *((long*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt8(this byte value, Memory<byte> memory)
         {
             memory.Span[0] = (byte)value;
         }
 
-        public static unsafe void ToBinarySInt8(this sbyte value, Memory<byte> memory)
+        public static unsafe void SetUInt8(this Memory<byte> memory, byte value)
         {
             memory.Span[0] = (byte)value;
         }
 
-        public static unsafe void ToBinaryUInt16(this ushort value, Memory<byte> memory)
+        public static unsafe void SetSInt8(this sbyte value, Memory<byte> memory)
+        {
+            memory.Span[0] = (byte)value;
+        }
+
+        public static unsafe void SetSInt8(this Memory<byte> memory, sbyte value)
+        {
+            memory.Span[0] = (byte)value;
+        }
+
+        public static unsafe void SetUInt16(this ushort value, Memory<byte> memory)
         {
             if (memory.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                *((ushort*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((ushort*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt16(this short value, Memory<byte> memory)
+        public static unsafe void SetUInt16(this Memory<byte> memory, ushort value)
+        {
+            if (memory.Length < sizeof(ushort)) throw new ArgumentOutOfRangeException("memory.Length is too small");
+            fixed (byte* ptr = memory.Span)
+                *((ushort*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt16(this short value, Memory<byte> memory)
         {
             if (memory.Length < sizeof(short)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                *((short*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((short*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt32(this uint value, Memory<byte> memory)
+        public static unsafe void SetSInt16(this Memory<byte> memory, short value)
+        {
+            if (memory.Length < sizeof(short)) throw new ArgumentOutOfRangeException("memory.Length is too small");
+            fixed (byte* ptr = memory.Span)
+                *((short*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt32(this uint value, Memory<byte> memory)
         {
             if (memory.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                *((uint*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((uint*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt32(this int value, Memory<byte> memory)
+        public static unsafe void SetUInt32(this Memory<byte> memory, uint value)
+        {
+            if (memory.Length < sizeof(uint)) throw new ArgumentOutOfRangeException("memory.Length is too small");
+            fixed (byte* ptr = memory.Span)
+                *((uint*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt32(this int value, Memory<byte> memory)
         {
             if (memory.Length < sizeof(int)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                *((int*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((int*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinaryUInt64(this ulong value, Memory<byte> memory)
+        public static unsafe void SetSInt32(this Memory<byte> memory, int value)
+        {
+            if (memory.Length < sizeof(int)) throw new ArgumentOutOfRangeException("memory.Length is too small");
+            fixed (byte* ptr = memory.Span)
+                *((int*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetUInt64(this ulong value, Memory<byte> memory)
         {
             if (memory.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                *((ulong*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((ulong*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
-        public static unsafe void ToBinarySInt64(this long value, Memory<byte> memory)
+        public static unsafe void SetUInt64(this Memory<byte> memory, ulong value)
+        {
+            if (memory.Length < sizeof(ulong)) throw new ArgumentOutOfRangeException("memory.Length is too small");
+            fixed (byte* ptr = memory.Span)
+                *((ulong*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt64(this long value, Memory<byte> memory)
         {
             if (memory.Length < sizeof(long)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
-                *((long*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+                *((long*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetSInt64(this Memory<byte> memory, long value)
+        {
+            if (memory.Length < sizeof(long)) throw new ArgumentOutOfRangeException("memory.Length is too small");
+            fixed (byte* ptr = memory.Span)
+                *((long*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
 
-        public static byte[] ToBinaryUInt8(this byte value) { byte[] r = new byte[1]; value.ToBinaryUInt8(r); return r; }
-        public static byte[] ToBinarySInt8(this sbyte value) { byte[] r = new byte[1]; value.ToBinarySInt8(r); return r; }
-        public static byte[] ToBinaryUInt16(this ushort value) { byte[] r = new byte[2]; value.ToBinaryUInt16(r); return r; }
-        public static byte[] ToBinarySInt16(this short value) { byte[] r = new byte[2]; value.ToBinarySInt16(r); return r; }
-        public static byte[] ToBinaryUInt32(this uint value) { byte[] r = new byte[4]; value.ToBinaryUInt32(r); return r; }
-        public static byte[] ToBinarySInt32(this int value) { byte[] r = new byte[4]; value.ToBinarySInt32(r); return r; }
-        public static byte[] ToBinaryUInt64(this ulong value) { byte[] r = new byte[8]; value.ToBinaryUInt64(r); return r; }
-        public static byte[] ToBinarySInt64(this long value) { byte[] r = new byte[8]; value.ToBinarySInt64(r); return r; }
+        public static unsafe byte[] GetUInt8(this byte value)
+        {
+            byte[] data = new byte[1];
+            data[0] = (byte)value;
+            return data;
+        }
+
+        public static unsafe byte[] GetSInt8(this sbyte value)
+        {
+            byte[] data = new byte[1];
+            data[0] = (byte)value;
+            return data;
+        }
+
+        public static unsafe byte[] GetUInt16(this ushort value)
+        {
+            byte[] data = new byte[2];
+            fixed (byte* ptr = data)
+                *((ushort*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+            return data;
+        }
+
+        public static unsafe byte[] GetSInt16(this short value)
+        {
+            byte[] data = new byte[2];
+            fixed (byte* ptr = data)
+                *((short*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+            return data;
+        }
+
+        public static unsafe byte[] GetUInt32(this uint value)
+        {
+            byte[] data = new byte[4];
+            fixed (byte* ptr = data)
+                *((uint*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+            return data;
+        }
+
+        public static unsafe byte[] GetSInt32(this int value)
+        {
+            byte[] data = new byte[4];
+            fixed (byte* ptr = data)
+                *((int*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+            return data;
+        }
+
+        public static unsafe byte[] GetUInt64(this ulong value)
+        {
+            byte[] data = new byte[8];
+            fixed (byte* ptr = data)
+                *((ulong*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+            return data;
+        }
+
+        public static unsafe byte[] GetSInt64(this long value)
+        {
+            byte[] data = new byte[8];
+            fixed (byte* ptr = data)
+                *((long*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+            return data;
+        }
 
 
 
@@ -996,36 +1404,36 @@ namespace cs_struct_bench1
             return original.Slice(0, size);
         }
 
-        public static void WalkWriteUInt8(ref this Span<byte> span, byte value) => value.ToBinaryUInt8(span.Walk(1));
-        public static void WalkWriteUInt16(ref this Span<byte> span, ushort value) => value.ToBinaryUInt16(span.Walk(2));
-        public static void WalkWriteUInt32(ref this Span<byte> span, uint value) => value.ToBinaryUInt32(span.Walk(4));
-        public static void WalkWriteUInt64(ref this Span<byte> span, ulong value) => value.ToBinaryUInt64(span.Walk(8));
-        public static void WalkWriteSInt8(ref this Span<byte> span, sbyte value) => value.ToBinarySInt8(span.Walk(1));
-        public static void WalkWriteSInt16(ref this Span<byte> span, short value) => value.ToBinarySInt16(span.Walk(2));
-        public static void WalkWriteSInt32(ref this Span<byte> span, int value) => value.ToBinarySInt32(span.Walk(4));
-        public static void WalkWriteSInt64(ref this Span<byte> span, long value) => value.ToBinarySInt64(span.Walk(8));
+        public static void WalkWriteUInt8(ref this Span<byte> span, byte value) => value.SetUInt8(span.Walk(1));
+        public static void WalkWriteUInt16(ref this Span<byte> span, ushort value) => value.SetUInt16(span.Walk(2));
+        public static void WalkWriteUInt32(ref this Span<byte> span, uint value) => value.SetUInt32(span.Walk(4));
+        public static void WalkWriteUInt64(ref this Span<byte> span, ulong value) => value.SetUInt64(span.Walk(8));
+        public static void WalkWriteSInt8(ref this Span<byte> span, sbyte value) => value.SetSInt8(span.Walk(1));
+        public static void WalkWriteSInt16(ref this Span<byte> span, short value) => value.SetSInt16(span.Walk(2));
+        public static void WalkWriteSInt32(ref this Span<byte> span, int value) => value.SetSInt32(span.Walk(4));
+        public static void WalkWriteSInt64(ref this Span<byte> span, long value) => value.SetSInt64(span.Walk(8));
 
         public static Span<T> WalkRead<T>(ref this Span<T> span, int size) => span.Walk(size);
 
         public static ReadOnlySpan<T> WalkRead<T>(ref this ReadOnlySpan<T> span, int size) => span.Walk(size);
 
-        public static byte WalkReadUInt8(ref this Span<byte> span) => span.WalkRead(1).ToUInt8();
-        public static ushort WalkReadUInt16(ref this Span<byte> span) => span.WalkRead(2).ToUInt16();
-        public static uint WalkReadUInt32(ref this Span<byte> span) => span.WalkRead(4).ToUInt32();
-        public static ulong WalkReadUInt64(ref this Span<byte> span) => span.WalkRead(8).ToUInt64();
-        public static sbyte WalkReadSInt8(ref this Span<byte> span) => span.WalkRead(1).ToSInt8();
-        public static short WalkReadSInt16(ref this Span<byte> span) => span.WalkRead(2).ToSInt16();
-        public static int WalkReadSInt32(ref this Span<byte> span) => span.WalkRead(4).ToSInt32();
-        public static long WalkReadSInt64(ref this Span<byte> span) => span.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this Span<byte> span) => span.WalkRead(1).GetUInt8();
+        public static ushort WalkReadUInt16(ref this Span<byte> span) => span.WalkRead(2).GetUInt16();
+        public static uint WalkReadUInt32(ref this Span<byte> span) => span.WalkRead(4).GetUInt32();
+        public static ulong WalkReadUInt64(ref this Span<byte> span) => span.WalkRead(8).GetUInt64();
+        public static sbyte WalkReadSInt8(ref this Span<byte> span) => span.WalkRead(1).GetSInt8();
+        public static short WalkReadSInt16(ref this Span<byte> span) => span.WalkRead(2).GetSInt16();
+        public static int WalkReadSInt32(ref this Span<byte> span) => span.WalkRead(4).GetSInt32();
+        public static long WalkReadSInt64(ref this Span<byte> span) => span.WalkRead(8).GetSInt64();
 
-        public static byte WalkReadUInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).ToUInt8();
-        public static ushort WalkReadUInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).ToUInt16();
-        public static uint WalkReadUInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).ToUInt32();
-        public static ulong WalkReadUInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).ToUInt64();
-        public static sbyte WalkReadSInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).ToSInt8();
-        public static short WalkReadSInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).ToSInt16();
-        public static int WalkReadSInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).ToSInt32();
-        public static long WalkReadSInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).GetUInt8();
+        public static ushort WalkReadUInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).GetUInt16();
+        public static uint WalkReadUInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).GetUInt32();
+        public static ulong WalkReadUInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).GetUInt64();
+        public static sbyte WalkReadSInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).GetSInt8();
+        public static short WalkReadSInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).GetSInt16();
+        public static int WalkReadSInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).GetSInt32();
+        public static long WalkReadSInt64(ref this ReadOnlySpan<byte> span) => span.WalkRead(8).GetSInt64();
 
 
         public static Memory<T> Walk<T>(ref this Memory<T> memory, int size)
@@ -1170,38 +1578,38 @@ namespace cs_struct_bench1
             }
         }
 
-        public static void WalkWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinaryUInt8(memory.Walk(1));
-        public static void WalkWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinaryUInt16(memory.Walk(2));
-        public static void WalkWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinaryUInt32(memory.Walk(4));
-        public static void WalkWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinaryUInt64(memory.Walk(8));
-        public static void WalkWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinarySInt8(memory.Walk(1));
-        public static void WalkWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinarySInt16(memory.Walk(2));
-        public static void WalkWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinarySInt32(memory.Walk(4));
-        public static void WalkWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinarySInt64(memory.Walk(8));
+        public static void WalkWriteUInt8(ref this Memory<byte> memory, byte value) => value.SetUInt8(memory.Walk(1));
+        public static void WalkWriteUInt16(ref this Memory<byte> memory, ushort value) => value.SetUInt16(memory.Walk(2));
+        public static void WalkWriteUInt32(ref this Memory<byte> memory, uint value) => value.SetUInt32(memory.Walk(4));
+        public static void WalkWriteUInt64(ref this Memory<byte> memory, ulong value) => value.SetUInt64(memory.Walk(8));
+        public static void WalkWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.SetSInt8(memory.Walk(1));
+        public static void WalkWriteSInt16(ref this Memory<byte> memory, short value) => value.SetSInt16(memory.Walk(2));
+        public static void WalkWriteSInt32(ref this Memory<byte> memory, int value) => value.SetSInt32(memory.Walk(4));
+        public static void WalkWriteSInt64(ref this Memory<byte> memory, long value) => value.SetSInt64(memory.Walk(8));
         public static void WalkWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.Walk(data.Length));
         public static void WalkWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.Walk(data.Length).Span);
         public static void WalkWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.Walk(data.Length).Span);
 
-        public static void WalkAutoDynamicWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinaryUInt8(memory.WalkAutoDynamic(1));
-        public static void WalkAutoDynamicWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinaryUInt16(memory.WalkAutoDynamic(2));
-        public static void WalkAutoDynamicWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinaryUInt32(memory.WalkAutoDynamic(4));
-        public static void WalkAutoDynamicWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinaryUInt64(memory.WalkAutoDynamic(8));
-        public static void WalkAutoDynamicWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinarySInt8(memory.WalkAutoDynamic(1));
-        public static void WalkAutoDynamicWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinarySInt16(memory.WalkAutoDynamic(2));
-        public static void WalkAutoDynamicWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinarySInt32(memory.WalkAutoDynamic(4));
-        public static void WalkAutoDynamicWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinarySInt64(memory.WalkAutoDynamic(8));
+        public static void WalkAutoDynamicWriteUInt8(ref this Memory<byte> memory, byte value) => value.SetUInt8(memory.WalkAutoDynamic(1));
+        public static void WalkAutoDynamicWriteUInt16(ref this Memory<byte> memory, ushort value) => value.SetUInt16(memory.WalkAutoDynamic(2));
+        public static void WalkAutoDynamicWriteUInt32(ref this Memory<byte> memory, uint value) => value.SetUInt32(memory.WalkAutoDynamic(4));
+        public static void WalkAutoDynamicWriteUInt64(ref this Memory<byte> memory, ulong value) => value.SetUInt64(memory.WalkAutoDynamic(8));
+        public static void WalkAutoDynamicWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.SetSInt8(memory.WalkAutoDynamic(1));
+        public static void WalkAutoDynamicWriteSInt16(ref this Memory<byte> memory, short value) => value.SetSInt16(memory.WalkAutoDynamic(2));
+        public static void WalkAutoDynamicWriteSInt32(ref this Memory<byte> memory, int value) => value.SetSInt32(memory.WalkAutoDynamic(4));
+        public static void WalkAutoDynamicWriteSInt64(ref this Memory<byte> memory, long value) => value.SetSInt64(memory.WalkAutoDynamic(8));
         public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length));
         public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
         public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
 
-        public static void WalkAutoStaticWriteUInt8(ref this Memory<byte> memory, byte value) => value.ToBinaryUInt8(memory.WalkAutoStatic(1));
-        public static void WalkAutoStaticWriteUInt16(ref this Memory<byte> memory, ushort value) => value.ToBinaryUInt16(memory.WalkAutoStatic(2));
-        public static void WalkAutoStaticWriteUInt32(ref this Memory<byte> memory, uint value) => value.ToBinaryUInt32(memory.WalkAutoStatic(4));
-        public static void WalkAutoStaticWriteUInt64(ref this Memory<byte> memory, ulong value) => value.ToBinaryUInt64(memory.WalkAutoStatic(8));
-        public static void WalkAutoStaticWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.ToBinarySInt8(memory.WalkAutoStatic(1));
-        public static void WalkAutoStaticWriteSInt16(ref this Memory<byte> memory, short value) => value.ToBinarySInt16(memory.WalkAutoStatic(2));
-        public static void WalkAutoStaticWriteSInt32(ref this Memory<byte> memory, int value) => value.ToBinarySInt32(memory.WalkAutoStatic(4));
-        public static void WalkAutoStaticWriteSInt64(ref this Memory<byte> memory, long value) => value.ToBinarySInt64(memory.WalkAutoStatic(8));
+        public static void WalkAutoStaticWriteUInt8(ref this Memory<byte> memory, byte value) => value.SetUInt8(memory.WalkAutoStatic(1));
+        public static void WalkAutoStaticWriteUInt16(ref this Memory<byte> memory, ushort value) => value.SetUInt16(memory.WalkAutoStatic(2));
+        public static void WalkAutoStaticWriteUInt32(ref this Memory<byte> memory, uint value) => value.SetUInt32(memory.WalkAutoStatic(4));
+        public static void WalkAutoStaticWriteUInt64(ref this Memory<byte> memory, ulong value) => value.SetUInt64(memory.WalkAutoStatic(8));
+        public static void WalkAutoStaticWriteSInt8(ref this Memory<byte> memory, sbyte value) => value.SetSInt8(memory.WalkAutoStatic(1));
+        public static void WalkAutoStaticWriteSInt16(ref this Memory<byte> memory, short value) => value.SetSInt16(memory.WalkAutoStatic(2));
+        public static void WalkAutoStaticWriteSInt32(ref this Memory<byte> memory, int value) => value.SetSInt32(memory.WalkAutoStatic(4));
+        public static void WalkAutoStaticWriteSInt64(ref this Memory<byte> memory, long value) => value.SetSInt64(memory.WalkAutoStatic(8));
         public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, Memory<T> data) => data.CopyTo(memory.WalkAutoStatic(data.Length));
         public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
         public static void WalkAutoStaticWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.WalkAutoStatic(data.Length).Span);
@@ -1209,23 +1617,23 @@ namespace cs_struct_bench1
         public static ReadOnlyMemory<T> WalkRead<T>(ref this ReadOnlyMemory<T> memory, int size) => memory.Walk(size);
         public static Memory<T> WalkRead<T>(ref this Memory<T> memory, int size) => memory.Walk(size);
 
-        public static byte WalkReadUInt8(ref this Memory<byte> memory) => memory.WalkRead(1).ToUInt8();
-        public static ushort WalkReadUInt16(ref this Memory<byte> memory) => memory.WalkRead(2).ToUInt16();
-        public static uint WalkReadUInt32(ref this Memory<byte> memory) => memory.WalkRead(4).ToUInt32();
-        public static ulong WalkReadUInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToUInt64();
-        public static sbyte WalkReadSInt8(ref this Memory<byte> memory) => memory.WalkRead(1).ToSInt8();
-        public static short WalkReadSInt16(ref this Memory<byte> memory) => memory.WalkRead(2).ToSInt16();
-        public static int WalkReadSInt32(ref this Memory<byte> memory) => memory.WalkRead(4).ToSInt32();
-        public static long WalkReadSInt64(ref this Memory<byte> memory) => memory.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this Memory<byte> memory) => memory.WalkRead(1).GetUInt8();
+        public static ushort WalkReadUInt16(ref this Memory<byte> memory) => memory.WalkRead(2).GetUInt16();
+        public static uint WalkReadUInt32(ref this Memory<byte> memory) => memory.WalkRead(4).GetUInt32();
+        public static ulong WalkReadUInt64(ref this Memory<byte> memory) => memory.WalkRead(8).GetUInt64();
+        public static sbyte WalkReadSInt8(ref this Memory<byte> memory) => memory.WalkRead(1).GetSInt8();
+        public static short WalkReadSInt16(ref this Memory<byte> memory) => memory.WalkRead(2).GetSInt16();
+        public static int WalkReadSInt32(ref this Memory<byte> memory) => memory.WalkRead(4).GetSInt32();
+        public static long WalkReadSInt64(ref this Memory<byte> memory) => memory.WalkRead(8).GetSInt64();
 
-        public static byte WalkReadUInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).ToUInt8();
-        public static ushort WalkReadUInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).ToUInt16();
-        public static uint WalkReadUInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).ToUInt32();
-        public static ulong WalkReadUInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).ToUInt64();
-        public static sbyte WalkReadSInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).ToSInt8();
-        public static short WalkReadSInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).ToSInt16();
-        public static int WalkReadSInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).ToSInt32();
-        public static long WalkReadSInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).ToSInt64();
+        public static byte WalkReadUInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).GetUInt8();
+        public static ushort WalkReadUInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).GetUInt16();
+        public static uint WalkReadUInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).GetUInt32();
+        public static ulong WalkReadUInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).GetUInt64();
+        public static sbyte WalkReadSInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).GetSInt8();
+        public static short WalkReadSInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).GetSInt16();
+        public static int WalkReadSInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).GetSInt32();
+        public static long WalkReadSInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).GetSInt64();
 
 
 

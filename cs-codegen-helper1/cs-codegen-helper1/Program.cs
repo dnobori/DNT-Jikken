@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Buffers.Binary;
 using System.IO;
+using System.Linq;
 using static System.Console;
 
 namespace cs_codegen_helper1
@@ -187,7 +188,7 @@ namespace cs_codegen_helper1
             {
                 foreach (var t1 in integer_types)
                 {
-                    toint.WriteLine($"public static unsafe {t1.TypeName} To{t1.FriendlyName}(this {t2.TypeName} {t2.ValueName}{t2.AdditionalArguments})");
+                    toint.WriteLine($"public static unsafe {t1.TypeName} Get{t1.FriendlyName}(this {t2.TypeName} {t2.ValueName}{t2.AdditionalArguments})");
                     toint.WriteLine("{");
                     if (t1.DataSize == 1)
                     {
@@ -201,17 +202,18 @@ namespace cs_codegen_helper1
                         }
                         else
                         {
+                            toint.WriteLine($"    if (offset < 0) throw new ArgumentOutOfRangeException(\"offset < 0\");");
                             toint.WriteLine($"    if (checked(offset + sizeof({t1.TypeName})) > {t2.ValueName}.Length) throw new ArgumentOutOfRangeException(\"{t2.ValueName}.Length is too small\");");
                         }
                         toint.WriteLine($"    fixed (byte* ptr = {t2.ValueName}{t2.AdditionalAccess})");
-                        toint.WriteLine($"        return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*(({t1.TypeName}*)ptr)) : *(({t1.TypeName}*)ptr);");
+                        toint.WriteLine($"        return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*(({t1.TypeName}*)(ptr{(string.IsNullOrEmpty(t2.AdditionalArguments) ? "" : " + offset")}))) : *(({t1.TypeName}*)(ptr{(string.IsNullOrEmpty(t2.AdditionalArguments) ? "" : " + offset")}));");
                     }
                     toint.WriteLine("}");
                     toint.WriteLine();
 
                     if (t2.TypeName.IndexOf("readonly", StringComparison.CurrentCultureIgnoreCase) == -1)
                     {
-                        tobin1.WriteLine($"public static unsafe void ToBinary{t1.FriendlyName}(this {t1.TypeName} value, {t2.TypeName} {t2.ValueName}{t2.AdditionalArguments})");
+                        tobin1.WriteLine($"public static unsafe void Set{t1.FriendlyName}(this {t1.TypeName} value, {t2.TypeName} {t2.ValueName}{t2.AdditionalArguments})");
                         tobin1.WriteLine("{");
                         if (t1.DataSize == 1)
                         {
@@ -225,10 +227,35 @@ namespace cs_codegen_helper1
                             }
                             else
                             {
+                                tobin1.WriteLine($"    if (offset < 0) throw new ArgumentOutOfRangeException(\"offset < 0\");");
                                 tobin1.WriteLine($"    if (checked(offset + sizeof({t1.TypeName})) > {t2.ValueName}.Length) throw new ArgumentOutOfRangeException(\"{t2.ValueName}.Length is too small\");");
                             }
                             tobin1.WriteLine($"    fixed (byte* ptr = {t2.ValueName}{t2.AdditionalAccess})");
-                            tobin1.WriteLine($"        *(({t1.TypeName}*)ptr) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;");
+                            tobin1.WriteLine($"        *(({t1.TypeName}*)(ptr{(string.IsNullOrEmpty(t2.AdditionalArguments) ? "" : " + offset")})) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;");
+                        }
+                        tobin1.WriteLine("}");
+                        tobin1.WriteLine();
+
+
+                        tobin1.WriteLine($"public static unsafe void Set{t1.FriendlyName}(this {t2.TypeName} {t2.ValueName}, {t1.TypeName} value{t2.AdditionalArguments})");
+                        tobin1.WriteLine("{");
+                        if (t1.DataSize == 1)
+                        {
+                            tobin1.WriteLine($"    {t2.ValueName}{t2.AdditionalAccess}[{(string.IsNullOrEmpty(t2.AdditionalArguments) ? "0" : "offset")}] = (byte)value;");
+                        }
+                        else
+                        {
+                            if (string.IsNullOrEmpty(t2.AdditionalArguments))
+                            {
+                                tobin1.WriteLine($"    if ({t2.ValueName}.Length < sizeof({t1.TypeName})) throw new ArgumentOutOfRangeException(\"{t2.ValueName}.Length is too small\");");
+                            }
+                            else
+                            {
+                                tobin1.WriteLine($"    if (offset < 0) throw new ArgumentOutOfRangeException(\"offset < 0\");");
+                                tobin1.WriteLine($"    if (checked(offset + sizeof({t1.TypeName})) > {t2.ValueName}.Length) throw new ArgumentOutOfRangeException(\"{t2.ValueName}.Length is too small\");");
+                            }
+                            tobin1.WriteLine($"    fixed (byte* ptr = {t2.ValueName}{t2.AdditionalAccess})");
+                            tobin1.WriteLine($"        *(({t1.TypeName}*)(ptr{(string.IsNullOrEmpty(t2.AdditionalArguments) ? "" : " + offset")})) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;");
                         }
                         tobin1.WriteLine("}");
                         tobin1.WriteLine();
@@ -238,7 +265,25 @@ namespace cs_codegen_helper1
 
             foreach (var t1 in integer_types)
             {
-                tobin2.WriteLine($"public static byte[] ToBinary{t1.FriendlyName}(this {t1.TypeName} value) {{ byte[] r = new byte[{t1.DataSize}]; value.ToBinary{t1.FriendlyName}(r); return r; }}");
+                tobin2.WriteLine($"public static unsafe byte[] Get{t1.FriendlyName}(this {t1.TypeName} value)");
+                tobin2.WriteLine("{");
+                tobin2.WriteLine($"    byte[] data = new byte[{t1.DataSize}];");
+
+                var t2 = byte_types.Where(x => x.TypeName == "byte[]").First();
+
+                if (t1.DataSize == 1)
+                {
+                    tobin2.WriteLine($"    {t2.ValueName}{t2.AdditionalAccess}[0] = (byte)value;");
+                }
+                else
+                {
+                    tobin2.WriteLine($"    fixed (byte* ptr = {t2.ValueName}{t2.AdditionalAccess})");
+                    tobin2.WriteLine($"        *(({t1.TypeName}*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;");
+                }
+                tobin2.WriteLine("    return data;");
+                tobin2.WriteLine("}");
+                tobin2.WriteLine();
+
             }
 
             WriteLine(toint.ToString());
