@@ -183,6 +183,11 @@ namespace cs_struct_bench1
         public readonly Func<TUserVariable> Init;
         public readonly Action<TUserVariable, int> Proc;
 
+        readonly Action<TUserVariable, int> DummyLoopProc = (state, count) =>
+        {
+            for (int i = 0; i < count; i++) Limbo.SInt++;
+        };
+
         public MicroBenchmark(string name, int iterations, Action<TUserVariable, int> proc, Func<TUserVariable> init = null)
         {
             Name = name;
@@ -226,7 +231,7 @@ namespace cs_struct_bench1
             {
                 if (Init == null && interations_pass_value == 0)
                 {
-                    for (int i = 0; i < Iterations; i++) Limbo.SInt++;
+                    DummyLoopProc(state, Iterations);
                 }
                 else
                 {

@@ -195,7 +195,6 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-
     public ref struct ReadOnlySpanBuffer<T>
     {
         ReadOnlySpan<T> InternalSpan;
@@ -322,10 +321,6 @@ namespace SoftEther.WebSocket.Helper
             Length = 0;
         }
     }
-
-
-
-
 
     public ref struct MemoryBuffer<T>
     {
@@ -563,12 +558,6 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-
-
-
-
-
-
     public ref struct ReadOnlyMemoryBuffer<T>
     {
         ReadOnlyMemory<T> InternalBuffer;
@@ -753,17 +742,6 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-
-
-
-
-
-
-
-
-
-
-
     public static class SpanMemoryBufferHelper
     {
         public static SpanBuffer<T> AsSpanBuffer<T>(this Span<T> span) => new SpanBuffer<T>(span);
@@ -892,8 +870,6 @@ namespace SoftEther.WebSocket.Helper
         public static int PeekSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
         public static long PeekSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
     }
-
-
 
     static class MemoryHelper
     {
@@ -1903,6 +1879,9 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+
+
+    // ---------------
 
     public class RefInt
     {
