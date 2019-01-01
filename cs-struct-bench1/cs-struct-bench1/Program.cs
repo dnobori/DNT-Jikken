@@ -128,35 +128,6 @@ namespace cs_struct_bench1
         public ref Struct1 Struct1Ref { get => ref GetStructWithUnsafe(); }
     }
 
-    public class RefInt
-    {
-        public RefInt() : this(0) { }
-        public RefInt(int value)
-        {
-            this.Value = value;
-        }
-        public int Value;
-        public void Set(int value) => this.Value = value;
-        public int Get() => this.Value;
-        public override string ToString() => this.Value.ToString();
-        public int Increment() => Interlocked.Increment(ref this.Value);
-        public int Decrement() => Interlocked.Decrement(ref this.Value);
-
-        public override bool Equals(object obj)
-        {
-            var x = obj as RefInt;
-            return x != null && this.Value == x.Value;
-        }
-
-        public override int GetHashCode() => HashCode.Combine(Value);
-
-        public static bool operator ==(RefInt left, int right) => left.Value == right;
-        public static bool operator !=(RefInt left, int right) => left.Value != right;
-
-        public static implicit operator int(RefInt r) => r.Value;
-        public static implicit operator RefInt(int value) => new RefInt(value);
-    }
-
     class Program
     {
         static Semaphore s = new Semaphore(1, 1);
@@ -183,14 +154,13 @@ namespace cs_struct_bench1
 
             Test1 t1 = new Test1();
 
-
             {
                 byte[] data = new byte[128];
                 var memory = data.AsMemory();
                 byte[] tmp = new byte[1000];
 
                 Func<int, int> tmp_proc = (x) => x + 1;
-                WriteLine("Memory Walk: " + do_test(30000, count =>
+                WriteLine("Memory Walk: " + do_test(30000000, count =>
                 {
                     var span = memory.Span;
 
