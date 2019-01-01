@@ -209,7 +209,7 @@ namespace cs_struct_bench1
                         {
                             var buf = memory.AsMemoryBuffer();
 
-                            if (true)
+                            if (false)
                             {
                                 buf.WriteSInt32(123);
                                 buf.WriteSInt32(123);
@@ -247,38 +247,38 @@ namespace cs_struct_bench1
                             }
                             else
                             {
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
-                                buf.Walk(4);
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
+                                buf.ReadUInt8();
                             }
                         }
                         else if (true)
