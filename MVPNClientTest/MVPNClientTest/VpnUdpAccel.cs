@@ -95,7 +95,7 @@ namespace SoftEther.VpnClient
 
                 NoNatT = no_nat_t;
 
-                NatT_TranId = WebSocketHelper.Rand(8).ToUInt64();
+                NatT_TranId = WebSocketHelper.Rand(8).GetUInt64();
                 Now = CreatedTick = Time.Tick64;
 
                 MyKey = WebSocketHelper.Rand(CommonKeySize);
@@ -114,13 +114,13 @@ namespace SoftEther.VpnClient
                 NextIv = WebSocketHelper.Rand(PacketIvSize);
                 do
                 {
-                    MyCookie = WebSocketHelper.Rand(4).ToUInt32();
+                    MyCookie = WebSocketHelper.Rand(4).GetUInt32();
                 }
                 while (MyCookie == 0);
 
                 do
                 {
-                    YourCookie = WebSocketHelper.Rand(4).ToUInt32();
+                    YourCookie = WebSocketHelper.Rand(4).GetUInt32();
                 }
                 while (YourCookie == 0);
 

@@ -691,7 +691,7 @@ namespace cs_struct_bench1
         public static long PeekSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
     }
 
-    static class Helper
+    static class MemoryHelper
     {
         public static ReadOnlyMemory<T> AsReadOnlyMemory<T>(this Memory<T> memory) => memory;
         public static ReadOnlySpan<T> AsReadOnlySpan<T>(this Span<T> span) => span;

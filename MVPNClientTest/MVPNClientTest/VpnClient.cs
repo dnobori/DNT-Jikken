@@ -203,7 +203,7 @@ namespace SoftEther.VpnClient
         public async Task<T> RecvJsonAsync<T>(bool no_error_check = false)
             where T : VpnJsonResponse
         {
-            ushort size = (await RecvAsync(2, true)).ToUInt16();
+            ushort size = (await RecvAsync(2, true)).GetUInt16();
             byte[] data = await RecvAsync(size, true);
             string json_string = Encoding.UTF8.GetString(data);
 
@@ -498,7 +498,7 @@ namespace SoftEther.VpnClient
                 while (CancelWatcher.CancelToken.IsCancellationRequested == false)
                 {
                     byte[] signature_bin = await this.Socket.RecvAsync(4, true);
-                    if (signature_bin.ToUInt32() != 0xCAFEBEEF)
+                    if (signature_bin.GetUInt32() != 0xCAFEBEEF)
                     {
                         throw new ApplicationException("VPN protocol error.");
                     }
@@ -507,7 +507,7 @@ namespace SoftEther.VpnClient
                     VpnProtocolPacketType packet_type = (VpnProtocolPacketType)packet_type_bin[0];
 
                     byte[] packet_data_size_bin = await this.Socket.RecvAsync(2, true);
-                    ushort packet_data_size = packet_data_size_bin.ToUInt16();
+                    ushort packet_data_size = packet_data_size_bin.GetUInt16();
 
                     byte[] packet_data = await this.Socket.RecvAsync(packet_data_size, true);
 
