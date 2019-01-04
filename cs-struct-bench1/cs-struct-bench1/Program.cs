@@ -278,6 +278,10 @@ namespace cs_struct_bench1
         }
     }
 
+    class MySeg<T> : ReadOnlySequenceSegment<T>
+    {
+    }
+
     class Program
     {
         static Semaphore s = new Semaphore(1, 1);
@@ -296,7 +300,17 @@ namespace cs_struct_bench1
             WriteLine("Started.");
             WriteLine();
 
+            
             var q = new MicroBenchmarkQueue()
+
+                .Add(new MicroBenchmark<Memory<byte>>("new byte[1]", 256, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        var x = new byte[1];
+                    }
+                }
+                ), true, 2)
 
                 .Add(new MicroBenchmark<Memory<byte>>("MemoryBuffer WriteSInt32", 32, (state, iterations) =>
                 {
@@ -353,6 +367,49 @@ namespace cs_struct_bench1
                     x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32);
                     x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32); x.SetSInt32(32);
                 }), true)
+
+
+
+#pragma warning disable CS1998 // 非同期メソッドは、'await' 演算子がないため、同期的に実行されます
+                .Add(new MicroBenchmark<Memory<byte>>("call Task", 256,
+                (state, iterations) =>
+                {
+                    async Task<int> test2(int x)
+                    {
+                        return x + 1;
+                    }
+
+                    async Task<int> test1(int x)
+                    {
+                        int ret = x;
+                        for (int i = 0; i < iterations; i++)
+                            ret += await test2(ret);
+                        return ret;
+                    }
+                    test1(123).Wait();
+                }), true, 1)
+
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("call ValueTask", 256,
+                (state, iterations) =>
+                {
+                    async ValueTask<int> test2(int x)
+                    {
+                        return x + 1;
+                    }
+
+                    async Task<int> test1(int x)
+                    {
+                        int ret = x;
+                        for (int i = 0; i < iterations; i++)
+                            ret += await test2(ret);
+                        return ret;
+                    }
+                    test1(123).Wait();
+                }), true, 1)
+#pragma warning restore CS1998 // 非同期メソッドは、'await' 演算子がないため、同期的に実行されます
+
 
                 ;
 
