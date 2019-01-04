@@ -158,11 +158,6 @@ namespace cs_struct_bench1
     {
         public static int DefaultDurationMSecs = 250;
         public static readonly double EmptyBaseLine;
-
-        //static MicroBenchmarkGlobalParam()
-        //{
-        //    EmptyBaseLine = new MicroBenchmark<int>("EmptyBaseLine", 1, (state, count) => { }).Start();
-        //}
     }
 
     public interface IMicroBenchmark
@@ -177,8 +172,6 @@ namespace cs_struct_bench1
         volatile bool StopFlag;
         object LockObj = new object();
         public readonly int Iterations;
-
-        //public static double EmptyBaseLine { get; } = MicroBenchmarkGlobalParam.EmptyBaseLine;
 
         public readonly Func<TUserVariable> Init;
         public readonly Action<TUserVariable, int> Proc;
