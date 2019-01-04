@@ -23,16 +23,106 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
+            TestStreamBuffer();
+            return;
             string s = "Hello";
 
             System.String s2 = s;
 
             test0().Wait();
             //nb_socket_tcp_test().Wait();
-//            nb_socket_udp_proc().Wait();
+            //            nb_socket_udp_proc().Wait();
             //async_test2().LaissezFaire();
             //async_test1().Wait();
             //Thread.Sleep(-1);
+        }
+
+        static void TestStreamBuffer()
+        {
+            ZeroCopyStreamBuffer<byte> new_test_buf()
+            {
+                ZeroCopyStreamBuffer<byte> ret = new ZeroCopyStreamBuffer<byte>();
+                ret.EnqueueFast(new byte[] { 1, 2, 3, });
+                ret.EnqueueFast(new byte[] { 4, 5, 6, 7 });
+                ret.EnqueueFast(new byte[] { 8, 9, 10, 11, 12 });
+                ret.EnqueueFast(new byte[] { 13, 14, 15, 16, 17, 18 });
+                return ret;
+            }
+
+            {
+                var buf1 = new_test_buf();
+                buf1.Remove(0, 3);
+
+                var buf2 = new_test_buf();
+                buf2.Remove(2, 4);
+
+                var buf3 = new_test_buf();
+                buf3.Remove(1, 17);
+
+                var buf4 = new_test_buf();
+                buf4.Remove(0, 17);
+
+                var buf5 = new_test_buf();
+                buf5.Remove(0, 3);
+
+                var buf6 = new_test_buf();
+                buf6.Remove(3, 4);
+
+                var buf7 = new_test_buf();
+                buf7.Remove(3, 9);
+
+                var buf8= new_test_buf();
+                buf8.Remove(12, 6);
+            }
+
+            {
+                var buf1 = new_test_buf();
+                var r1 = buf1.GetContiguousSlow(buf1.PinHead + 2, 2, false);
+                buf1 = new_test_buf();
+                var r2 = buf1.GetContiguousSlow(buf1.PinHead + 2, 5, false);
+                buf1 = new_test_buf();
+                var r3 = buf1.GetContiguousSlow(buf1.PinHead + 2, 6, false);
+                buf1 = new_test_buf();
+                var r4 = buf1.GetContiguousSlow(buf1.PinHead + 2, 10, false);
+                buf1 = new_test_buf();
+                var r5 = buf1.GetContiguousSlow(buf1.PinHead + 2, 15, false);
+                buf1 = new_test_buf();
+                var r6 = buf1.GetContiguousSlow(buf1.PinHead + 2, 16, false);
+                buf1 = new_test_buf();
+                var r7 = buf1.GetContiguousSlow(buf1.PinHead + 4, 14, false);
+            }
+
+            {
+                var buf1 = new_test_buf();
+                var r1 = buf1.GetContiguousSlow(buf1.PinHead + 0, 3, false);
+
+                buf1 = new_test_buf();
+                var r2 = buf1.GetContiguousSlow(buf1.PinHead + 3, 4, false);
+
+                buf1 = new_test_buf();
+                var r3 = buf1.GetContiguousSlow(buf1.PinHead + 7, 5, false);
+
+                buf1 = new_test_buf();
+                var r4 = buf1.GetContiguousSlow(buf1.PinHead + 12, 6, false);
+
+                buf1 = new_test_buf();
+                var r5 = buf1.GetContiguousSlow(buf1.PinHead + 0, 2, false);
+
+                buf1 = new_test_buf();
+                var r6 = buf1.GetContiguousSlow(buf1.PinHead + 2, 1, false);
+
+                buf1 = new_test_buf();
+                var r7 = buf1.GetContiguousSlow(buf1.PinHead + 3, 1, false);
+
+                buf1 = new_test_buf();
+                var r8 = buf1.GetContiguousSlow(buf1.PinHead + 4, 3, false);
+
+                buf1 = new_test_buf();
+                var r9 = buf1.GetContiguousSlow(buf1.PinHead + 12, 2, false);
+
+                buf1 = new_test_buf();
+                var r10 = buf1.GetContiguousSlow(buf1.PinHead + 14, 4, false);
+            }
         }
 
         static async Task nb_socket_udp_proc()

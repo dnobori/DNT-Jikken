@@ -4496,17 +4496,17 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public interface INetBuffer<T>
+    public interface IZeroCopyBuffer<T>
     {
     }
 
-    public readonly struct StreamBufferSegment<T>
+    public readonly struct ZeroCopyStreamBufferSegment<T>
     {
         public readonly Memory<T> Memory;
         public readonly long Pin;
         public readonly long RelativeOffset;
 
-        public StreamBufferSegment(Memory<T> memory, long pin, long relative_offset)
+        public ZeroCopyStreamBufferSegment(Memory<T> memory, long pin, long relative_offset)
         {
             Memory = memory;
             Pin = pin;
@@ -4514,106 +4514,130 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class StreamBuffer<T> : INetBuffer<Memory<T>>
+    public class ZeroCopyStreamBuffer<T> : IZeroCopyBuffer<Memory<T>>
     {
         LinkedList<Memory<T>> List = new LinkedList<Memory<T>>();
         public long PinHead { get; private set; } = 0;
         public long PinTail { get; private set; } = 0;
-        public object SyncRoot = new object();
+        public long Length { get => checked(PinTail - PinHead); }
 
-        public void InsertBeforeHead(Memory<T> memory)
+        public void Clear()
         {
-            if (memory.IsEmpty) return;
-            List.AddFirst(memory);
-            PinHead -= memory.Length;
-        }
-
-        public void InsertHead(Memory<T> memory)
-        {
-            if (memory.IsEmpty) return;
-            List.AddFirst(memory);
-            PinTail += memory.Length;
-        }
-
-        public void InsertTail(Memory<T> memory)
-        {
-            if (memory.IsEmpty) return;
-            List.AddLast(memory);
-            PinTail += memory.Length;
-        }
-
-        public void InsertWithPin(long pin, Memory<T> memory)
-        {
-            if (memory.IsEmpty) return;
-
-            if (List.First == null)
+            checked
             {
-                InsertHead(memory);
-                return;
+                List.Clear();
+                PinHead = PinTail;
             }
+        }
 
-            var node = GetNodeWithPin(pin, out int offset_in_segment, out long node_pin);
-            if (node.Value.Length == offset_in_segment)
+        public void InsertBeforeHeadFast(Memory<T> memory)
+        {
+            checked
             {
-                var new_node = List.AddAfter(node, memory);
+                if (memory.IsEmpty) return;
+                List.AddFirst(memory);
+                PinHead -= memory.Length;
+            }
+        }
+
+        public void InsertHeadFast(Memory<T> memory)
+        {
+            checked
+            {
+                if (memory.IsEmpty) return;
+                List.AddFirst(memory);
                 PinTail += memory.Length;
             }
-            else
-            {
-                Memory<T> slice_before = node.Value.Slice(0, offset_in_segment);
-                Memory<T> slice_after = node.Value.Slice(offset_in_segment);
+        }
 
-                node.Value = slice_before;
-                var new_node = List.AddAfter(node, memory);
-                List.AddAfter(new_node, slice_after);
+        public void InsertTailFast(Memory<T> memory)
+        {
+            checked
+            {
+                if (memory.IsEmpty) return;
+                List.AddLast(memory);
                 PinTail += memory.Length;
+            }
+        }
+
+        public void InsertWithPinFast(long pin, Memory<T> memory)
+        {
+            checked
+            {
+                if (memory.IsEmpty) return;
+
+                if (List.First == null)
+                {
+                    InsertHeadFast(memory);
+                    return;
+                }
+
+                var node = GetNodeWithPin(pin, out int offset_in_segment, out long node_pin);
+                if (node.Value.Length == offset_in_segment)
+                {
+                    var new_node = List.AddAfter(node, memory);
+                    PinTail += memory.Length;
+                }
+                else
+                {
+                    Memory<T> slice_before = node.Value.Slice(0, offset_in_segment);
+                    Memory<T> slice_after = node.Value.Slice(offset_in_segment);
+
+                    node.Value = slice_before;
+                    var new_node = List.AddAfter(node, memory);
+                    List.AddAfter(new_node, slice_after);
+                    PinTail += memory.Length;
+                }
             }
         }
 
         LinkedListNode<Memory<T>> GetNodeWithPin(long pin, out int offset_in_segment, out long node_pin)
         {
-            offset_in_segment = 0;
-            node_pin = 0;
-            if (List.First == null)
+            checked
             {
-                if (pin != PinHead) throw new ArgumentOutOfRangeException("List.First == null, but pin != PinHead");
-                return null;
-            }
-            if (pin < PinHead) throw new ArgumentOutOfRangeException("pin < PinHead");
-            if (pin == PinHead)
-            {
-                node_pin = pin;
-                return List.First;
-            }
-            if (pin > PinTail) throw new ArgumentOutOfRangeException("pin > PinTail");
-            if (pin == PinTail)
-            {
-                var last = List.Last;
-                if (last != null)
+                offset_in_segment = 0;
+                node_pin = 0;
+                if (List.First == null)
                 {
-                    offset_in_segment = last.Value.Length;
-                    node_pin = PinTail - last.Value.Length;
+                    if (pin != PinHead) throw new ArgumentOutOfRangeException("List.First == null, but pin != PinHead");
+                    return null;
                 }
-                else
+                if (pin < PinHead) throw new ArgumentOutOfRangeException("pin < PinHead");
+                if (pin == PinHead)
                 {
-                    node_pin = PinTail;
+                    node_pin = pin;
+                    return List.First;
                 }
-                return last;
-            }
-            long current_pin = PinHead;
-            LinkedListNode<Memory<T>> node = List.First;
-            while (node != null)
-            {
-                if (pin <= (current_pin + node.Value.Length))
+                if (pin > PinTail) throw new ArgumentOutOfRangeException("pin > PinTail");
+                if (pin == PinTail)
                 {
-                    offset_in_segment = (int)(pin - current_pin);
-                    node_pin = current_pin;
-                    return node;
+                    var last = List.Last;
+                    if (last != null)
+                    {
+                        offset_in_segment = last.Value.Length;
+                        node_pin = PinTail - last.Value.Length;
+                    }
+                    else
+                    {
+                        node_pin = PinTail;
+                    }
+                    return last;
                 }
-                current_pin += node.Value.Length;
-                node = node.Next;
+                long current_pin = PinHead;
+                LinkedListNode<Memory<T>> node = List.First;
+                while (node != null)
+                {
+                    if (pin >= current_pin && pin < (current_pin + node.Value.Length))
+                    {
+                        offset_in_segment = (int)(pin - current_pin);
+                        node_pin = current_pin;
+                        return node;
+                    }
+                    current_pin += node.Value.Length;
+                    node = node.Next;
+                }
+                throw new ApplicationException("GetNodeWithPin: Bug!");
             }
-            throw new ApplicationException("GetNodeWithPin: Bug!");
         }
 
         void GetOverlappedNodes(long pin_start, long pin_end,
@@ -4621,183 +4645,404 @@ namespace SoftEther.WebSocket.Helper
             out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
             out int node_counts, out int lack_remain_length)
         {
-            if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
-
-            first_node = GetNodeWithPin(pin_start, out first_node_offset_in_segment, out first_node_pin);
-
-            if (pin_end > PinTail)
+            checked
             {
-                lack_remain_length = (int)checked(pin_end - PinTail);
-                pin_end = PinTail;
-            }
+                if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
 
-            LinkedListNode<Memory<T>> node = first_node;
-            long current_pin = pin_start - first_node_offset_in_segment;
-            node_counts = 0;
-            while (true)
-            {
-                Debug.Assert(node != null, "node == null");
+                first_node = GetNodeWithPin(pin_start, out first_node_offset_in_segment, out first_node_pin);
 
-                node_counts++;
-                if (pin_end <= (current_pin + node.Value.Length))
+                if (pin_end > PinTail)
                 {
-                    last_node_offset_in_segment = (int)(pin_end - current_pin);
-                    last_node = node;
-                    lack_remain_length = 0;
-                    last_node_pin = current_pin;
-                    return;
+                    lack_remain_length = (int)checked(pin_end - PinTail);
+                    pin_end = PinTail;
                 }
-                current_pin += node.Value.Length;
-                node = node.Next;
+
+                LinkedListNode<Memory<T>> node = first_node;
+                long current_pin = pin_start - first_node_offset_in_segment;
+                node_counts = 0;
+                while (true)
+                {
+                    Debug.Assert(node != null, "node == null");
+
+                    node_counts++;
+                    if (pin_end <= (current_pin + node.Value.Length))
+                    {
+                        last_node_offset_in_segment = (int)(pin_end - current_pin);
+                        last_node = node;
+                        lack_remain_length = 0;
+                        last_node_pin = current_pin;
+                        return;
+                    }
+                    current_pin += node.Value.Length;
+                    node = node.Next;
+                }
             }
         }
 
-        StreamBufferSegment<T>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
+        public ZeroCopyStreamBufferSegment<T>[] GetFast(long pin, long size, out long read_size, bool allow_partial = false)
         {
-            if (pin_start == pin_end) return new StreamBufferSegment<T>[0];
-            if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
-
-            if (append_if_overrun)
+            checked
             {
-                if (List.First == null)
+                if (size < 0) throw new ArgumentOutOfRangeException("read_size < 0");
+                if (size == 0)
                 {
-                    InsertHead(new T[pin_end - pin_start]);
-                    PinHead = pin_start;
-                    PinTail = pin_end;
+                    read_size = 0;
+                    return new ZeroCopyStreamBufferSegment<T>[0];
+                }
+                if (Length < size)
+                {
+                    if (allow_partial == false)
+                        throw new ArgumentOutOfRangeException("Length < size");
+                    else
+                        size = Length;
                 }
 
-                if (pin_start < PinHead)
-                    InsertBeforeHead(new T[PinHead - pin_start]);
-
-                if (pin_end > PinTail)
-                    InsertTail(new T[pin_end - PinTail]);
+                ZeroCopyStreamBufferSegment<T>[] ret = GetUncontiguousSegments(pin, pin + size, false);
+                read_size = size;
+                return ret;
             }
-            else
+        }
+
+        public ZeroCopyStreamBufferSegment<T>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false)
+        {
+            checked
             {
-                if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
-                if (pin_start < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
-                if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
+                ZeroCopyStreamBufferSegment<T>[] ret = GetFast(pin, size, out read_size, allow_partial);
+                pin += read_size;
+                return ret;
             }
+        }
 
-            GetOverlappedNodes(pin_start, pin_end,
-                out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
-                out int node_counts, out int lack_remain_length);
+        public Memory<T> GetContiguousSlow(long pin, long size, bool allow_partial = false)
+        {
+            checked
+            {
+                if (size < 0) throw new ArgumentOutOfRangeException("read_size < 0");
+                if (size == 0)
+                {
+                    return new Memory<T>();
+                }
+                if (Length < size)
+                {
+                    if (allow_partial == false)
+                        throw new ArgumentOutOfRangeException("Length < size");
+                    else
+                        size = Length;
+                }
+                Memory<T> ret = GetContiguousMemory(pin, pin + size, false, false);
+                return ret;
+            }
+        }
 
-            Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
+        public Memory<T> ReadContiguousSlow(ref long pin, long size, bool allow_partial = false)
+        {
+            checked
+            {
+                Memory<T> ret = GetContiguousSlow(pin, size, allow_partial);
+                pin += ret.Length;
+                return ret;
+            }
+        }
 
-            if (first_node == last_node)
-                return new StreamBufferSegment<T>[1]{ new StreamBufferSegment<T>(
+        public Memory<T> PutContiguousSlow(long pin, long size, bool append_if_overrun = false)
+        {
+            checked
+            {
+                if (size < 0) throw new ArgumentOutOfRangeException("read_size < 0");
+                if (size == 0)
+                {
+                    return new Memory<T>();
+                }
+                Memory<T> ret = GetContiguousMemory(pin, pin + size, append_if_overrun, false);
+                return ret;
+            }
+        }
+
+        public Memory<T> WriteContiguousSlow(ref long pin, long size, bool append_if_overrun = false)
+        {
+            checked
+            {
+                Memory<T> ret = PutContiguousSlow(pin, size, append_if_overrun);
+                pin += ret.Length;
+                return ret;
+            }
+        }
+
+        public void EnqueueFast(Memory<T> memory)
+        {
+            InsertTailFast(memory);
+        }
+
+        public void EnqueueFast(Memory<T>[] memory_list)
+        {
+            foreach (Memory<T> m in memory_list)
+                EnqueueFast(m);
+        }
+
+        public Memory<T>[] DequeueFast(long size, out long total_size, bool allow_split_segments = true)
+        {
+            checked
+            {
+                if (size < 1) throw new ArgumentOutOfRangeException("size < 1");
+
+                total_size = 0;
+                if (List.First == null)
+                {
+                    return null;
+                }
+
+                LinkedListNode<Memory<T>> node = List.First;
+                List<Memory<T>> ret = new List<Memory<T>>();
+                while (true)
+                {
+                    if ((total_size + node.Value.Length) >= size)
+                    {
+                        if (allow_split_segments && (total_size + node.Value.Length) > size)
+                        {
+                            int last_segment_read_size = (int)(total_size + node.Value.Length - size);
+                            ret.Add(node.Value.Slice(0, last_segment_read_size));
+                            node.Value = node.Value.Slice(last_segment_read_size);
+                            total_size += last_segment_read_size;
+                            Debug.Assert(last_segment_read_size == size, "last_segment_read_size != size");
+                            PinHead += total_size;
+                            return ret.ToArray();
+                        }
+                        else
+                        {
+                            ret.Add(node.Value);
+                            total_size += node.Value.Length;
+                            PinHead += total_size;
+                            return ret.ToArray();
+                        }
+                    }
+                    else
+                    {
+                        ret.Add(node.Value);
+                        total_size += node.Value.Length;
+
+                        LinkedListNode<Memory<T>> delete_node = node;
+                        List.Remove(delete_node);
+
+                        node = node.Next;
+                    }
+                }
+            }
+        }
+
+        ZeroCopyStreamBufferSegment<T>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
+        {
+            checked
+            {
+                if (pin_start == pin_end) return new ZeroCopyStreamBufferSegment<T>[0];
+                if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
+
+                if (append_if_overrun)
+                {
+                    if (List.First == null)
+                    {
+                        InsertHeadFast(new T[pin_end - pin_start]);
+                        PinHead = pin_start;
+                        PinTail = pin_end;
+                    }
+
+                    if (pin_start < PinHead)
+                        InsertBeforeHeadFast(new T[PinHead - pin_start]);
+
+                    if (pin_end > PinTail)
+                        InsertTailFast(new T[pin_end - PinTail]);
+                }
+                else
+                {
+                    if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
+                    if (pin_start < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
+                    if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
+                }
+
+                GetOverlappedNodes(pin_start, pin_end,
+                    out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
+                    out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
+                    out int node_counts, out int lack_remain_length);
+
+                Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
+
+                if (first_node == last_node)
+                    return new ZeroCopyStreamBufferSegment<T>[1]{ new ZeroCopyStreamBufferSegment<T>(
                     first_node.Value.Slice(first_node_offset_in_segment, first_node.Value.Length - first_node_offset_in_segment - last_node_offset_in_segment), pin_start, 0) };
 
-            StreamBufferSegment<T>[] ret = new StreamBufferSegment<T>[node_counts];
+                ZeroCopyStreamBufferSegment<T>[] ret = new ZeroCopyStreamBufferSegment<T>[node_counts];
 
-            LinkedListNode<Memory<T>> prev_node = first_node.Previous;
-            LinkedListNode<Memory<T>> next_node = last_node.Next;
+                LinkedListNode<Memory<T>> prev_node = first_node.Previous;
+                LinkedListNode<Memory<T>> next_node = last_node.Next;
 
-            LinkedListNode<Memory<T>> node = first_node;
-            int count = 0;
-            long current_offset = 0;
+                LinkedListNode<Memory<T>> node = first_node;
+                int count = 0;
+                long current_offset = 0;
 
-            while (true)
-            {
-                Debug.Assert(node != null, "node == null");
-
-                int slice_start = (node == first_node) ? first_node_offset_in_segment : 0;
-                int slice_length = (node == last_node) ? last_node_offset_in_segment : node.Value.Length - slice_start;
-
-                ret[count] = new StreamBufferSegment<T>(node.Value.Slice(slice_start, slice_length), current_offset + pin_start, current_offset);
-                count++;
-
-                Debug.Assert(count <= node_counts, "count > node_counts");
-
-                current_offset += slice_length;
-
-                if (node == last_node)
+                while (true)
                 {
-                    Debug.Assert(count == ret.Length, "count != ret.Length");
-                    break;
+                    Debug.Assert(node != null, "node == null");
+
+                    int slice_start = (node == first_node) ? first_node_offset_in_segment : 0;
+                    int slice_length = (node == last_node) ? last_node_offset_in_segment : node.Value.Length - slice_start;
+
+                    ret[count] = new ZeroCopyStreamBufferSegment<T>(node.Value.Slice(slice_start, slice_length), current_offset + pin_start, current_offset);
+                    count++;
+
+                    Debug.Assert(count <= node_counts, "count > node_counts");
+
+                    current_offset += slice_length;
+
+                    if (node == last_node)
+                    {
+                        Debug.Assert(count == ret.Length, "count != ret.Length");
+                        break;
+                    }
+
+                    node = node.Next;
                 }
 
-                node = node.Next;
+                return ret;
             }
-
-            return ret;
         }
 
-        Memory<T> GetContiguousMemory(long pin_start, long pin_end, bool append_if_overrun)
+        public void Remove(long pin_start, long length)
         {
-            if (pin_start == pin_end) return new Memory<T>();
-            if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
-
-            if (append_if_overrun)
+            checked
             {
-                if (List.First == null)
-                {
-                    InsertHead(new T[pin_end - pin_start]);
-                    PinHead = pin_start;
-                    PinTail = pin_end;
-                }
-
-                if (pin_start < PinHead)
-                    InsertBeforeHead(new T[PinHead - pin_start]);
-
-                if (pin_end > PinTail)
-                    InsertTail(new T[pin_end - PinTail]);
-            }
-            else
-            {
+                if (length == 0) return;
+                if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+                long pin_end = checked(pin_start + length);
                 if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
                 if (pin_start < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
                 if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
+
+                GetOverlappedNodes(pin_start, pin_end,
+                    out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
+                    out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
+                    out int node_counts, out int lack_remain_length);
+
+                Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
+
+                if (first_node == last_node)
+                {
+                    Debug.Assert(first_node_offset_in_segment < last_node_offset_in_segment);
+                    if (first_node_offset_in_segment == 0 && last_node_offset_in_segment == last_node.Value.Length)
+                    {
+                        Debug.Assert(first_node.Value.Length == length, "first_node.Value.Length != length");
+                        List.Remove(first_node);
+                        PinTail -= length;
+                        return;
+                    }
+                    else
+                    {
+                        Debug.Assert((last_node_offset_in_segment - first_node_offset_in_segment) == length);
+                        Memory<T> slice1 = first_node.Value.Slice(0, first_node_offset_in_segment);
+                        Memory<T> slice2 = first_node.Value.Slice(last_node_offset_in_segment);
+                        Debug.Assert(slice1.Length != 0 || slice2.Length != 0);
+                        if (slice1.Length == 0)
+                        {
+                            first_node.Value = slice2;
+                        }
+                        else if (slice2.Length == 0)
+                        {
+                            first_node.Value = slice1;
+                        }
+                        else
+                        {
+                            first_node.Value = slice1;
+                            List.AddAfter(first_node, slice2);
+                        }
+                        PinTail -= length;
+                        return;
+                    }
+                }
+                else
+                {
+                    // TODO
+                }
             }
+        }
 
-            GetOverlappedNodes(pin_start, pin_end,
-                out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
-                out int node_counts, out int lack_remain_length);
-
-            Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
-
-            if (first_node == last_node)
-                return first_node.Value.Slice(first_node_offset_in_segment, first_node.Value.Length - first_node_offset_in_segment - last_node_offset_in_segment);
-
-            LinkedListNode<Memory<T>> prev_node = first_node.Previous;
-            LinkedListNode<Memory<T>> next_node = last_node.Next;
-
-            Memory<T> new_memory = new T[last_node_pin + last_node.Value.Length - first_node_pin];
-            LinkedListNode<Memory<T>> node = first_node;
-            int current_write_pointer = 0;
-
-            while (true)
+        Memory<T> GetContiguousMemory(long pin_start, long pin_end, bool append_if_overrun, bool no_replace)
+        {
+            checked
             {
-                Debug.Assert(node != null, "node == null");
+                if (pin_start == pin_end) return new Memory<T>();
+                if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
 
-                bool finish = false;
-                node.Value.CopyTo(new_memory.Slice(current_write_pointer));
+                if (append_if_overrun)
+                {
+                    if (List.First == null)
+                    {
+                        InsertHeadFast(new T[pin_end - pin_start]);
+                        PinHead = pin_start;
+                        PinTail = pin_end;
+                    }
 
-                if (node == last_node) finish = true;
+                    if (pin_start < PinHead)
+                        InsertBeforeHeadFast(new T[PinHead - pin_start]);
 
-                LinkedListNode<Memory<T>> node_to_delete = node;
+                    if (pin_end > PinTail)
+                        InsertTailFast(new T[pin_end - PinTail]);
+                }
+                else
+                {
+                    if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
+                    if (pin_start < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
+                    if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
+                }
 
-                node = node.Next;
-                List.Remove(node_to_delete);
+                GetOverlappedNodes(pin_start, pin_end,
+                    out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
+                    out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
+                    out int node_counts, out int lack_remain_length);
 
-                if (finish) break;
+                Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
 
-                current_write_pointer += node.Value.Length;
+                if (first_node == last_node)
+                    return first_node.Value.Slice(first_node_offset_in_segment, last_node_offset_in_segment - first_node_offset_in_segment);
+
+                LinkedListNode<Memory<T>> prev_node = first_node.Previous;
+                LinkedListNode<Memory<T>> next_node = last_node.Next;
+
+                Memory<T> new_memory = new T[last_node_pin + last_node.Value.Length - first_node_pin];
+                LinkedListNode<Memory<T>> node = first_node;
+                int current_write_pointer = 0;
+
+                while (true)
+                {
+                    Debug.Assert(node != null, "node == null");
+
+                    bool finish = false;
+                    node.Value.CopyTo(new_memory.Slice(current_write_pointer));
+
+                    if (node == last_node) finish = true;
+
+                    LinkedListNode<Memory<T>> node_to_delete = node;
+                    current_write_pointer += node.Value.Length;
+
+                    node = node.Next;
+
+                    if (no_replace == false)
+                        List.Remove(node_to_delete);
+
+                    if (finish) break;
+                }
+
+                if (no_replace == false)
+                {
+                    if (prev_node != null)
+                        List.AddAfter(prev_node, new_memory);
+                    else if (next_node != null)
+                        List.AddBefore(next_node, new_memory);
+                    else
+                        List.AddFirst(new_memory);
+                }
+
+                var ret = new_memory.Slice(first_node_offset_in_segment, new_memory.Length - (last_node.Value.Length - last_node_offset_in_segment) - first_node_offset_in_segment);
+                Debug.Assert(ret.Length == (pin_end - pin_start), "ret.Length");
+                return ret;
             }
-
-            if (prev_node != null)
-                List.AddAfter(prev_node, new_memory);
-            else if (next_node != null)
-                List.AddBefore(next_node, new_memory);
-            else
-                List.AddFirst(new_memory);
-
-            var ret = new_memory.Slice(first_node_offset_in_segment, new_memory.Length - last_node_offset_in_segment - first_node_offset_in_segment);
-            Debug.Assert(ret.Length == (pin_end - pin_start), "ret.Length");
-            return ret;
         }
     }
 }
