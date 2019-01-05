@@ -4899,6 +4899,45 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        public void DequeueAllAndEnqueueToOther(FastStreamBuffer<T> other)
+        {
+            checked
+            {
+                if (this == other) throw new ArgumentException("this == other");
+
+                if (this.Length == 0)
+                {
+                    Debug.Assert(this.List.Count == 0);
+                    return;
+                }
+
+                if (other.Length == 0)
+                {
+                    long length = this.Length;
+                    Debug.Assert(other.List.Count == 0);
+                    other.List = this.List;
+                    this.List = new LinkedList<Memory<T>>();
+                    this.PinHead = this.PinTail;
+                    other.PinTail += length;
+                }
+                else
+                {
+                    long length = this.Length;
+                    var node = this.List.First;
+                    while (node != null)
+                    {
+                        var next_node = node.Next;
+                        List.Remove(node);
+                        other.List.AddLast(node);
+                        node = next_node;
+                    }
+                    this.List = new LinkedList<Memory<T>>();
+                    this.PinHead = this.PinTail;
+                    other.PinTail += length;
+                }
+            }
+        }
+
         FastStreamBufferSegment<T>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
         {
             checked

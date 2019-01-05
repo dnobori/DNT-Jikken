@@ -41,13 +41,16 @@ namespace MVPNClientTest
 
         static void BenchStreamBuffer()
         {
-            FastStreamBuffer<byte> new_test_buf()
+            FastStreamBuffer<byte> new_test_buf(int num = 1)
             {
                 FastStreamBuffer<byte> ret = new FastStreamBuffer<byte>();
-                ret.Enqueue(new byte[] { 1, 2, 3, });
-                ret.Enqueue(new byte[] { 4, 5, 6, 7 });
-                ret.Enqueue(new byte[] { 8, 9, 10, 11, 12 });
-                ret.Enqueue(new byte[] { 13, 14, 15, 16, 17, 18 });
+                for (int i = 0; i < num; i++)
+                {
+                    ret.Enqueue(new byte[] { 1, 2, 3, });
+                    ret.Enqueue(new byte[] { 4, 5, 6, 7 });
+                    ret.Enqueue(new byte[] { 8, 9, 10, 11, 12 });
+                    ret.Enqueue(new byte[] { 13, 14, 15, 16, 17, 18 });
+                }
                 return ret;
             }
 
@@ -65,7 +68,8 @@ namespace MVPNClientTest
 
                     for (int i = 0; i < iterations; i++)
                     {
-                        buf.Insert(buf.PinHead + 0, add_data);
+                        //buf.Insert(buf.PinHead + 0, add_data);
+                        buf.InsertBefore(add_data);
                     }
 
                 },
@@ -111,6 +115,37 @@ namespace MVPNClientTest
                 () => 0), true, 10);
 
 
+            q.Add(new MicroBenchmark<int>("MoveToOtherEmpty", 100000,
+                (x, iterations) =>
+                {
+                    FastStreamBuffer<byte> buf1 = new_test_buf(10000);
+                    FastStreamBuffer<byte> buf2 = new_test_buf(10000);
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        buf1.DequeueAllAndEnqueueToOther(buf2);
+                        buf2.DequeueAllAndEnqueueToOther(buf1);
+                    }
+
+                },
+                () => 0), true, 20);
+
+
+            q.Add(new MicroBenchmark<int>("MoveToOtherNonEmpty", 1,
+                (x, iterations) =>
+                {
+                    FastStreamBuffer<byte> buf1 = new_test_buf(10000);
+                    FastStreamBuffer<byte> buf2 = new_test_buf(10000);
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        buf1.DequeueAllAndEnqueueToOther(buf2);
+                    }
+
+                },
+                () => 0), true, 20);
+
+
             q.Run();
         }
 
@@ -124,6 +159,18 @@ namespace MVPNClientTest
                 ret.Enqueue(new byte[] { 8, 9, 10, 11, 12 });
                 ret.Enqueue(new byte[] { 13, 14, 15, 16, 17, 18 });
                 return ret;
+            }
+
+            {
+                var buf = new_test_buf();
+                var other = new FastStreamBuffer<byte>();
+                buf.DequeueAllAndEnqueueToOther(other);
+            }
+
+            {
+                var buf = new_test_buf();
+                var other = new_test_buf();
+                buf.DequeueAllAndEnqueueToOther(other);
             }
 
             {
