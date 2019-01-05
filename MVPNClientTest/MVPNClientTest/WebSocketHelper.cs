@@ -4770,6 +4770,122 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class FastFifo<T>
+    {
+        public T[] PhysicalData { get; private set; }
+        public int Size { get; private set; }
+        public int Position { get; private set; }
+        public int CurrentInternalSize { get => PhysicalData.Length; }
+
+        public const int FifoInitSize = 4096;
+        public const int FifoReallocSize = 65536;
+        public const int FifoReallocSizeSmall = 65536;
+
+        public int ReallocMemSize { get; }
+
+        public FastFifo(int realloc_mem_size = FifoReallocSize)
+        {
+            ReallocMemSize = realloc_mem_size;
+            Size = Position = 0;
+            PhysicalData = new T[FifoInitSize];
+        }
+
+        public void Write(Span<T> data)
+        {
+            WriteInternal(data, data.Length);
+        }
+
+        public void WriteSkip(int length)
+        {
+            WriteInternal(null, length);
+        }
+
+        void WriteInternal(Span<T> src, int size)
+        {
+            checked
+            {
+                int old_size, new_size, need_size;
+
+                old_size = Size;
+                new_size = old_size + size;
+                need_size = Position + new_size;
+
+                bool realloc_flag = false;
+                int memsize = PhysicalData.Length;
+                while (need_size > memsize)
+                {
+                    memsize = Math.Max(memsize, FifoInitSize) * 3;
+                    realloc_flag = true;
+                }
+
+                if (realloc_flag)
+                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, memsize);
+
+                if (src != null)
+                    src.CopyTo(PhysicalData.AsSpan().Slice(old_size));
+
+                Size = new_size;
+            }
+        }
+
+        public int Read(Span<T> dest)
+        {
+            return ReadInternal(dest, dest.Length);
+        }
+
+        public T[] Read(int size)
+        {
+            int read_size = Math.Min(this.Size, size);
+            T[] ret = new T[read_size];
+            Read(ret);
+            return ret;
+        }
+
+        public T[] Read() => Read(this.Size);
+
+        int ReadInternal(Span<T> dest, int size)
+        {
+            checked
+            {
+                int read_size;
+
+                read_size = Math.Min(size, Size);
+                if (read_size == 0)
+                {
+                    return 0;
+                }
+                if (dest != null)
+                {
+                    dest.CopyTo(this.PhysicalData.AsSpan(this.Position, size));
+                }
+                Position += read_size;
+                Size -= read_size;
+
+                if (Size == 0)
+                {
+                    Position = 0;
+                }
+
+                if (this.Position >= FifoInitSize &&
+                    this.PhysicalData.Length >= this.ReallocMemSize &&
+                    (this.PhysicalData.Length / 2) > this.Size)
+                {
+                    int new_size;
+
+                    new_size = Math.Max(this.PhysicalData.Length / 2, FifoInitSize);
+
+                    this.PhysicalData = MemoryHelper.ReAlloc(this.PhysicalData, new_size);
+
+                    this.Position = 0;
+                }
+
+                return read_size;
+            }
+        }
+
+        public Span<T> Span { get => this.PhysicalData.AsSpan(this.Position, this.Size); }
+    }
+
     public class FastDatagramBuffer<T> : IFastBuffer<T>
     {
         FastLinkedList<T> List = new FastLinkedList<T>();
