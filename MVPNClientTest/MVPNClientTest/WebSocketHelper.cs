@@ -22,6 +22,7 @@ using Org.BouncyCastle.Crypto.Macs;
 using Org.BouncyCastle.Crypto.Parameters;
 using System.Runtime.InteropServices;
 using System.Buffers.Binary;
+using System.Collections;
 
 #pragma warning disable CS0162, CS1998
 
@@ -4496,19 +4497,275 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public interface IFastBuffer<T>
+
+    public class FastLinkedListNode<T>
     {
+        public T Value;
+        public FastLinkedListNode<T> Next, Previous;
     }
 
-    public readonly struct FastStreamBufferSegment<T>
+    public class FastLinkedList<T>
     {
-        public readonly Memory<T> Memory;
+        public int Count;
+        public FastLinkedListNode<T> First, Last;
+
+        public void Clear()
+        {
+            Count = 0;
+            First = Last = null;
+        }
+
+        public FastLinkedListNode<T> AddFirst(T value)
+        {
+            if (First == null)
+            {
+                Debug.Assert(Last == null);
+                Debug.Assert(Count == 0);
+                First = Last = new FastLinkedListNode<T>() { Value = value, Next = null, Previous = null };
+                Count++;
+                return First;
+            }
+            else
+            {
+                Debug.Assert(Last != null);
+                Debug.Assert(Count >= 1);
+                var old_first = First;
+                var nn = new FastLinkedListNode<T>() { Value = value, Next = old_first, Previous = null };
+                Debug.Assert(old_first.Previous == null);
+                old_first.Previous = nn;
+                First = nn;
+                Count++;
+                return nn;
+            }
+        }
+
+        public void AddFirst(FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        {
+            if (First == null)
+            {
+                Debug.Assert(Last == null);
+                Debug.Assert(Count == 0);
+                First = chain_first;
+                Last = chain_last;
+                chain_first.Previous = null;
+                chain_last.Next = null;
+                Count = chained_count;
+            }
+            else
+            {
+                Debug.Assert(Last != null);
+                Debug.Assert(Count >= 1);
+                var old_first = First;
+                Debug.Assert(old_first.Previous == null);
+                old_first.Previous = chain_last;
+                First = chain_first;
+                Count += chained_count;
+            }
+        }
+
+        public FastLinkedListNode<T> AddLast(T value)
+        {
+            if (Last == null)
+            {
+                Debug.Assert(First == null);
+                Debug.Assert(Count == 0);
+                First = Last = new FastLinkedListNode<T>() { Value = value, Next = null, Previous = null };
+                Count++;
+                return Last;
+            }
+            else
+            {
+                Debug.Assert(First != null);
+                Debug.Assert(Count >= 1);
+                var old_last = Last;
+                var nn = new FastLinkedListNode<T>() { Value = value, Next = null, Previous = old_last };
+                Debug.Assert(old_last.Next == null);
+                old_last.Next = nn;
+                Last = nn;
+                Count++;
+                return nn;
+            }
+        }
+
+        public void AddLast(FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        {
+            if (Last == null)
+            {
+                Debug.Assert(First == null);
+                Debug.Assert(Count == 0);
+                First = chain_first;
+                Last = chain_last;
+                chain_first.Previous = null;
+                chain_last.Next = null;
+                Count = chained_count;
+            }
+            else
+            {
+                Debug.Assert(First != null);
+                Debug.Assert(Count >= 1);
+                var old_last = Last;
+                Debug.Assert(old_last.Next == null);
+                old_last.Next = chain_first;
+                Last = chain_last;
+                Count += chained_count;
+            }
+        }
+
+        public FastLinkedListNode<T> AddAfter(FastLinkedListNode<T> prev_node, T value)
+        {
+            var next_node = prev_node.Next;
+            Debug.Assert(First != null && Last != null);
+            Debug.Assert(next_node != null || Last == prev_node);
+            Debug.Assert(next_node == null || next_node.Previous == prev_node);
+            var nn = new FastLinkedListNode<T>() { Value = value, Next = next_node, Previous = prev_node };
+            prev_node.Next = nn;
+            if (next_node != null) next_node.Previous = nn;
+            if (Last == prev_node) Last = nn;
+            Count++;
+            return nn;
+        }
+
+        public void AddAfter(FastLinkedListNode<T> prev_node, FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        {
+            var next_node = prev_node.Next;
+            Debug.Assert(First != null && Last != null);
+            Debug.Assert(next_node != null || Last == prev_node);
+            Debug.Assert(next_node == null || next_node.Previous == prev_node);
+            prev_node.Next = chain_first;
+            chain_first.Previous = prev_node;
+            if (next_node != null) next_node.Previous = chain_last;
+            chain_last.Previous = next_node;
+            if (Last == prev_node) Last = chain_last;
+            Count += chained_count;
+        }
+
+        public FastLinkedListNode<T> AddBefore(FastLinkedListNode<T> next_node, T value)
+        {
+            var prev_node = next_node.Previous;
+            Debug.Assert(First != null && Last != null);
+            Debug.Assert(prev_node != null || First == next_node);
+            Debug.Assert(prev_node == null || prev_node.Next == next_node);
+            var nn = new FastLinkedListNode<T>() { Value = value, Next = next_node, Previous = prev_node };
+            next_node.Previous = nn;
+            if (prev_node != null) prev_node.Next = nn;
+            if (First == next_node) First = nn;
+            Count++;
+            return nn;
+        }
+
+        public void AddBefore(FastLinkedListNode<T> next_node, FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        {
+            var prev_node = next_node.Previous;
+            Debug.Assert(First != null && Last != null);
+            Debug.Assert(prev_node != null || First == next_node);
+            Debug.Assert(prev_node == null || prev_node.Next == next_node);
+            next_node.Previous = chain_last;
+            chain_last.Next = next_node;
+            if (prev_node != null) prev_node.Next = chain_first;
+            chain_first.Previous = prev_node;
+            if (First == next_node) First = chain_first;
+            Count += chained_count;
+        }
+
+        public void Remove(FastLinkedListNode<T> node)
+        {
+            Debug.Assert(First != null && Last != null);
+
+            if (node.Previous != null && node.Next != null)
+            {
+                Debug.Assert(First != null);
+                Debug.Assert(Last != null);
+                Debug.Assert(First != node);
+                Debug.Assert(Last != node);
+
+                node.Previous.Next = node.Next;
+                node.Next.Previous = node.Previous;
+
+                Count--;
+            }
+            else if (node.Previous == null && node.Next == null)
+            {
+                Debug.Assert(First == node);
+                Debug.Assert(Last == node);
+
+                First = Last = null;
+
+                Count--;
+            }
+            else if (node.Previous != null)
+            {
+                Debug.Assert(First != null);
+                Debug.Assert(First != node);
+                Debug.Assert(Last == node);
+
+                node.Previous.Next = null;
+                Last = node.Previous;
+
+                Count--;
+            }
+            else
+            {
+                Debug.Assert(Last != null);
+                Debug.Assert(Last != node);
+                Debug.Assert(First == node);
+
+                node.Next.Previous = null;
+                First = node.Next;
+
+                Count--;
+            }
+        }
+
+        public T[] ItemsReadOnly
+        {
+            get
+            {
+                List<T> ret = new List<T>();
+                var node = First;
+                while (node != null)
+                {
+                    ret.Add(node.Value);
+                    node = node.Next;
+                }
+                return ret.ToArray();
+            }
+        }
+    }
+
+
+    public interface IFastBuffer<T>
+    {
+        long PinHead { get; }
+        long PinTail { get; }
+        long Length { get; }
+
+        void Clear();
+        void InsertBefore(T item);
+        void InsertHead(T item);
+        void InsertTail(T item);
+        void Insert(long pin, T item, bool append_if_overrun = false);
+        FastBufferSegment<T>[] GetSegmentsFast(long pin, long size, out long read_size, bool allow_partial = false);
+        FastBufferSegment<T>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false);
+        T GetContiguous(long pin, long size, bool allow_partial = false);
+        T ReadContiguous(ref long pin, long size, bool allow_partial = false);
+        T PutContiguous(long pin, long size, bool append_if_overrun = false);
+        T WriteContiguous(ref long pin, long size, bool append_if_overrun = false);
+        void Enqueue(T item);
+        void Enqueue(T[] item_list);
+        T DequeueContiguousSlow(long size);
+        List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true);
+        void DequeueAllAndEnqueueToOther(IFastBuffer<T> other);
+    }
+
+    public readonly struct FastBufferSegment<T>
+    {
+        public readonly T Item;
         public readonly long Pin;
         public readonly long RelativeOffset;
 
-        public FastStreamBufferSegment(Memory<T> memory, long pin, long relative_offset)
+        public FastBufferSegment(T item, long pin, long relative_offset)
         {
-            Memory = memory;
+            Item = item;
             Pin = pin;
             RelativeOffset = relative_offset;
         }
@@ -4516,7 +4773,7 @@ namespace SoftEther.WebSocket.Helper
 
     public class FastStreamBuffer<T> : IFastBuffer<Memory<T>>
     {
-        LinkedList<Memory<T>> List = new LinkedList<Memory<T>>();
+        FastLinkedList<Memory<T>> List = new FastLinkedList<Memory<T>>();
         public long PinHead { get; private set; } = 0;
         public long PinTail { get; private set; } = 0;
         public long Length { get => checked(PinTail - PinHead); }
@@ -4530,45 +4787,45 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void InsertBefore(Memory<T> memory)
+        public void InsertBefore(Memory<T> item)
         {
             checked
             {
-                if (memory.IsEmpty) return;
-                List.AddFirst(memory);
-                PinHead -= memory.Length;
+                if (item.IsEmpty) return;
+                List.AddFirst(item);
+                PinHead -= item.Length;
             }
         }
 
-        public void InsertHead(Memory<T> memory)
+        public void InsertHead(Memory<T> item)
         {
             checked
             {
-                if (memory.IsEmpty) return;
-                List.AddFirst(memory);
-                PinTail += memory.Length;
+                if (item.IsEmpty) return;
+                List.AddFirst(item);
+                PinTail += item.Length;
             }
         }
 
-        public void InsertTail(Memory<T> memory)
+        public void InsertTail(Memory<T> item)
         {
             checked
             {
-                if (memory.IsEmpty) return;
-                List.AddLast(memory);
-                PinTail += memory.Length;
+                if (item.IsEmpty) return;
+                List.AddLast(item);
+                PinTail += item.Length;
             }
         }
 
-        public void Insert(long pin, Memory<T> memory, bool append_if_overrun = false)
+        public void Insert(long pin, Memory<T> item, bool append_if_overrun = false)
         {
             checked
             {
-                if (memory.IsEmpty) return;
+                if (item.IsEmpty) return;
 
                 if (List.First == null)
                 {
-                    InsertHead(memory);
+                    InsertHead(item);
                     return;
                 }
 
@@ -4591,13 +4848,13 @@ namespace SoftEther.WebSocket.Helper
                 Debug.Assert(node != null);
                 if (offset_in_segment == 0)
                 {
-                    var new_node = List.AddBefore(node, memory);
-                    PinTail += memory.Length;
+                    var new_node = List.AddBefore(node, item);
+                    PinTail += item.Length;
                 }
                 else if (node.Value.Length == offset_in_segment)
                 {
-                    var new_node = List.AddAfter(node, memory);
-                    PinTail += memory.Length;
+                    var new_node = List.AddAfter(node, item);
+                    PinTail += item.Length;
                 }
                 else
                 {
@@ -4605,14 +4862,14 @@ namespace SoftEther.WebSocket.Helper
                     Memory<T> slice_after = node.Value.Slice(offset_in_segment);
 
                     node.Value = slice_before;
-                    var new_node = List.AddAfter(node, memory);
+                    var new_node = List.AddAfter(node, item);
                     List.AddAfter(new_node, slice_after);
-                    PinTail += memory.Length;
+                    PinTail += item.Length;
                 }
             }
         }
 
-        LinkedListNode<Memory<T>> GetNodeWithPin(long pin, out int offset_in_segment, out long node_pin)
+        FastLinkedListNode<Memory<T>> GetNodeWithPin(long pin, out int offset_in_segment, out long node_pin)
         {
             checked
             {
@@ -4645,7 +4902,7 @@ namespace SoftEther.WebSocket.Helper
                     return last;
                 }
                 long current_pin = PinHead;
-                LinkedListNode<Memory<T>> node = List.First;
+                FastLinkedListNode<Memory<T>> node = List.First;
                 while (node != null)
                 {
                     if (pin >= current_pin && pin < (current_pin + node.Value.Length))
@@ -4662,8 +4919,8 @@ namespace SoftEther.WebSocket.Helper
         }
 
         void GetOverlappedNodes(long pin_start, long pin_end,
-            out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-            out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
+            out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
+            out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
             out int node_counts, out int lack_remain_length)
         {
             checked
@@ -4678,7 +4935,7 @@ namespace SoftEther.WebSocket.Helper
                     pin_end = PinTail;
                 }
 
-                LinkedListNode<Memory<T>> node = first_node;
+                FastLinkedListNode<Memory<T>> node = first_node;
                 long current_pin = pin_start - first_node_offset_in_segment;
                 node_counts = 0;
                 while (true)
@@ -4704,7 +4961,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public FastStreamBufferSegment<T>[] GetSegmentsFast(long pin, long size, out long read_size, bool allow_partial = false)
+        public FastBufferSegment<Memory<T>>[] GetSegmentsFast(long pin, long size, out long read_size, bool allow_partial = false)
         {
             checked
             {
@@ -4712,7 +4969,7 @@ namespace SoftEther.WebSocket.Helper
                 if (size == 0)
                 {
                     read_size = 0;
-                    return new FastStreamBufferSegment<T>[0];
+                    return new FastBufferSegment<Memory<T>>[0];
                 }
                 if (pin > PinTail)
                 {
@@ -4725,17 +4982,17 @@ namespace SoftEther.WebSocket.Helper
                     size = PinTail - pin;
                 }
 
-                FastStreamBufferSegment<T>[] ret = GetUncontiguousSegments(pin, pin + size, false);
+                FastBufferSegment<Memory<T>>[] ret = GetUncontiguousSegments(pin, pin + size, false);
                 read_size = size;
                 return ret;
             }
         }
 
-        public FastStreamBufferSegment<T>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false)
+        public FastBufferSegment<Memory<T>>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false)
         {
             checked
             {
-                FastStreamBufferSegment<T>[] ret = GetSegmentsFast(pin, size, out read_size, allow_partial);
+                FastBufferSegment<Memory<T>>[] ret = GetSegmentsFast(pin, size, out read_size, allow_partial);
                 pin += read_size;
                 return ret;
             }
@@ -4799,19 +5056,19 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void Enqueue(Memory<T> memory)
+        public void Enqueue(Memory<T> item)
         {
-            InsertTail(memory);
+            InsertTail(item);
         }
 
-        public void Enqueue(Memory<T>[] memory_list)
+        public void Enqueue(Memory<T>[] item_list)
         {
-            foreach (Memory<T> m in memory_list)
+            foreach (Memory<T> t in item_list)
             {
-                if (m.Length != 0)
+                if (t.Length != 0)
                 {
-                    List.AddLast(m);
-                    PinTail += m.Length;
+                    List.AddLast(t);
+                    PinTail += t.Length;
                 }
             }
         }
@@ -4849,7 +5106,7 @@ namespace SoftEther.WebSocket.Helper
                     return null;
                 }
 
-                LinkedListNode<Memory<T>> node = List.First;
+                FastLinkedListNode<Memory<T>> node = List.First;
                 List<Memory<T>> ret = new List<Memory<T>>();
                 while (true)
                 {
@@ -4884,7 +5141,7 @@ namespace SoftEther.WebSocket.Helper
                         ret.Add(node.Value);
                         total_read_size += node.Value.Length;
 
-                        LinkedListNode<Memory<T>> delete_node = node;
+                        FastLinkedListNode<Memory<T>> delete_node = node;
                         node = node.Next;
 
                         List.Remove(delete_node);
@@ -4898,6 +5155,8 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
         }
+
+        public void DequeueAllAndEnqueueToOther(IFastBuffer<Memory<T>> other) => DequeueAllAndEnqueueToOther((FastStreamBuffer<T>)other);
 
         public void DequeueAllAndEnqueueToOther(FastStreamBuffer<T> other)
         {
@@ -4916,33 +5175,28 @@ namespace SoftEther.WebSocket.Helper
                     long length = this.Length;
                     Debug.Assert(other.List.Count == 0);
                     other.List = this.List;
-                    this.List = new LinkedList<Memory<T>>();
+                    this.List = new FastLinkedList<Memory<T>>();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
                 }
                 else
                 {
                     long length = this.Length;
-                    var node = this.List.First;
-                    while (node != null)
-                    {
-                        var next_node = node.Next;
-                        List.Remove(node);
-                        other.List.AddLast(node);
-                        node = next_node;
-                    }
-                    this.List = new LinkedList<Memory<T>>();
+                    var chain_first = this.List.First;
+                    var chain_last = this.List.Last;
+                    other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
+                    this.List.Clear();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
                 }
             }
         }
 
-        FastStreamBufferSegment<T>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
+        FastBufferSegment<Memory<T>>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
         {
             checked
             {
-                if (pin_start == pin_end) return new FastStreamBufferSegment<T>[0];
+                if (pin_start == pin_end) return new FastBufferSegment<Memory<T>>[0];
                 if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
 
                 if (append_if_overrun)
@@ -4968,22 +5222,22 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 GetOverlappedNodes(pin_start, pin_end,
-                    out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                    out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
+                    out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
+                    out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
                     out int node_counts, out int lack_remain_length);
 
                 Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
 
                 if (first_node == last_node)
-                    return new FastStreamBufferSegment<T>[1]{ new FastStreamBufferSegment<T>(
+                    return new FastBufferSegment<Memory<T>>[1]{ new FastBufferSegment<Memory<T>>(
                     first_node.Value.Slice(first_node_offset_in_segment, last_node_offset_in_segment - first_node_offset_in_segment), pin_start, 0) };
 
-                FastStreamBufferSegment<T>[] ret = new FastStreamBufferSegment<T>[node_counts];
+                FastBufferSegment<Memory<T>>[] ret = new FastBufferSegment<Memory<T>>[node_counts];
 
-                LinkedListNode<Memory<T>> prev_node = first_node.Previous;
-                LinkedListNode<Memory<T>> next_node = last_node.Next;
+                FastLinkedListNode<Memory<T>> prev_node = first_node.Previous;
+                FastLinkedListNode<Memory<T>> next_node = last_node.Next;
 
-                LinkedListNode<Memory<T>> node = first_node;
+                FastLinkedListNode<Memory<T>> node = first_node;
                 int count = 0;
                 long current_offset = 0;
 
@@ -4994,7 +5248,7 @@ namespace SoftEther.WebSocket.Helper
                     int slice_start = (node == first_node) ? first_node_offset_in_segment : 0;
                     int slice_length = (node == last_node) ? last_node_offset_in_segment : node.Value.Length - slice_start;
 
-                    ret[count] = new FastStreamBufferSegment<T>(node.Value.Slice(slice_start, slice_length), current_offset + pin_start, current_offset);
+                    ret[count] = new FastBufferSegment<Memory<T>>(node.Value.Slice(slice_start, slice_length), current_offset + pin_start, current_offset);
                     count++;
 
                     Debug.Assert(count <= node_counts, "count > node_counts");
@@ -5026,8 +5280,8 @@ namespace SoftEther.WebSocket.Helper
                 if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
 
                 GetOverlappedNodes(pin_start, pin_end,
-                    out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                    out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
+                    out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
+                    out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
                     out int node_counts, out int lack_remain_length);
 
                 Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
@@ -5123,8 +5377,8 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 GetOverlappedNodes(pin_start, pin_end,
-                    out LinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                    out LinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
+                    out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
+                    out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
                     out int node_counts, out int lack_remain_length);
 
                 Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
@@ -5132,11 +5386,11 @@ namespace SoftEther.WebSocket.Helper
                 if (first_node == last_node)
                     return first_node.Value.Slice(first_node_offset_in_segment, last_node_offset_in_segment - first_node_offset_in_segment);
 
-                LinkedListNode<Memory<T>> prev_node = first_node.Previous;
-                LinkedListNode<Memory<T>> next_node = last_node.Next;
+                FastLinkedListNode<Memory<T>> prev_node = first_node.Previous;
+                FastLinkedListNode<Memory<T>> next_node = last_node.Next;
 
                 Memory<T> new_memory = new T[last_node_pin + last_node.Value.Length - first_node_pin];
-                LinkedListNode<Memory<T>> node = first_node;
+                FastLinkedListNode<Memory<T>> node = first_node;
                 int current_write_pointer = 0;
 
                 while (true)
@@ -5148,7 +5402,7 @@ namespace SoftEther.WebSocket.Helper
 
                     if (node == last_node) finish = true;
 
-                    LinkedListNode<Memory<T>> node_to_delete = node;
+                    FastLinkedListNode<Memory<T>> node_to_delete = node;
                     current_write_pointer += node.Value.Length;
 
                     node = node.Next;

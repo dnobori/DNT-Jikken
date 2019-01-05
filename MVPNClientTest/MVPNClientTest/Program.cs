@@ -23,8 +23,8 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            //TestStreamBuffer();
-            BenchStreamBuffer();
+            TestStreamBuffer();
+            //BenchStreamBuffer();
 
             return;
             string s = "Hello";
@@ -114,22 +114,23 @@ namespace MVPNClientTest
                 },
                 () => 0), true, 10);
 
+            FastStreamBuffer<byte> bufx1 = new_test_buf(10000);
+            FastStreamBuffer<byte> bufx2 = new_test_buf(10000);
 
             q.Add(new MicroBenchmark<int>("MoveToOtherEmpty", 100000,
                 (x, iterations) =>
                 {
-                    FastStreamBuffer<byte> buf1 = new_test_buf(10000);
-                    FastStreamBuffer<byte> buf2 = new_test_buf(10000);
 
                     for (int i = 0; i < iterations; i++)
                     {
-                        buf1.DequeueAllAndEnqueueToOther(buf2);
-                        buf2.DequeueAllAndEnqueueToOther(buf1);
+                        bufx1.DequeueAllAndEnqueueToOther(bufx2);
+                        bufx2.DequeueAllAndEnqueueToOther(bufx1);
                     }
 
                 },
                 () => 0), true, 20);
 
+            System.GC.Collect();
 
             q.Add(new MicroBenchmark<int>("MoveToOtherNonEmpty", 1,
                 (x, iterations) =>
