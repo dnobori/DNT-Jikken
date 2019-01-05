@@ -52,9 +52,8 @@ namespace MVPNClientTest
             }
 
             MicroBenchmarkQueue q = new MicroBenchmarkQueue();
-            q.Add(
 
-                new MicroBenchmark<int>("InsertRandom", 1000,
+            q.Add(new MicroBenchmark<int>("InsertFirst", 1000,
                 (x, iterations) =>
                 {
                     List<int> rands = new List<int>();
@@ -66,11 +65,51 @@ namespace MVPNClientTest
 
                     for (int i = 0; i < iterations; i++)
                     {
-                        //buf.Insert(buf.PinHead + 0, add_data);
+                        buf.Insert(buf.PinHead + 0, add_data);
                     }
 
                 },
                 () => 0), true, 0);
+
+            q.Add(new MicroBenchmark<int>("InsertAndRemoveRandom", 10000,
+                (x, iterations) =>
+                {
+                    List<int> rands = new List<int>();
+                    for (int i = 0; i < 256; i++)
+                        rands.Add(WebSocketHelper.RandSInt31());
+                    Memory<byte> add_data = new byte[] { 1, 2, 3, 4, 5, };
+
+                    FastStreamBuffer<byte> buf = new_test_buf();
+                    
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        long pin = buf.PinHead + rands[i % rands.Count] % (buf.Length - add_data.Length);
+                        buf.Insert(pin, add_data);
+                        buf.Remove(pin, add_data.Length);
+                    }
+
+                },
+                () => 0), true, 0);
+
+            q.Add(new MicroBenchmark<int>("EnqueueAndDequeue", 10000,
+                (x, iterations) =>
+                {
+                    List<int> rands = new List<int>();
+                    for (int i = 0; i < 256; i++)
+                        rands.Add(WebSocketHelper.RandSInt31());
+                    Memory<byte> add_data = new byte[] { 1, 2, 3, 4, 5, };
+
+                    FastStreamBuffer<byte> buf = new_test_buf();
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        buf.Enqueue(add_data);
+                        var ret = buf.Dequeue(long.MaxValue, out _, false);
+                    }
+
+                },
+                () => 0), true, 10);
+
 
             q.Run();
         }
@@ -101,26 +140,26 @@ namespace MVPNClientTest
             }
 
             {
-                { var buf = new_test_buf(); var a = buf.GetFast(4, 14 + 100, out long read_size, true); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(4, 14 + 100, out long read_size, true); }
             }
 
             {
-                { var buf = new_test_buf(); var a = buf.GetFast(0, 3, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 1, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 2, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 3, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 6, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 7, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 11, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 12, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(1, 17, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(0, 18, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(4, 14, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(5, 13, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(11, 7, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(12, 6, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(13, 5, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetFast(13, 4, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(0, 3, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 1, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 2, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 3, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 6, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 7, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 11, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 12, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 17, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(0, 18, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(4, 14, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(5, 13, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(11, 7, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(12, 6, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(13, 5, out long read_size, false); }
+                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(13, 4, out long read_size, false); }
             }
 
             {

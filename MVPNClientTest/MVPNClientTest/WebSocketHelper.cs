@@ -4704,7 +4704,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public FastStreamBufferSegment<T>[] GetFast(long pin, long size, out long read_size, bool allow_partial = false)
+        public FastStreamBufferSegment<T>[] GetSegmentsFast(long pin, long size, out long read_size, bool allow_partial = false)
         {
             checked
             {
@@ -4735,7 +4735,7 @@ namespace SoftEther.WebSocket.Helper
         {
             checked
             {
-                FastStreamBufferSegment<T>[] ret = GetFast(pin, size, out read_size, allow_partial);
+                FastStreamBufferSegment<T>[] ret = GetSegmentsFast(pin, size, out read_size, allow_partial);
                 pin += read_size;
                 return ret;
             }
@@ -4807,7 +4807,13 @@ namespace SoftEther.WebSocket.Helper
         public void Enqueue(Memory<T>[] memory_list)
         {
             foreach (Memory<T> m in memory_list)
-                Enqueue(m);
+            {
+                if (m.Length != 0)
+                {
+                    List.AddLast(m);
+                    PinTail += m.Length;
+                }
+            }
         }
 
         public Memory<T> DequeueContiguousSlow(long size)
@@ -4831,7 +4837,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public Memory<T>[] Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true)
+        public List<Memory<T>> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
         {
             checked
             {
@@ -4849,7 +4855,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     if ((total_read_size + node.Value.Length) >= min_read_size)
                     {
-                        if (allow_split_segments && (total_read_size + node.Value.Length) > min_read_size)
+                        if (allow_split_segments_slow && (total_read_size + node.Value.Length) > min_read_size)
                         {
                             int last_segment_read_size = (int)(min_read_size - total_read_size);
                             Debug.Assert(last_segment_read_size <= node.Value.Length);
@@ -4861,7 +4867,7 @@ namespace SoftEther.WebSocket.Helper
                             total_read_size += last_segment_read_size;
                             PinHead += total_read_size;
                             Debug.Assert(min_read_size >= total_read_size);
-                            return ret.ToArray();
+                            return ret;
                         }
                         else
                         {
@@ -4869,8 +4875,8 @@ namespace SoftEther.WebSocket.Helper
                             total_read_size += node.Value.Length;
                             List.Remove(node);
                             PinHead += total_read_size;
-                            Debug.Assert(min_read_size >= total_read_size);
-                            return ret.ToArray();
+                            Debug.Assert(min_read_size <= total_read_size);
+                            return ret;
                         }
                     }
                     else
@@ -4886,7 +4892,7 @@ namespace SoftEther.WebSocket.Helper
                         if (node == null)
                         {
                             PinHead += total_read_size;
-                            return ret.ToArray();
+                            return ret;
                         }
                     }
                 }
