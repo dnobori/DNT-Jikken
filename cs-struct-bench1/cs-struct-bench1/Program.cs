@@ -275,6 +275,32 @@ namespace cs_struct_bench1
     {
     }
 
+    public class BenchProperty1
+    {
+        public long Value { get; private set; }
+
+        public void Test()
+        {
+            for (int i = 0; i < 1000; i++)
+            {
+                Value += Limbo.SInt;
+            }
+        }
+    }
+
+    public class BenchProperty2
+    {
+        public long Value;
+
+        public void Test()
+        {
+            for (int i = 0; i < 1000; i++)
+            {
+                Value += Limbo.SInt;
+            }
+        }
+    }
+
     class Program
     {
         static Semaphore s = new Semaphore(1, 1);
@@ -295,6 +321,28 @@ namespace cs_struct_bench1
 
             
             var q = new MicroBenchmarkQueue()
+
+                .Add(new MicroBenchmark<Memory<byte>>("BenchProperty1", 256, (state, iterations) =>
+                {
+                    var x = new BenchProperty1();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        x.Test();
+                        Limbo.SInt += x.Value;
+                    }
+                }
+                ), true, 10)
+
+                .Add(new MicroBenchmark<Memory<byte>>("BenchProperty2", 256, (state, iterations) =>
+                {
+                    var x = new BenchProperty2();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        x.Test();
+                        Limbo.SInt += x.Value;
+                    }
+                }
+                ), true, 10)
 
                 .Add(new MicroBenchmark<Memory<byte>>("new byte[1]", 256, (state, iterations) =>
                 {
