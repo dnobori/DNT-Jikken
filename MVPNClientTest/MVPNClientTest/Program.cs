@@ -51,10 +51,34 @@ namespace MVPNClientTest
                 return ret;
             }
 
-            MicroBenchmarkQueue q = new MicroBenchmarkQueue();
-            q.Add(
+            var q = new MicroBenchmarkQueue().Add(
 
-                new MicroBenchmark<int>("InsertRandom", 1000,
+                new MicroBenchmark<int>("LinkedList", 1000,
+                (x, iterations) =>
+                {
+                    LinkedList<int> a = new LinkedList<int>();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        a.AddFirst(i);
+                    }
+
+                },
+                () => 0), true, 0).Add(
+
+
+                new MicroBenchmark<int>("LinkedList", 1000,
+                (x, iterations) =>
+                {
+                    FastLinkedList<int> a = new FastLinkedList<int>();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        a.AddFirst(i);
+                    }
+
+                },
+                () => 0), true, 0).Add(
+
+            new MicroBenchmark<int>("InsertRandom", 1000,
                 (x, iterations) =>
                 {
                     List<int> rands = new List<int>();
@@ -66,7 +90,7 @@ namespace MVPNClientTest
 
                     for (int i = 0; i < iterations; i++)
                     {
-                        //buf.Insert(buf.PinHead + 0, add_data);
+                        buf.Insert(buf.PinHead + 0, add_data);
                     }
 
                 },

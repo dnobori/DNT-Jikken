@@ -4496,6 +4496,141 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class FastLinkedListNode<T>
+    {
+        public T Item;
+        public FastLinkedListNode<T> Next, Prev;
+    }
+
+    public class FastLinkedList<T>
+    {
+        public int Count;
+        public FastLinkedListNode<T> First, Last;
+
+        public void Clear()
+        {
+            Count = 0;
+            First = Last = null;
+        }
+
+        public FastLinkedListNode<T> AddFirst(T value)
+        {
+            if (First == null)
+            {
+                Debug.Assert(Last == null);
+                First = new FastLinkedListNode<T>() { Item = value, Next = null, Prev = null };
+                Count++;
+                return First;
+            }
+            else
+            {
+                Debug.Assert(Last != null);
+                var old_first = First;
+                var nn = new FastLinkedListNode<T>() { Item = value, Next = old_first, Prev = null };
+                Debug.Assert(old_first.Prev == null);
+                old_first.Prev = nn;
+                First = nn;
+                Count++;
+                return nn;
+            }
+        }
+
+        public FastLinkedListNode<T> AddLast(T value)
+        {
+            if (Last == null)
+            {
+                Debug.Assert(First == null);
+                Last = new FastLinkedListNode<T>() { Item = value, Next = null, Prev = null };
+                Count++;
+                return Last;
+            }
+            else
+            {
+                Debug.Assert(First != null);
+                var old_last = Last;
+                var nn = new FastLinkedListNode<T>() { Item = value, Next = null, Prev = old_last };
+                Debug.Assert(old_last.Next == null);
+                old_last.Next = nn;
+                Last = nn;
+                Count++;
+                return nn;
+            }
+        }
+
+        public FastLinkedListNode<T> AddAfter(FastLinkedListNode<T> node, T value)
+        {
+            var next_node = node.Next;
+            Debug.Assert(next_node != null || Last == node);
+            Debug.Assert(next_node == null || next_node.Prev == node);
+            var nn = new FastLinkedListNode<T>() { Item = value, Next = next_node, Prev = node };
+            node.Next = nn;
+            if (next_node != null) next_node.Prev = node;
+            if (Last == null) Last = nn;
+            Count++;
+            return nn;
+        }
+
+        public FastLinkedListNode<T> AddBefore(FastLinkedListNode<T> node, T value)
+        {
+            var prev_node = node.Prev;
+            Debug.Assert(prev_node != null || First == node);
+            Debug.Assert(prev_node == null || prev_node.Next == node);
+            var nn = new FastLinkedListNode<T>() { Item = value, Next = node, Prev = prev_node };
+            node.Prev = nn;
+            if (prev_node != null) prev_node.Next = node;
+            if (First == null) First = nn;
+            Count++;
+            return nn;
+        }
+
+        public void Remove(FastLinkedListNode<T> node)
+        {
+            if (node.Prev != null && node.Next != null)
+            {
+                Debug.Assert(First != null);
+                Debug.Assert(Last != null);
+                Debug.Assert(First != node);
+                Debug.Assert(Last != node);
+
+                node.Prev.Next = node.Next;
+                node.Next.Prev = node.Prev;
+
+                Count--;
+            }
+            else if (node.Prev == null && node.Next == null)
+            {
+                Debug.Assert(First == node);
+                Debug.Assert(Last == node);
+
+                First = Last = null;
+
+                Count--;
+            }
+            else if (node.Prev != null)
+            {
+                Debug.Assert(First != null);
+                Debug.Assert(First != node);
+                Debug.Assert(Last == node);
+
+                node.Prev.Next = null;
+                Last = node.Prev;
+
+                Count--;
+            }
+            else
+            {
+                Debug.Assert(Last != null);
+                Debug.Assert(Last != node);
+                Debug.Assert(First == node);
+
+                node.Next.Prev = null;
+                First = node.Next;
+
+                Count--;
+            }
+        }
+    }
+
     public interface IFastBuffer<T>
     {
     }
