@@ -366,7 +366,7 @@ namespace SoftEther.WebSocket.Helper
             if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
             if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
             if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
-            MemoryBuffer <T> ret = new MemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
             ret.Length = length;
             ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
             return ret;
@@ -4924,187 +4924,6 @@ namespace SoftEther.WebSocket.Helper
         public Span<T> Span { get => this.PhysicalData.AsSpan(this.Position, this.Size); }
     }
 
-    public class FastDatagramBuffer<T> : IFastBuffer<T>
-    {
-        FastLinkedList<T> List = new FastLinkedList<T>();
-
-        public long PinHead { get; private set; } = 0;
-        public long PinTail { get; private set; } = 0;
-        public long Length { get => checked(PinTail - PinHead); }
-        public long Threshold { get; set; }
-
-        public bool IsReadyToWrite { get => (Length <= Threshold); }
-        public bool IsEventsEnabled { get; }
-
-        public AsyncAutoResetEvent EventWriteReady { get; } = null;
-        public AsyncAutoResetEvent EventReadReady { get; } = null;
-
-        public const long DefaultThreshold = 65536;
-
-        public FastDatagramBuffer(bool enable_events = false, long threshold_length = DefaultThreshold)
-        {
-            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
-
-            Threshold = threshold_length;
-            IsEventsEnabled = enable_events;
-            if (IsEventsEnabled)
-            {
-                EventWriteReady = new AsyncAutoResetEvent();
-                EventReadReady = new AsyncAutoResetEvent();
-            }
-        }
-
-        bool LastReadyToWrite = false;
-
-        public void FlushRead()
-        {
-            if (IsEventsEnabled)
-            {
-                bool current = IsReadyToWrite;
-                if (current != LastReadyToWrite)
-                {
-                    LastReadyToWrite = current;
-                    EventWriteReady.Set();
-                }
-            }
-        }
-
-        long LastTailPin = long.MinValue;
-
-        public void FlushWrite()
-        {
-            if (IsEventsEnabled)
-            {
-                long current = PinTail;
-                if (LastTailPin != current)
-                {
-                    LastTailPin = current;
-                    EventReadReady.Set();
-                }
-            }
-        }
-
-        public void Clear()
-        {
-            checked
-            {
-                List.Clear();
-                PinTail = PinHead;
-            }
-        }
-
-        public void InsertBefore(T item)
-        {
-            checked
-            {
-                List.AddFirst(item);
-                PinHead--;
-            }
-        }
-
-        public void InsertHead(T item)
-        {
-            checked
-            {
-                List.AddFirst(item);
-                PinTail++;
-            }
-        }
-
-        public void InsertTail(T item)
-        {
-            checked
-            {
-                List.AddLast(item);
-                PinTail++;
-            }
-        }
-
-        public void Enqueue(T item)
-        {
-            InsertTail(item);
-        }
-
-        public void Enqueue(T[] item_list)
-        {
-            foreach (T t in item_list)
-            {
-                List.AddLast(t);
-            }
-            PinTail += item_list.Length;
-        }
-
-        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
-        {
-            checked
-            {
-                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
-
-                total_read_size = 0;
-                if (List.First == null)
-                {
-                    return new List<T>();
-                }
-
-                List<T> ret = new List<T>();
-
-                var node = List.First;
-                while (node != null)
-                {
-                    ret.Add(node.Value);
-
-                    var next_node = node.Next;
-                    List.Remove(node);
-
-                    total_read_size++;
-                    if (total_read_size >= min_read_size) break;
-
-                    node = next_node;
-                }
-
-                total_read_size = ret.Count;
-
-                return ret;
-            }
-        }
-
-        public void DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer<T>)other);
-
-        public void DequeueAllAndEnqueueToOther(FastDatagramBuffer<T> other)
-        {
-            checked
-            {
-                if (this == other) throw new ArgumentException("this == other");
-
-                if (this.Length == 0)
-                {
-                    Debug.Assert(this.List.Count == 0);
-                    return;
-                }
-
-                if (other.Length == 0)
-                {
-                    long length = this.Length;
-                    Debug.Assert(other.List.Count == 0);
-                    other.List = this.List;
-                    this.List = new FastLinkedList<T>();
-                    this.PinHead = this.PinTail;
-                    other.PinTail += length;
-                }
-                else
-                {
-                    long length = this.Length;
-                    var chain_first = this.List.First;
-                    var chain_last = this.List.Last;
-                    other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
-                    this.List.Clear();
-                    this.PinHead = this.PinTail;
-                    other.PinTail += length;
-                }
-            }
-        }
-    }
-
     public class FastStreamBuffer<T> : IFastBuffer<Memory<T>>
     {
         FastLinkedList<Memory<T>> List = new FastLinkedList<Memory<T>>();
@@ -5820,7 +5639,7 @@ namespace SoftEther.WebSocket.Helper
 
 
 
-    public class FastDatagramBuffer2<T> : IFastBuffer<T>
+    public class FastDatagramBuffer<T> : IFastBuffer<T>
     {
         FastFifo<T> Fifo = new FastFifo<T>();
 
@@ -5837,7 +5656,7 @@ namespace SoftEther.WebSocket.Helper
 
         public const long DefaultThreshold = 65536;
 
-        public FastDatagramBuffer2(bool enable_events = false, long threshold_length = DefaultThreshold)
+        public FastDatagramBuffer(bool enable_events = false, long threshold_length = DefaultThreshold)
         {
             if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
 
@@ -5926,9 +5745,9 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer2<T>)other);
+        public void DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer<T>)other);
 
-        public void DequeueAllAndEnqueueToOther(FastDatagramBuffer2<T> other)
+        public void DequeueAllAndEnqueueToOther(FastDatagramBuffer<T> other)
         {
             checked
             {
@@ -5964,149 +5783,6 @@ namespace SoftEther.WebSocket.Helper
     }
 
 
-
-    public class FastDatagramBuffer3<T> : IFastBuffer<T>
-    {
-        FastStreamBuffer<T> Fifo = new FastStreamBuffer<T>();
-
-        public long PinHead { get; private set; } = 0;
-        public long PinTail { get; private set; } = 0;
-        public long Length { get => checked(PinTail - PinHead); }
-        public long Threshold { get; set; }
-
-        public bool IsReadyToWrite { get => (Length <= Threshold); }
-        public bool IsEventsEnabled { get; }
-
-        public AsyncAutoResetEvent EventWriteReady { get; } = null;
-        public AsyncAutoResetEvent EventReadReady { get; } = null;
-
-        public const long DefaultThreshold = 65536;
-
-        public FastDatagramBuffer3(bool enable_events = false, long threshold_length = DefaultThreshold)
-        {
-            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
-
-            Threshold = threshold_length;
-            IsEventsEnabled = enable_events;
-            if (IsEventsEnabled)
-            {
-                EventWriteReady = new AsyncAutoResetEvent();
-                EventReadReady = new AsyncAutoResetEvent();
-            }
-        }
-
-        bool LastReadyToWrite = false;
-
-        public void FlushRead()
-        {
-            if (IsEventsEnabled)
-            {
-                bool current = IsReadyToWrite;
-                if (current != LastReadyToWrite)
-                {
-                    LastReadyToWrite = current;
-                    EventWriteReady.Set();
-                }
-            }
-        }
-
-        long LastTailPin = long.MinValue;
-
-        public void FlushWrite()
-        {
-            if (IsEventsEnabled)
-            {
-                long current = PinTail;
-                if (LastTailPin != current)
-                {
-                    LastTailPin = current;
-                    EventReadReady.Set();
-                }
-            }
-        }
-
-        public void Clear()
-        {
-            checked
-            {
-                Fifo.Clear();
-                PinTail = PinHead;
-            }
-        }
-
-        public void Enqueue(T item)
-        {
-            checked
-            {
-                Fifo.Enqueue(new T[] { item });
-                PinTail++;
-            }
-        }
-
-        public void Enqueue(T[] item_list)
-        {
-            Fifo.Enqueue(item_list);
-            PinTail += item_list.Length;
-        }
-
-        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
-        {
-            checked
-            {
-                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
-                if (min_read_size >= int.MaxValue) min_read_size = int.MaxValue;
-
-                total_read_size = 0;
-
-                if (Fifo.Length == 0)
-                {
-                    return new List<T>();
-                }
-
-                var tmp = Fifo.DequeueContiguousSlow(min_read_size);
-
-                total_read_size = tmp.Length;
-
-                return new List<T>(tmp.ToArray());
-            }
-        }
-
-        public void DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer3<T>)other);
-
-        public void DequeueAllAndEnqueueToOther(FastDatagramBuffer3<T> other)
-        {
-            checked
-            {
-                if (this == other) throw new ArgumentException("this == other");
-
-                if (this.Length == 0)
-                {
-                    Debug.Assert(this.Fifo.Length == 0);
-                    return;
-                }
-
-                //if (other.Length == 0)
-                //{
-                //    long length = this.Length;
-                //    Debug.Assert(other.List.Count == 0);
-                //    other.List = this.List;
-                //    this.List = new FastLinkedList<T>();
-                //    this.PinHead = this.PinTail;
-                //    other.PinTail += length;
-                //}
-                //else
-                //{
-                //    long length = this.Length;
-                //    var chain_first = this.List.First;
-                //    var chain_last = this.List.Last;
-                //    other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
-                //    this.List.Clear();
-                //    this.PinHead = this.PinTail;
-                //    other.PinTail += length;
-                //}
-            }
-        }
-    }
 
 }
 
