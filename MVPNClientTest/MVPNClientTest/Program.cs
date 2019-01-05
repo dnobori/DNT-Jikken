@@ -23,8 +23,8 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            TestStreamBuffer();
-            //BenchStreamBuffer();
+            //TestStreamBuffer();
+            BenchStreamBuffer();
 
             return;
             string s = "Hello";
@@ -69,7 +69,7 @@ namespace MVPNClientTest
                     for (int i = 0; i < iterations; i++)
                     {
                         //buf.Insert(buf.PinHead + 0, add_data);
-                        buf.InsertBefore(add_data);
+                        buf.InsertHead(add_data);
                     }
 
                 },
@@ -145,6 +145,28 @@ namespace MVPNClientTest
 
                 },
                 () => 0), true, 20);
+
+
+            q.Add(new MicroBenchmark<int>("Datagram1", 10000,
+                (x, iterations) =>
+                {
+                    FastDatagramBuffer<int> dg = new FastDatagramBuffer<int>();
+                    List<int> a = new List<int>();
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        //dg.InsertTail(i);
+                        a.Add(i);
+                    }
+
+                    //for (int i = 0; i < iterations; i++)
+                    //{
+                    //    var r = dg.Dequeue(1, out long _);
+                    //}
+
+                },
+                () => 0), true, 30);
+
 
 
             q.Run();

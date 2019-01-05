@@ -4739,22 +4739,21 @@ namespace SoftEther.WebSocket.Helper
         long PinTail { get; }
         long Length { get; }
 
+        bool IsReadyToWrite { get; }
+        bool IsEventsEnabled { get; }
+        AsyncAutoResetEvent EventWriteReady { get; }
+        AsyncAutoResetEvent EventReadReady { get; }
+
         void Clear();
         void InsertBefore(T item);
         void InsertHead(T item);
         void InsertTail(T item);
-        void Insert(long pin, T item, bool append_if_overrun = false);
-        FastBufferSegment<T>[] GetSegmentsFast(long pin, long size, out long read_size, bool allow_partial = false);
-        FastBufferSegment<T>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false);
-        T GetContiguous(long pin, long size, bool allow_partial = false);
-        T ReadContiguous(ref long pin, long size, bool allow_partial = false);
-        T PutContiguous(long pin, long size, bool append_if_overrun = false);
-        T WriteContiguous(ref long pin, long size, bool append_if_overrun = false);
         void Enqueue(T item);
         void Enqueue(T[] item_list);
-        T DequeueContiguousSlow(long size);
         List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true);
         void DequeueAllAndEnqueueToOther(IFastBuffer<T> other);
+        void FlushRead();
+        void FlushWrite();
     }
 
     public readonly struct FastBufferSegment<T>
@@ -4771,12 +4770,245 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class FastDatagramBuffer<T> : IFastBuffer<T>
+    {
+        FastLinkedList<T> List = new FastLinkedList<T>();
+
+        public long PinHead { get; private set; } = 0;
+        public long PinTail { get; private set; } = 0;
+        public long Length { get => checked(PinTail - PinHead); }
+        public long Threshold { get; set; }
+
+        public bool IsReadyToWrite { get => (Length <= Threshold); }
+        public bool IsEventsEnabled { get; }
+
+        public AsyncAutoResetEvent EventWriteReady { get; } = null;
+        public AsyncAutoResetEvent EventReadReady { get; } = null;
+
+        public const long DefaultThreshold = 65536;
+
+        public FastDatagramBuffer(bool enable_events = false, long threshold_length = DefaultThreshold)
+        {
+            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
+
+            Threshold = threshold_length;
+            IsEventsEnabled = enable_events;
+            if (IsEventsEnabled)
+            {
+                EventWriteReady = new AsyncAutoResetEvent();
+                EventReadReady = new AsyncAutoResetEvent();
+            }
+        }
+
+        bool LastReadyToWrite = false;
+
+        public void FlushRead()
+        {
+            if (IsEventsEnabled)
+            {
+                bool current = IsReadyToWrite;
+                if (current != LastReadyToWrite)
+                {
+                    LastReadyToWrite = current;
+                    EventWriteReady.Set();
+                }
+            }
+        }
+
+        long LastTailPin = long.MinValue;
+
+        public void FlushWrite()
+        {
+            if (IsEventsEnabled)
+            {
+                long current = PinTail;
+                if (LastTailPin != current)
+                {
+                    LastTailPin = current;
+                    EventReadReady.Set();
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            checked
+            {
+                List.Clear();
+                PinTail = PinHead;
+            }
+        }
+
+        public void InsertBefore(T item)
+        {
+            checked
+            {
+                List.AddFirst(item);
+                PinHead--;
+            }
+        }
+
+        public void InsertHead(T item)
+        {
+            checked
+            {
+                List.AddFirst(item);
+                PinTail++;
+            }
+        }
+
+        public void InsertTail(T item)
+        {
+            checked
+            {
+                List.AddLast(item);
+                PinTail++;
+            }
+        }
+
+        public void Enqueue(T item)
+        {
+            InsertTail(item);
+        }
+
+        public void Enqueue(T[] item_list)
+        {
+            foreach (T t in item_list)
+            {
+                List.AddLast(t);
+            }
+            PinTail += item_list.Length;
+        }
+
+        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
+        {
+            checked
+            {
+                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
+
+                total_read_size = 0;
+                if (List.First == null)
+                {
+                    return new List<T>();
+                }
+
+                List<T> ret = new List<T>();
+
+                var node = List.First;
+                while (node != null)
+                {
+                    ret.Add(node.Value);
+
+                    var next_node = node.Next;
+                    List.Remove(node);
+
+                    total_read_size++;
+                    if (total_read_size >= min_read_size) break;
+
+                    node = next_node;
+                }
+
+                total_read_size = ret.Count;
+
+                return ret;
+            }
+        }
+
+        public void DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer<T>)other);
+
+        public void DequeueAllAndEnqueueToOther(FastDatagramBuffer<T> other)
+        {
+            checked
+            {
+                if (this == other) throw new ArgumentException("this == other");
+
+                if (this.Length == 0)
+                {
+                    Debug.Assert(this.List.Count == 0);
+                    return;
+                }
+
+                if (other.Length == 0)
+                {
+                    long length = this.Length;
+                    Debug.Assert(other.List.Count == 0);
+                    other.List = this.List;
+                    this.List = new FastLinkedList<T>();
+                    this.PinHead = this.PinTail;
+                    other.PinTail += length;
+                }
+                else
+                {
+                    long length = this.Length;
+                    var chain_first = this.List.First;
+                    var chain_last = this.List.Last;
+                    other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
+                    this.List.Clear();
+                    this.PinHead = this.PinTail;
+                    other.PinTail += length;
+                }
+            }
+        }
+    }
+
     public class FastStreamBuffer<T> : IFastBuffer<Memory<T>>
     {
         FastLinkedList<Memory<T>> List = new FastLinkedList<Memory<T>>();
         public long PinHead { get; private set; } = 0;
         public long PinTail { get; private set; } = 0;
         public long Length { get => checked(PinTail - PinHead); }
+        public long Threshold { get; set; }
+
+        public bool IsReadyToWrite { get => (Length <= Threshold); }
+        public bool IsEventsEnabled { get; }
+
+        public AsyncAutoResetEvent EventWriteReady { get; } = null;
+        public AsyncAutoResetEvent EventReadReady { get; } = null;
+
+        public const long DefaultThreshold = 4 * 1024 * 1024;
+
+        public FastStreamBuffer(bool enable_events = false, long threshold_length = DefaultThreshold)
+        {
+            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
+
+            Threshold = threshold_length;
+            IsEventsEnabled = enable_events;
+            if (IsEventsEnabled)
+            {
+                EventWriteReady = new AsyncAutoResetEvent();
+                EventReadReady = new AsyncAutoResetEvent();
+            }
+        }
+
+        bool LastReadyToWrite = false;
+
+        public void FlushRead()
+        {
+            if (IsEventsEnabled)
+            {
+                bool current = IsReadyToWrite;
+                if (current != LastReadyToWrite)
+                {
+                    LastReadyToWrite = current;
+                    EventWriteReady.Set();
+                }
+            }
+        }
+
+        long LastTailPin = long.MinValue;
+
+        public void FlushWrite()
+        {
+            if (IsEventsEnabled)
+            {
+                long current = PinTail;
+                if (LastTailPin != current)
+                {
+                    LastTailPin = current;
+                    EventReadReady.Set();
+                }
+            }
+        }
 
         public void Clear()
         {
@@ -5103,7 +5335,7 @@ namespace SoftEther.WebSocket.Helper
                 total_read_size = 0;
                 if (List.First == null)
                 {
-                    return null;
+                    return new List<Memory<T>>();
                 }
 
                 FastLinkedListNode<Memory<T>> node = List.First;
