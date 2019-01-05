@@ -4496,17 +4496,17 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public interface IZeroCopyBuffer<T>
+    public interface IFastBuffer<T>
     {
     }
 
-    public readonly struct ZeroCopyStreamBufferSegment<T>
+    public readonly struct FastStreamBufferSegment<T>
     {
         public readonly Memory<T> Memory;
         public readonly long Pin;
         public readonly long RelativeOffset;
 
-        public ZeroCopyStreamBufferSegment(Memory<T> memory, long pin, long relative_offset)
+        public FastStreamBufferSegment(Memory<T> memory, long pin, long relative_offset)
         {
             Memory = memory;
             Pin = pin;
@@ -4514,7 +4514,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class ZeroCopyStreamBuffer<T> : IZeroCopyBuffer<Memory<T>>
+    public class FastStreamBuffer<T> : IFastBuffer<Memory<T>>
     {
         LinkedList<Memory<T>> List = new LinkedList<Memory<T>>();
         public long PinHead { get; private set; } = 0;
@@ -4526,11 +4526,11 @@ namespace SoftEther.WebSocket.Helper
             checked
             {
                 List.Clear();
-                PinHead = PinTail;
+                PinTail = PinHead;
             }
         }
 
-        public void InsertBeforeHeadFast(Memory<T> memory)
+        public void InsertBefore(Memory<T> memory)
         {
             checked
             {
@@ -4540,7 +4540,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void InsertHeadFast(Memory<T> memory)
+        public void InsertHead(Memory<T> memory)
         {
             checked
             {
@@ -4550,7 +4550,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void InsertTailFast(Memory<T> memory)
+        public void InsertTail(Memory<T> memory)
         {
             checked
             {
@@ -4560,7 +4560,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void InsertWithPinFast(long pin, Memory<T> memory)
+        public void Insert(long pin, Memory<T> memory, bool append_if_overrun = false)
         {
             checked
             {
@@ -4568,12 +4568,33 @@ namespace SoftEther.WebSocket.Helper
 
                 if (List.First == null)
                 {
-                    InsertHeadFast(memory);
+                    InsertHead(memory);
                     return;
                 }
 
-                var node = GetNodeWithPin(pin, out int offset_in_segment, out long node_pin);
-                if (node.Value.Length == offset_in_segment)
+                if (append_if_overrun)
+                {
+                    if (pin < PinHead)
+                        InsertBefore(new T[PinHead - pin]);
+
+                    if (pin > PinTail)
+                        InsertTail(new T[pin - PinTail]);
+                }
+                else
+                {
+                    if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
+                    if (pin < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
+                    if (pin > PinTail) throw new ArgumentOutOfRangeException("pin > PinTail");
+                }
+
+                var node = GetNodeWithPin(pin, out int offset_in_segment, out _);
+                Debug.Assert(node != null);
+                if (offset_in_segment == 0)
+                {
+                    var new_node = List.AddBefore(node, memory);
+                    PinTail += memory.Length;
+                }
+                else if (node.Value.Length == offset_in_segment)
                 {
                     var new_node = List.AddAfter(node, memory);
                     PinTail += memory.Length;
@@ -4671,6 +4692,10 @@ namespace SoftEther.WebSocket.Helper
                         last_node = node;
                         lack_remain_length = 0;
                         last_node_pin = current_pin;
+
+                        Debug.Assert(first_node_offset_in_segment != first_node.Value.Length);
+                        Debug.Assert(last_node_offset_in_segment != 0);
+
                         return;
                     }
                     current_pin += node.Value.Length;
@@ -4679,7 +4704,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public ZeroCopyStreamBufferSegment<T>[] GetFast(long pin, long size, out long read_size, bool allow_partial = false)
+        public FastStreamBufferSegment<T>[] GetFast(long pin, long size, out long read_size, bool allow_partial = false)
         {
             checked
             {
@@ -4687,33 +4712,36 @@ namespace SoftEther.WebSocket.Helper
                 if (size == 0)
                 {
                     read_size = 0;
-                    return new ZeroCopyStreamBufferSegment<T>[0];
+                    return new FastStreamBufferSegment<T>[0];
                 }
-                if (Length < size)
+                if (pin > PinTail)
+                {
+                    throw new ArgumentOutOfRangeException("pin > PinTail");
+                }
+                if ((pin + size) > PinTail)
                 {
                     if (allow_partial == false)
-                        throw new ArgumentOutOfRangeException("Length < size");
-                    else
-                        size = Length;
+                        throw new ArgumentOutOfRangeException("(pin + size) > PinTail");
+                    size = PinTail - pin;
                 }
 
-                ZeroCopyStreamBufferSegment<T>[] ret = GetUncontiguousSegments(pin, pin + size, false);
+                FastStreamBufferSegment<T>[] ret = GetUncontiguousSegments(pin, pin + size, false);
                 read_size = size;
                 return ret;
             }
         }
 
-        public ZeroCopyStreamBufferSegment<T>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false)
+        public FastStreamBufferSegment<T>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false)
         {
             checked
             {
-                ZeroCopyStreamBufferSegment<T>[] ret = GetFast(pin, size, out read_size, allow_partial);
+                FastStreamBufferSegment<T>[] ret = GetFast(pin, size, out read_size, allow_partial);
                 pin += read_size;
                 return ret;
             }
         }
 
-        public Memory<T> GetContiguousSlow(long pin, long size, bool allow_partial = false)
+        public Memory<T> GetContiguous(long pin, long size, bool allow_partial = false)
         {
             checked
             {
@@ -4722,29 +4750,32 @@ namespace SoftEther.WebSocket.Helper
                 {
                     return new Memory<T>();
                 }
-                if (Length < size)
+                if (pin > PinTail)
+                {
+                    throw new ArgumentOutOfRangeException("pin > PinTail");
+                }
+                if ((pin + size) > PinTail)
                 {
                     if (allow_partial == false)
-                        throw new ArgumentOutOfRangeException("Length < size");
-                    else
-                        size = Length;
+                        throw new ArgumentOutOfRangeException("(pin + size) > PinTail");
+                    size = PinTail - pin;
                 }
                 Memory<T> ret = GetContiguousMemory(pin, pin + size, false, false);
                 return ret;
             }
         }
 
-        public Memory<T> ReadContiguousSlow(ref long pin, long size, bool allow_partial = false)
+        public Memory<T> ReadContiguous(ref long pin, long size, bool allow_partial = false)
         {
             checked
             {
-                Memory<T> ret = GetContiguousSlow(pin, size, allow_partial);
+                Memory<T> ret = GetContiguous(pin, size, allow_partial);
                 pin += ret.Length;
                 return ret;
             }
         }
 
-        public Memory<T> PutContiguousSlow(long pin, long size, bool append_if_overrun = false)
+        public Memory<T> PutContiguous(long pin, long size, bool append_if_overrun = false)
         {
             checked
             {
@@ -4758,34 +4789,55 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public Memory<T> WriteContiguousSlow(ref long pin, long size, bool append_if_overrun = false)
+        public Memory<T> WriteContiguous(ref long pin, long size, bool append_if_overrun = false)
         {
             checked
             {
-                Memory<T> ret = PutContiguousSlow(pin, size, append_if_overrun);
+                Memory<T> ret = PutContiguous(pin, size, append_if_overrun);
                 pin += ret.Length;
                 return ret;
             }
         }
 
-        public void EnqueueFast(Memory<T> memory)
+        public void Enqueue(Memory<T> memory)
         {
-            InsertTailFast(memory);
+            InsertTail(memory);
         }
 
-        public void EnqueueFast(Memory<T>[] memory_list)
+        public void Enqueue(Memory<T>[] memory_list)
         {
             foreach (Memory<T> m in memory_list)
-                EnqueueFast(m);
+                Enqueue(m);
         }
 
-        public Memory<T>[] DequeueFast(long size, out long total_size, bool allow_split_segments = true)
+        public Memory<T> DequeueContiguousSlow(long size)
         {
             checked
             {
-                if (size < 1) throw new ArgumentOutOfRangeException("size < 1");
+                if (size < 0) throw new ArgumentOutOfRangeException("size < 0");
+                if (size == 0) return Memory<T>.Empty;
+                var memarray = Dequeue(size, out long total_size, true);
+                Debug.Assert(total_size <= size);
+                if (total_size > int.MaxValue) throw new IndexOutOfRangeException("total_size > int.MaxValue");
+                var ret = new Memory<T>(new T[total_size]);
+                int pos = 0;
+                foreach (var mem in memarray)
+                {
+                    mem.CopyTo(ret.Slice(pos, mem.Length));
+                    pos += mem.Length;
+                }
+                Debug.Assert(pos == total_size);
+                return ret;
+            }
+        }
 
-                total_size = 0;
+        public Memory<T>[] Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true)
+        {
+            checked
+            {
+                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
+
+                total_read_size = 0;
                 if (List.First == null)
                 {
                     return null;
@@ -4795,61 +4847,73 @@ namespace SoftEther.WebSocket.Helper
                 List<Memory<T>> ret = new List<Memory<T>>();
                 while (true)
                 {
-                    if ((total_size + node.Value.Length) >= size)
+                    if ((total_read_size + node.Value.Length) >= min_read_size)
                     {
-                        if (allow_split_segments && (total_size + node.Value.Length) > size)
+                        if (allow_split_segments && (total_read_size + node.Value.Length) > min_read_size)
                         {
-                            int last_segment_read_size = (int)(total_size + node.Value.Length - size);
+                            int last_segment_read_size = (int)(min_read_size - total_read_size);
+                            Debug.Assert(last_segment_read_size <= node.Value.Length);
                             ret.Add(node.Value.Slice(0, last_segment_read_size));
-                            node.Value = node.Value.Slice(last_segment_read_size);
-                            total_size += last_segment_read_size;
-                            Debug.Assert(last_segment_read_size == size, "last_segment_read_size != size");
-                            PinHead += total_size;
+                            if (last_segment_read_size == node.Value.Length)
+                                List.Remove(node);
+                            else
+                                node.Value = node.Value.Slice(last_segment_read_size);
+                            total_read_size += last_segment_read_size;
+                            PinHead += total_read_size;
+                            Debug.Assert(min_read_size >= total_read_size);
                             return ret.ToArray();
                         }
                         else
                         {
                             ret.Add(node.Value);
-                            total_size += node.Value.Length;
-                            PinHead += total_size;
+                            total_read_size += node.Value.Length;
+                            List.Remove(node);
+                            PinHead += total_read_size;
+                            Debug.Assert(min_read_size >= total_read_size);
                             return ret.ToArray();
                         }
                     }
                     else
                     {
                         ret.Add(node.Value);
-                        total_size += node.Value.Length;
+                        total_read_size += node.Value.Length;
 
                         LinkedListNode<Memory<T>> delete_node = node;
+                        node = node.Next;
+
                         List.Remove(delete_node);
 
-                        node = node.Next;
+                        if (node == null)
+                        {
+                            PinHead += total_read_size;
+                            return ret.ToArray();
+                        }
                     }
                 }
             }
         }
 
-        ZeroCopyStreamBufferSegment<T>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
+        FastStreamBufferSegment<T>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
         {
             checked
             {
-                if (pin_start == pin_end) return new ZeroCopyStreamBufferSegment<T>[0];
+                if (pin_start == pin_end) return new FastStreamBufferSegment<T>[0];
                 if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
 
                 if (append_if_overrun)
                 {
                     if (List.First == null)
                     {
-                        InsertHeadFast(new T[pin_end - pin_start]);
+                        InsertHead(new T[pin_end - pin_start]);
                         PinHead = pin_start;
                         PinTail = pin_end;
                     }
 
                     if (pin_start < PinHead)
-                        InsertBeforeHeadFast(new T[PinHead - pin_start]);
+                        InsertBefore(new T[PinHead - pin_start]);
 
                     if (pin_end > PinTail)
-                        InsertTailFast(new T[pin_end - PinTail]);
+                        InsertTail(new T[pin_end - PinTail]);
                 }
                 else
                 {
@@ -4866,10 +4930,10 @@ namespace SoftEther.WebSocket.Helper
                 Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
 
                 if (first_node == last_node)
-                    return new ZeroCopyStreamBufferSegment<T>[1]{ new ZeroCopyStreamBufferSegment<T>(
-                    first_node.Value.Slice(first_node_offset_in_segment, first_node.Value.Length - first_node_offset_in_segment - last_node_offset_in_segment), pin_start, 0) };
+                    return new FastStreamBufferSegment<T>[1]{ new FastStreamBufferSegment<T>(
+                    first_node.Value.Slice(first_node_offset_in_segment, last_node_offset_in_segment - first_node_offset_in_segment), pin_start, 0) };
 
-                ZeroCopyStreamBufferSegment<T>[] ret = new ZeroCopyStreamBufferSegment<T>[node_counts];
+                FastStreamBufferSegment<T>[] ret = new FastStreamBufferSegment<T>[node_counts];
 
                 LinkedListNode<Memory<T>> prev_node = first_node.Previous;
                 LinkedListNode<Memory<T>> next_node = last_node.Next;
@@ -4885,7 +4949,7 @@ namespace SoftEther.WebSocket.Helper
                     int slice_start = (node == first_node) ? first_node_offset_in_segment : 0;
                     int slice_length = (node == last_node) ? last_node_offset_in_segment : node.Value.Length - slice_start;
 
-                    ret[count] = new ZeroCopyStreamBufferSegment<T>(node.Value.Slice(slice_start, slice_length), current_offset + pin_start, current_offset);
+                    ret[count] = new FastStreamBufferSegment<T>(node.Value.Slice(slice_start, slice_length), current_offset + pin_start, current_offset);
                     count++;
 
                     Debug.Assert(count <= node_counts, "count > node_counts");
@@ -4958,7 +5022,28 @@ namespace SoftEther.WebSocket.Helper
                 }
                 else
                 {
-                    // TODO
+                    first_node.Value = first_node.Value.Slice(0, first_node_offset_in_segment);
+                    last_node.Value = last_node.Value.Slice(last_node_offset_in_segment);
+
+                    var node = first_node.Next;
+                    while (node != last_node)
+                    {
+                        var node_to_delete = node;
+
+                        Debug.Assert(node.Next != null);
+                        node = node.Next;
+
+                        List.Remove(node_to_delete);
+                    }
+
+                    if (last_node.Value.Length == 0)
+                        List.Remove(last_node);
+
+                    if (first_node.Value.Length == 0)
+                        List.Remove(first_node);
+
+                    PinTail -= length;
+                    return;
                 }
             }
         }
@@ -4974,16 +5059,16 @@ namespace SoftEther.WebSocket.Helper
                 {
                     if (List.First == null)
                     {
-                        InsertHeadFast(new T[pin_end - pin_start]);
+                        InsertHead(new T[pin_end - pin_start]);
                         PinHead = pin_start;
                         PinTail = pin_end;
                     }
 
                     if (pin_start < PinHead)
-                        InsertBeforeHeadFast(new T[PinHead - pin_start]);
+                        InsertBefore(new T[PinHead - pin_start]);
 
                     if (pin_end > PinTail)
-                        InsertTailFast(new T[pin_end - PinTail]);
+                        InsertTail(new T[pin_end - PinTail]);
                 }
                 else
                 {
