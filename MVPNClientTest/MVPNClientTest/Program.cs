@@ -132,6 +132,7 @@ namespace MVPNClientTest
 
             System.GC.Collect();
 
+
             q.Add(new MicroBenchmark<int>("MoveToOtherNonEmpty", 1,
                 (x, iterations) =>
                 {
@@ -147,23 +148,147 @@ namespace MVPNClientTest
                 () => 0), true, 20);
 
 
-            q.Add(new MicroBenchmark<int>("Datagram1", 10000,
+            bool call_deque = true;
+            long deque_max = 1;
+
+            q.Add(new MicroBenchmark<int>("Datagram1_single_add", 10000,
                 (x, iterations) =>
                 {
                     FastDatagramBuffer<int> dg = new FastDatagramBuffer<int>();
 
                     for (int i = 0; i < iterations; i++)
                     {
-                        dg.InsertTail(i);
+                        dg.Enqueue(i);
                     }
 
-                    for (int i = 0; i < iterations; i++)
+                    if (call_deque)
                     {
-                        var r = dg.Dequeue(long.MaxValue, out long _);
+                        for (int i = 0; i < iterations; i++)
+                        {
+                            var r = dg.Dequeue(deque_max, out long _);
+                        }
                     }
 
                 },
                 () => 0), true, 30);
+
+
+
+            q.Add(new MicroBenchmark<int>("Datagram1_bulk_add", 10000,
+                (x, iterations) =>
+                {
+                    FastDatagramBuffer<int> dg = new FastDatagramBuffer<int>();
+                    int[] tmp = new int[100];
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        dg.Enqueue(tmp);
+                    }
+
+                    if (call_deque)
+                    {
+                        for (int i = 0; i < iterations; i++)
+                        {
+                            var r = dg.Dequeue(deque_max, out long _);
+                        }
+                    }
+
+                },
+                () => 0), true, 30);
+
+
+            q.Add(new MicroBenchmark<int>("Datagram2_single_add", 10000,
+                (x, iterations) =>
+                {
+                    FastDatagramBuffer2<int> dg = new FastDatagramBuffer2<int>();
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        dg.Enqueue(i);
+                    }
+
+                    if (call_deque)
+                    {
+                        for (int i = 0; i < iterations; i++)
+                        {
+                            var r = dg.Dequeue(deque_max, out long _);
+                        }
+                    }
+
+                },
+                () => 0), true, 30);
+
+
+
+            q.Add(new MicroBenchmark<int>("Datagram2_bulk_add", 10000,
+                (x, iterations) =>
+                {
+                    FastDatagramBuffer2<int> dg = new FastDatagramBuffer2<int>();
+                    int[] tmp = new int[100];
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        dg.Enqueue(tmp);
+                    }
+
+                    if (call_deque)
+                    {
+                        for (int i = 0; i < iterations; i++)
+                        {
+                            var r = dg.Dequeue(deque_max, out long _);
+                        }
+                    }
+
+                },
+                () => 0), true, 30);
+
+
+
+            q.Add(new MicroBenchmark<int>("Datagram3_single_add", 10000,
+                (x, iterations) =>
+                {
+                    FastDatagramBuffer3<int> dg = new FastDatagramBuffer3<int>();
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        dg.Enqueue(i);
+                    }
+
+                    if (call_deque)
+                    {
+                        for (int i = 0; i < iterations; i++)
+                        {
+                            var r = dg.Dequeue(deque_max, out long _);
+                        }
+                    }
+
+                },
+                () => 0), true, 30);
+
+
+
+            q.Add(new MicroBenchmark<int>("Datagram3_bulk_add", 10000,
+                (x, iterations) =>
+                {
+                    FastDatagramBuffer3<int> dg = new FastDatagramBuffer3<int>();
+                    int[] tmp = new int[100];
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        dg.Enqueue(tmp);
+                    }
+
+                    if (call_deque)
+                    {
+                        for (int i = 0; i < iterations; i++)
+                        {
+                            var r = dg.Dequeue(deque_max, out long _);
+                        }
+                    }
+
+                },
+                () => 0), true, 30);
+
 
 
 

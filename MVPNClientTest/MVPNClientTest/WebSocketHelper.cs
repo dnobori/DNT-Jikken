@@ -4745,9 +4745,6 @@ namespace SoftEther.WebSocket.Helper
         AsyncAutoResetEvent EventReadReady { get; }
 
         void Clear();
-        void InsertBefore(T item);
-        void InsertHead(T item);
-        void InsertTail(T item);
         void Enqueue(T item);
         void Enqueue(T[] item_list);
         List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true);
@@ -4793,6 +4790,42 @@ namespace SoftEther.WebSocket.Helper
         public void Clear()
         {
             Size = Position = 0;
+        }
+
+        public void WriteBefore(Span<T> src)
+        {
+            checked
+            {
+                if (Position > src.Length)
+                {
+                    src.CopyTo(PhysicalData.AsSpan().Slice(Position - src.Length, src.Length));
+                    Position -= src.Length;
+                }
+                else
+                {
+                    int old_size, new_size, need_size;
+
+                    old_size = Size;
+                    new_size = old_size + src.Length;
+                    need_size = Position + new_size;
+
+                    bool realloc_flag = false;
+                    int memsize = PhysicalData.Length;
+                    while (need_size > memsize)
+                    {
+                        memsize = Math.Max(memsize, FifoInitSize) * 3;
+                        realloc_flag = true;
+                    }
+
+                    if (realloc_flag)
+                        PhysicalData = MemoryHelper.ReAlloc(PhysicalData, memsize);
+
+                    if (src != null)
+                        src.CopyTo(PhysicalData.AsSpan().Slice(old_size));
+
+                    Size = new_size;
+                }
+            }
         }
 
         public void Write(Span<T> data)
@@ -5782,5 +5815,298 @@ namespace SoftEther.WebSocket.Helper
             }
         }
     }
+
+
+
+
+
+    public class FastDatagramBuffer2<T> : IFastBuffer<T>
+    {
+        FastFifo<T> Fifo = new FastFifo<T>();
+
+        public long PinHead { get; private set; } = 0;
+        public long PinTail { get; private set; } = 0;
+        public long Length { get => checked(PinTail - PinHead); }
+        public long Threshold { get; set; }
+
+        public bool IsReadyToWrite { get => (Length <= Threshold); }
+        public bool IsEventsEnabled { get; }
+
+        public AsyncAutoResetEvent EventWriteReady { get; } = null;
+        public AsyncAutoResetEvent EventReadReady { get; } = null;
+
+        public const long DefaultThreshold = 65536;
+
+        public FastDatagramBuffer2(bool enable_events = false, long threshold_length = DefaultThreshold)
+        {
+            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
+
+            Threshold = threshold_length;
+            IsEventsEnabled = enable_events;
+            if (IsEventsEnabled)
+            {
+                EventWriteReady = new AsyncAutoResetEvent();
+                EventReadReady = new AsyncAutoResetEvent();
+            }
+        }
+
+        bool LastReadyToWrite = false;
+
+        public void FlushRead()
+        {
+            if (IsEventsEnabled)
+            {
+                bool current = IsReadyToWrite;
+                if (current != LastReadyToWrite)
+                {
+                    LastReadyToWrite = current;
+                    EventWriteReady.Set();
+                }
+            }
+        }
+
+        long LastTailPin = long.MinValue;
+
+        public void FlushWrite()
+        {
+            if (IsEventsEnabled)
+            {
+                long current = PinTail;
+                if (LastTailPin != current)
+                {
+                    LastTailPin = current;
+                    EventReadReady.Set();
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            checked
+            {
+                Fifo.Clear();
+                PinTail = PinHead;
+            }
+        }
+
+        public void Enqueue(T item)
+        {
+            checked
+            {
+                Fifo.Write(new T[] { item });
+                PinTail++;
+            }
+        }
+
+        public void Enqueue(T[] item_list)
+        {
+            Fifo.Write(item_list);
+            PinTail += item_list.Length;
+        }
+
+        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
+        {
+            checked
+            {
+                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
+                if (min_read_size >= int.MaxValue) min_read_size = int.MaxValue;
+
+                total_read_size = 0;
+                if (Fifo.Size == 0)
+                {
+                    return new List<T>();
+                }
+
+                T[] tmp = Fifo.Read((int)min_read_size);
+
+                total_read_size = tmp.Length;
+                List<T> ret = new List<T>(tmp);
+
+                return ret;
+            }
+        }
+
+        public void DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer2<T>)other);
+
+        public void DequeueAllAndEnqueueToOther(FastDatagramBuffer2<T> other)
+        {
+            checked
+            {
+                if (this == other) throw new ArgumentException("this == other");
+
+                if (this.Length == 0)
+                {
+                    Debug.Assert(this.Fifo.Size == 0);
+                    return;
+                }
+
+                //if (other.Length == 0)
+                //{
+                //    long length = this.Length;
+                //    Debug.Assert(other.List.Count == 0);
+                //    other.List = this.List;
+                //    this.List = new FastLinkedList<T>();
+                //    this.PinHead = this.PinTail;
+                //    other.PinTail += length;
+                //}
+                //else
+                //{
+                //    long length = this.Length;
+                //    var chain_first = this.List.First;
+                //    var chain_last = this.List.Last;
+                //    other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
+                //    this.List.Clear();
+                //    this.PinHead = this.PinTail;
+                //    other.PinTail += length;
+                //}
+            }
+        }
+    }
+
+
+
+    public class FastDatagramBuffer3<T> : IFastBuffer<T>
+    {
+        FastStreamBuffer<T> Fifo = new FastStreamBuffer<T>();
+
+        public long PinHead { get; private set; } = 0;
+        public long PinTail { get; private set; } = 0;
+        public long Length { get => checked(PinTail - PinHead); }
+        public long Threshold { get; set; }
+
+        public bool IsReadyToWrite { get => (Length <= Threshold); }
+        public bool IsEventsEnabled { get; }
+
+        public AsyncAutoResetEvent EventWriteReady { get; } = null;
+        public AsyncAutoResetEvent EventReadReady { get; } = null;
+
+        public const long DefaultThreshold = 65536;
+
+        public FastDatagramBuffer3(bool enable_events = false, long threshold_length = DefaultThreshold)
+        {
+            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
+
+            Threshold = threshold_length;
+            IsEventsEnabled = enable_events;
+            if (IsEventsEnabled)
+            {
+                EventWriteReady = new AsyncAutoResetEvent();
+                EventReadReady = new AsyncAutoResetEvent();
+            }
+        }
+
+        bool LastReadyToWrite = false;
+
+        public void FlushRead()
+        {
+            if (IsEventsEnabled)
+            {
+                bool current = IsReadyToWrite;
+                if (current != LastReadyToWrite)
+                {
+                    LastReadyToWrite = current;
+                    EventWriteReady.Set();
+                }
+            }
+        }
+
+        long LastTailPin = long.MinValue;
+
+        public void FlushWrite()
+        {
+            if (IsEventsEnabled)
+            {
+                long current = PinTail;
+                if (LastTailPin != current)
+                {
+                    LastTailPin = current;
+                    EventReadReady.Set();
+                }
+            }
+        }
+
+        public void Clear()
+        {
+            checked
+            {
+                Fifo.Clear();
+                PinTail = PinHead;
+            }
+        }
+
+        public void Enqueue(T item)
+        {
+            checked
+            {
+                Fifo.Enqueue(new T[] { item });
+                PinTail++;
+            }
+        }
+
+        public void Enqueue(T[] item_list)
+        {
+            Fifo.Enqueue(item_list);
+            PinTail += item_list.Length;
+        }
+
+        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
+        {
+            checked
+            {
+                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
+                if (min_read_size >= int.MaxValue) min_read_size = int.MaxValue;
+
+                total_read_size = 0;
+
+                if (Fifo.Length == 0)
+                {
+                    return new List<T>();
+                }
+
+                var tmp = Fifo.DequeueContiguousSlow(min_read_size);
+
+                total_read_size = tmp.Length;
+
+                return new List<T>(tmp.ToArray());
+            }
+        }
+
+        public void DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer3<T>)other);
+
+        public void DequeueAllAndEnqueueToOther(FastDatagramBuffer3<T> other)
+        {
+            checked
+            {
+                if (this == other) throw new ArgumentException("this == other");
+
+                if (this.Length == 0)
+                {
+                    Debug.Assert(this.Fifo.Length == 0);
+                    return;
+                }
+
+                //if (other.Length == 0)
+                //{
+                //    long length = this.Length;
+                //    Debug.Assert(other.List.Count == 0);
+                //    other.List = this.List;
+                //    this.List = new FastLinkedList<T>();
+                //    this.PinHead = this.PinTail;
+                //    other.PinTail += length;
+                //}
+                //else
+                //{
+                //    long length = this.Length;
+                //    var chain_first = this.List.First;
+                //    var chain_last = this.List.Last;
+                //    other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
+                //    this.List.Clear();
+                //    this.PinHead = this.PinTail;
+                //    other.PinTail += length;
+                //}
+            }
+        }
+    }
+
 }
 
