@@ -2311,34 +2311,37 @@ namespace SoftEther.WebSocket.Helper
         }
         public void Write(byte[] src, int offset, int size)
         {
-            int i, need_size;
-            bool realloc_flag;
-
-            i = this.size;
-            this.size += size;
-            need_size = this.pos + this.size;
-            realloc_flag = false;
-
-            int memsize = p.Length;
-            while (need_size > memsize)
+            checked
             {
-                memsize = Math.Max(memsize, FifoInitMemSize) * 3;
-                realloc_flag = true;
-            }
+                int i, need_size;
+                bool realloc_flag;
 
-            if (realloc_flag)
-            {
-                byte[] new_p = new byte[memsize];
-                WebSocketHelper.CopyByte(new_p, 0, this.p, 0, this.p.Length);
-                this.p = new_p;
-            }
+                i = this.size;
+                this.size += size;
+                need_size = this.pos + this.size;
+                realloc_flag = false;
 
-            if (src != null)
-            {
-                WebSocketHelper.CopyByte(this.p, this.pos + i, src, offset, size);
-            }
+                int memsize = p.Length;
+                while (need_size > memsize)
+                {
+                    memsize = Math.Max(memsize, FifoInitMemSize) * 3;
+                    realloc_flag = true;
+                }
 
-            totalWriteSize += size;
+                if (realloc_flag)
+                {
+                    byte[] new_p = new byte[memsize];
+                    WebSocketHelper.CopyByte(new_p, 0, this.p, 0, this.p.Length);
+                    this.p = new_p;
+                }
+
+                if (src != null)
+                {
+                    WebSocketHelper.CopyByte(this.p, this.pos + i, src, offset, size);
+                }
+
+                totalWriteSize += size;
+            }
         }
 
         public byte[] Read()
@@ -2379,44 +2382,47 @@ namespace SoftEther.WebSocket.Helper
         }
         public int Read(byte[] dst, int offset, int size)
         {
-            int read_size;
-
-            read_size = Math.Min(size, this.size);
-            if (read_size == 0)
+            checked
             {
-                return 0;
+                int read_size;
+
+                read_size = Math.Min(size, this.size);
+                if (read_size == 0)
+                {
+                    return 0;
+                }
+                if (dst != null)
+                {
+                    WebSocketHelper.CopyByte(dst, offset, this.p, this.pos, read_size);
+                }
+                this.pos += read_size;
+                this.size -= read_size;
+
+                if (this.size == 0)
+                {
+                    this.pos = 0;
+                }
+
+                if (this.pos >= FifoInitMemSize &&
+                    this.p.Length >= this.reallocMemSize &&
+                    (this.p.Length / 2) > this.size)
+                {
+                    byte[] new_p;
+                    int new_size;
+
+                    new_size = Math.Max(this.p.Length / 2, FifoInitMemSize);
+                    new_p = new byte[new_size];
+                    WebSocketHelper.CopyByte(new_p, 0, this.p, this.pos, this.size);
+
+                    this.p = new_p;
+
+                    this.pos = 0;
+                }
+
+                totalReadSize += read_size;
+
+                return read_size;
             }
-            if (dst != null)
-            {
-                WebSocketHelper.CopyByte(dst, offset, this.p, this.pos, size);
-            }
-            this.pos += read_size;
-            this.size -= read_size;
-
-            if (this.size == 0)
-            {
-                this.pos = 0;
-            }
-
-            if (this.pos >= FifoInitMemSize &&
-                this.p.Length >= this.reallocMemSize &&
-                (this.p.Length / 2) > this.size)
-            {
-                byte[] new_p;
-                int new_size;
-
-                new_size = Math.Max(this.p.Length / 2, FifoInitMemSize);
-                new_p = new byte[new_size];
-                WebSocketHelper.CopyByte(new_p, 0, this.p, this.pos, this.size);
-
-                this.p = new_p;
-
-                this.pos = 0;
-            }
-
-            totalReadSize += read_size;
-
-            return read_size;
         }
 
         public Span<byte> Span
@@ -4772,11 +4778,11 @@ namespace SoftEther.WebSocket.Helper
         public T[] PhysicalData { get; private set; }
         public int Size { get; private set; }
         public int Position { get; private set; }
-        public int CurrentInternalSize { get => PhysicalData.Length; }
+        public int PhysicalSize { get => PhysicalData.Length; }
 
-        public const int FifoInitSize = 4096;
-        public const int FifoReallocSize = 65536;
-        public const int FifoReallocSizeSmall = 65536;
+        public const int FifoInitSize = 32;
+        public const int FifoReallocSize = 1024;
+        public const int FifoReallocSizeSmall = 1024;
 
         public int ReallocMemSize { get; }
 
@@ -4790,42 +4796,6 @@ namespace SoftEther.WebSocket.Helper
         public void Clear()
         {
             Size = Position = 0;
-        }
-
-        public void WriteBefore(Span<T> src)
-        {
-            checked
-            {
-                if (Position > src.Length)
-                {
-                    src.CopyTo(PhysicalData.AsSpan().Slice(Position - src.Length, src.Length));
-                    Position -= src.Length;
-                }
-                else
-                {
-                    int old_size, new_size, need_size;
-
-                    old_size = Size;
-                    new_size = old_size + src.Length;
-                    need_size = Position + new_size;
-
-                    bool realloc_flag = false;
-                    int memsize = PhysicalData.Length;
-                    while (need_size > memsize)
-                    {
-                        memsize = Math.Max(memsize, FifoInitSize) * 3;
-                        realloc_flag = true;
-                    }
-
-                    if (realloc_flag)
-                        PhysicalData = MemoryHelper.ReAlloc(PhysicalData, memsize);
-
-                    if (src != null)
-                        src.CopyTo(PhysicalData.AsSpan().Slice(old_size));
-
-                    Size = new_size;
-                }
-            }
         }
 
         public void Write(Span<T> data)
@@ -4849,18 +4819,18 @@ namespace SoftEther.WebSocket.Helper
                 need_size = Position + new_size;
 
                 bool realloc_flag = false;
-                int memsize = PhysicalData.Length;
-                while (need_size > memsize)
+                int new_physical_size = PhysicalData.Length;
+                while (need_size > new_physical_size)
                 {
-                    memsize = Math.Max(memsize, FifoInitSize) * 3;
+                    new_physical_size = Math.Max(new_physical_size, FifoInitSize) * 3;
                     realloc_flag = true;
                 }
 
                 if (realloc_flag)
-                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, memsize);
+                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, new_physical_size);
 
                 if (src != null)
-                    src.CopyTo(PhysicalData.AsSpan().Slice(old_size));
+                    src.CopyTo(PhysicalData.AsSpan().Slice(Position + old_size));
 
                 Size = new_size;
             }
@@ -4894,7 +4864,7 @@ namespace SoftEther.WebSocket.Helper
                 }
                 if (dest != null)
                 {
-                    dest.CopyTo(this.PhysicalData.AsSpan(this.Position, size));
+                    PhysicalData.AsSpan(this.Position, size).CopyTo(dest);
                 }
                 Position += read_size;
                 Size -= read_size;
@@ -4908,11 +4878,13 @@ namespace SoftEther.WebSocket.Helper
                     this.PhysicalData.Length >= this.ReallocMemSize &&
                     (this.PhysicalData.Length / 2) > this.Size)
                 {
-                    int new_size;
+                    int new_physical_size;
 
-                    new_size = Math.Max(this.PhysicalData.Length / 2, FifoInitSize);
+                    new_physical_size = Math.Max(this.PhysicalData.Length / 2, FifoInitSize);
 
-                    this.PhysicalData = MemoryHelper.ReAlloc(this.PhysicalData, new_size);
+                    T[] new_p = new T[new_physical_size];
+                    this.PhysicalData.AsSpan(this.Position, this.Size).CopyTo(new_p);
+                    this.PhysicalData = new_p;
 
                     this.Position = 0;
                 }
@@ -5552,6 +5524,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        public T[] ToArray() => GetContiguousMemory(PinHead, PinTail, false, true).ToArray();
+
+        public T[] ItemsSlow { get => ToArray(); }
+
         Memory<T> GetContiguousMemory(long pin_start, long pin_end, bool append_if_overrun, bool no_replace)
         {
             checked
@@ -5741,6 +5717,8 @@ namespace SoftEther.WebSocket.Helper
                 total_read_size = tmp.Length;
                 List<T> ret = new List<T>(tmp);
 
+                PinHead += total_read_size;
+
                 return ret;
             }
         }
@@ -5759,27 +5737,30 @@ namespace SoftEther.WebSocket.Helper
                     return;
                 }
 
-                //if (other.Length == 0)
-                //{
-                //    long length = this.Length;
-                //    Debug.Assert(other.List.Count == 0);
-                //    other.List = this.List;
-                //    this.List = new FastLinkedList<T>();
-                //    this.PinHead = this.PinTail;
-                //    other.PinTail += length;
-                //}
-                //else
-                //{
-                //    long length = this.Length;
-                //    var chain_first = this.List.First;
-                //    var chain_last = this.List.Last;
-                //    other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
-                //    this.List.Clear();
-                //    this.PinHead = this.PinTail;
-                //    other.PinTail += length;
-                //}
+                if (other.Length == 0)
+                {
+                    long length = this.Length;
+                    Debug.Assert(other.Fifo.Size == 0);
+                    other.Fifo = this.Fifo;
+                    this.Fifo = new FastFifo<T>();
+                    this.PinHead = this.PinTail;
+                    other.PinTail += length;
+                }
+                else
+                {
+                    long length = this.Length;
+                    var data = this.Fifo.Read();
+                    other.Fifo.Write(data);
+                    this.PinHead = this.PinTail;
+                    other.PinTail += length;
+                }
             }
         }
+
+
+        public T[] ToArray() => Fifo.Span.ToArray();
+
+        public T[] ItemsSlow { get => ToArray(); }
     }
 
 

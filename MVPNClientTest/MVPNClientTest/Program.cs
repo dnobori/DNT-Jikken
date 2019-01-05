@@ -23,8 +23,8 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            //TestStreamBuffer();
-            BenchStreamBuffer();
+            TestStreamBuffer();
+            //BenchStreamBuffer();
 
             return;
             string s = "Hello";
@@ -202,9 +202,44 @@ namespace MVPNClientTest
             q.Run();
         }
 
+        static void TestFifo()
+        {
+            Fifo a = new Fifo();
+            FastFifo<byte> b = new FastFifo<byte>();
+            int num = 0;
+            while (true)
+            {
+                num++;
+
+                if ((num % 100) == 0)
+                {
+                    WriteLine($"num = {num},  len = {b.Size},  a = {a.PhysicalSize} ({(int)((double)a.Size * 100 / (double)a.PhysicalSize)} %)  b = {b.PhysicalSize} ({(int)((double)b.Size * 100 / (double)b.PhysicalSize)} %)  ");
+                }
+
+                byte[] add_data = new byte[WebSocketHelper.RandSInt31() % 200000];
+                WebSocketHelper.Rand(add_data);
+
+                a.Write(add_data);
+                b.Write(add_data);
+
+                if (a.Span.SequenceCompareTo(b.Span) != 0) throw new Exception();
+
+                int read_size = WebSocketHelper.RandSInt31() % 210000;
+
+                var reta = a.Read(read_size);
+                var retb = b.Read(read_size);
+
+                if (reta.AsSpan().SequenceCompareTo(retb) != 0) throw new Exception();
+
+                if (a.Size != b.Size) throw new Exception();
+            }
+        }
+
         static void TestStreamBuffer()
         {
-            FastStreamBuffer<byte> new_test_buf()
+            TestFifo();
+
+            FastStreamBuffer<byte> new_test_stream_buf()
             {
                 FastStreamBuffer<byte> ret = new FastStreamBuffer<byte>();
                 ret.Enqueue(new byte[] { 1, 2, 3, });
@@ -214,179 +249,251 @@ namespace MVPNClientTest
                 return ret;
             }
 
+            FastDatagramBuffer<int> new_test_datagram_buf()
             {
-                var buf = new_test_buf();
+                var buf = new FastDatagramBuffer<int>();
+                buf.Enqueue(new int[] { 1, 2, 3, 4 });
+                buf.Enqueue(new int[] { 5, 6, 7, 8, 9, 10 });
+                return buf;
+            }
+
+
+            {
+                var buf = new_test_datagram_buf();
+                buf.Enqueue(new int[] { 11, 12, 13 });
+
+                var a1 = buf.Dequeue(2, out _);
+                var a2 = buf.Dequeue(2, out _);
+                var a3 = buf.Dequeue(int.MaxValue, out _);
+            }
+
+            {
+                var buf = new_test_datagram_buf();
+                var x1 = new int[88888];
+                Array.Fill(x1, 88);
+                buf.Enqueue(x1);
+
+                var a1 = buf.Dequeue(2, out _);
+                buf.Enqueue(31);
+                buf.Enqueue(32);
+                buf.Enqueue(33);
+                var a2 = buf.Dequeue(2, out _);
+                buf.Enqueue(34);
+                buf.Enqueue(35);
+                buf.Enqueue(36);
+                var a3 = buf.Dequeue(buf.Length - 6, out _);
+                var a4 = buf.Dequeue(4, out _);
+                var a5 = buf.Dequeue(2, out _);
+            }
+
+
+            {
+                var buf = new_test_datagram_buf();
+                var buf2 = new FastDatagramBuffer<int>();
+                var x1 = new int[88888];
+                Array.Fill(x1, 88);
+                buf.Enqueue(x1);
+
+                var a1 = buf.Dequeue(2, out _);
+                buf.Enqueue(31);
+                buf.Enqueue(32);
+                buf.Enqueue(33);
+                var a2 = buf.Dequeue(2, out _);
+                buf.Enqueue(34);
+                buf.Enqueue(35);
+                buf.Enqueue(36);
+                var a3 = buf.Dequeue(buf.Length - 6, out _);
+                var a4 = buf.Dequeue(4, out _);
+                var a5 = buf.Dequeue(2, out _);
+            }
+
+
+            {
+                var buf1 = new_test_datagram_buf();
+                buf1.Enqueue(new int[] { 97, 98, 99 });
+                buf1.Dequeue(3, out _);
+
+                var buf2 = new_test_datagram_buf();
+                buf2.Enqueue(new int[] { 87, 88, 89 });
+                buf2.Dequeue(3, out _);
+
+                buf2.DequeueAllAndEnqueueToOther(buf1);
+            }
+
+
+            {
+                var buf = new_test_stream_buf();
                 var other = new FastStreamBuffer<byte>();
                 buf.DequeueAllAndEnqueueToOther(other);
             }
 
             {
-                var buf = new_test_buf();
-                var other = new_test_buf();
+                var buf = new_test_stream_buf();
+                var other = new_test_stream_buf();
                 buf.DequeueAllAndEnqueueToOther(other);
             }
 
             {
-                { var buf = new_test_buf(); buf.Insert(0, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(1, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(3, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(4, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(12, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(13, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(17, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(18, new byte[] { 21, 22, 23, }, false); }
-                { var buf = new_test_buf(); buf.Insert(19, new byte[] { 21, 22, 23, }, true); }
-                { var buf = new_test_buf(); buf.Insert(-1, new byte[] { 21, 22, 23, }, true); }
+                { var buf = new_test_stream_buf(); buf.Insert(0, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(1, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(3, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(4, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(12, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(13, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(17, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(18, new byte[] { 21, 22, 23, }, false); }
+                { var buf = new_test_stream_buf(); buf.Insert(19, new byte[] { 21, 22, 23, }, true); }
+                { var buf = new_test_stream_buf(); buf.Insert(-1, new byte[] { 21, 22, 23, }, true); }
             }
 
             {
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(4, 14 + 100, out long read_size, true); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(4, 14 + 100, out long read_size, true); }
             }
 
             {
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(0, 3, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 1, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 2, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 3, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 6, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 7, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 11, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 12, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(1, 17, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(0, 18, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(4, 14, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(5, 13, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(11, 7, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(12, 6, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(13, 5, out long read_size, false); }
-                { var buf = new_test_buf(); var a = buf.GetSegmentsFast(13, 4, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(0, 3, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 1, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 2, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 3, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 6, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 7, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 11, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 12, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(1, 17, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(0, 18, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(4, 14, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(5, 13, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(11, 7, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(12, 6, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(13, 5, out long read_size, false); }
+                { var buf = new_test_stream_buf(); var a = buf.GetSegmentsFast(13, 4, out long read_size, false); }
             }
 
             {
-                { var buf = new_test_buf(); buf.PutContiguous(0, 3, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(1, 2, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(1, 3, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(1, 6, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(1, 7, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(1, 11, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(1, 12, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(1, 17, false).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(0, 18, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(0, 3, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(1, 2, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(1, 3, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(1, 6, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(1, 7, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(1, 11, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(1, 12, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(1, 17, false).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(0, 18, false).Span.Fill(88); }
 
-                { var buf = new_test_buf(); buf.PutContiguous(-1, 3, true).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(-1, 7, true).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(11, 10, true).Span.Fill(88); }
-                { var buf = new_test_buf(); buf.PutContiguous(-5, 28, true).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(-1, 3, true).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(-1, 7, true).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(11, 10, true).Span.Fill(88); }
+                { var buf = new_test_stream_buf(); buf.PutContiguous(-5, 28, true).Span.Fill(88); }
             }
 
             {
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(2); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(3); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(4); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(11); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(12); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(13); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(17); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(18); }
-                { var buf = new_test_buf(); var a = buf.DequeueContiguousSlow(19); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(2); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(3); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(4); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(11); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(12); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(13); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(17); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(18); }
+                { var buf = new_test_stream_buf(); var a = buf.DequeueContiguousSlow(19); }
             }
 
             {
-                var buf1 = new_test_buf();
+                var buf1 = new_test_stream_buf();
                 buf1.Remove(0, 3);
 
-                var buf2 = new_test_buf();
+                var buf2 = new_test_stream_buf();
                 buf2.Remove(2, 4);
 
-                var buf3 = new_test_buf();
+                var buf3 = new_test_stream_buf();
                 buf3.Remove(1, 17);
 
-                var buf4 = new_test_buf();
+                var buf4 = new_test_stream_buf();
                 buf4.Remove(0, 17);
 
-                var buf5 = new_test_buf();
+                var buf5 = new_test_stream_buf();
                 buf5.Remove(0, 3);
 
-                var buf6 = new_test_buf();
+                var buf6 = new_test_stream_buf();
                 buf6.Remove(3, 4);
 
-                var buf7 = new_test_buf();
+                var buf7 = new_test_stream_buf();
                 buf7.Remove(3, 9);
 
-                var buf8 = new_test_buf();
+                var buf8 = new_test_stream_buf();
                 buf8.Remove(12, 6);
 
-                var buf9 = new_test_buf();
+                var buf9 = new_test_stream_buf();
                 buf9.Remove(1, 16);
 
-                var buf10 = new_test_buf();
+                var buf10 = new_test_stream_buf();
                 buf10.Remove(7, 2);
 
-                var buf11 = new_test_buf();
+                var buf11 = new_test_stream_buf();
                 buf11.Remove(15, 2);
 
             }
             {
-                var buf1 = new_test_buf();
+                var buf1 = new_test_stream_buf();
                 var r1 = buf1.GetContiguous(buf1.PinHead + 2, 2, false);
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r2 = buf1.GetContiguous(buf1.PinHead + 2, 5, false);
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r3 = buf1.GetContiguous(buf1.PinHead + 2, 6, false);
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r4 = buf1.GetContiguous(buf1.PinHead + 2, 10, false);
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r5 = buf1.GetContiguous(buf1.PinHead + 2, 15, false);
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r6 = buf1.GetContiguous(buf1.PinHead + 2, 16, false);
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r7 = buf1.GetContiguous(buf1.PinHead + 4, 14, false);
             }
 
             {
-                var buf1 = new_test_buf();
+                var buf1 = new_test_stream_buf();
                 var r1 = buf1.GetContiguous(buf1.PinHead + 0, 3, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r2 = buf1.GetContiguous(buf1.PinHead + 3, 4, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r3 = buf1.GetContiguous(buf1.PinHead + 7, 5, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r4 = buf1.GetContiguous(buf1.PinHead + 12, 6, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r5 = buf1.GetContiguous(buf1.PinHead + 0, 2, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r6 = buf1.GetContiguous(buf1.PinHead + 2, 1, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r7 = buf1.GetContiguous(buf1.PinHead + 3, 1, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r8 = buf1.GetContiguous(buf1.PinHead + 4, 3, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r9 = buf1.GetContiguous(buf1.PinHead + 12, 2, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r10 = buf1.GetContiguous(buf1.PinHead + 14, 4, false);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r11 = buf1.GetContiguous(buf1.PinHead + 0, 19, true);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r12 = buf1.GetContiguous(buf1.PinHead + 2, 17, true);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r13 = buf1.GetContiguous(buf1.PinHead + 11, 8, true);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r14 = buf1.GetContiguous(buf1.PinHead + 13, 6, true);
 
-                buf1 = new_test_buf();
+                buf1 = new_test_stream_buf();
                 var r15 = buf1.GetContiguous(buf1.PinHead + 18, 1, true);
             }
         }
