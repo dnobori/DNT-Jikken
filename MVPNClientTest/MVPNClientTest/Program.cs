@@ -23,8 +23,8 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            TestStreamBuffer();
-            //BenchStreamBuffer();
+            //TestStreamBuffer();
+            BenchStreamBuffer();
 
             return;
             string s = "Hello";
@@ -207,6 +207,7 @@ namespace MVPNClientTest
             Fifo a = new Fifo();
             FastFifo<byte> b = new FastFifo<byte>();
             int num = 0;
+            int standard = 10;
             while (true)
             {
                 num++;
@@ -216,7 +217,7 @@ namespace MVPNClientTest
                     WriteLine($"num = {num},  len = {b.Size},  a = {a.PhysicalSize} ({(int)((double)a.Size * 100 / (double)a.PhysicalSize)} %)  b = {b.PhysicalSize} ({(int)((double)b.Size * 100 / (double)b.PhysicalSize)} %)  ");
                 }
 
-                byte[] add_data = new byte[WebSocketHelper.RandSInt31() % 200000];
+                byte[] add_data = new byte[WebSocketHelper.RandSInt31() % standard];
                 WebSocketHelper.Rand(add_data);
 
                 a.Write(add_data);
@@ -224,7 +225,7 @@ namespace MVPNClientTest
 
                 if (a.Span.SequenceCompareTo(b.Span) != 0) throw new Exception();
 
-                int read_size = WebSocketHelper.RandSInt31() % 210000;
+                int read_size = WebSocketHelper.RandSInt31() % (int)((double)standard * 1.1);
 
                 var reta = a.Read(read_size);
                 var retb = b.Read(read_size);
