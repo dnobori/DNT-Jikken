@@ -151,18 +151,16 @@ namespace MVPNClientTest
                 (x, iterations) =>
                 {
                     FastDatagramBuffer<int> dg = new FastDatagramBuffer<int>();
-                    List<int> a = new List<int>();
 
                     for (int i = 0; i < iterations; i++)
                     {
-                        //dg.InsertTail(i);
-                        a.Add(i);
+                        dg.InsertTail(i);
                     }
 
-                    //for (int i = 0; i < iterations; i++)
-                    //{
-                    //    var r = dg.Dequeue(1, out long _);
-                    //}
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        var r = dg.Dequeue(long.MaxValue, out long _);
+                    }
 
                 },
                 () => 0), true, 30);

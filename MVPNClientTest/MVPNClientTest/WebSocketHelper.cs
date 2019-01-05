@@ -4790,6 +4790,11 @@ namespace SoftEther.WebSocket.Helper
             PhysicalData = new T[FifoInitSize];
         }
 
+        public void Clear()
+        {
+            Size = Position = 0;
+        }
+
         public void Write(Span<T> data)
         {
             WriteInternal(data, data.Length);
