@@ -1869,6 +1869,45 @@ namespace cs_struct_bench1
                 return ret.AsMemory();
             }
         }
+
+        public static byte[] FastAlloc(int minimum_size)
+        {
+            if (minimum_size < 512)
+                return new byte[minimum_size];
+            else
+                return ArrayPool<byte>.Shared.Rent(minimum_size);
+        }
+
+        public const int MemoryUsePoolThreshold = 1024;
+        public static Memory<byte> FastAllocMemory(int size)
+        {
+            if (size < MemoryUsePoolThreshold)
+                return new byte[size];
+            else
+                return new Memory<byte>(FastAlloc(size)).Slice(0, size);
+        }
+
+        public static void FastFree(this byte[] a)
+        {
+            if (a.Length >= MemoryUsePoolThreshold)
+                ArrayPool<byte>.Shared.Return(a);
+        }
+
+        public static void FastFree(Memory<byte> memory) => memory.GetInternalArray().FastFree();
+
+        static readonly int _memory_object_offset = Marshal.OffsetOf<Memory<byte>>("_object").ToInt32();
+        public static byte[] GetInternalArray(this Memory<byte> memory)
+        {
+            unsafe
+            {
+                byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
+                ptr += _memory_object_offset;
+                byte[] o = Unsafe.Read<byte[]>(ptr);
+                return o;
+            }
+        }
+
+        public static int GetInternalArrayLength(this Memory<byte> memory) => GetInternalArray(memory).Length;
     }
 
 

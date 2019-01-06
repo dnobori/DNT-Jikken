@@ -24,7 +24,8 @@ namespace MVPNClientTest
         static void Main(string[] args)
         {
             //TestStreamBuffer();
-            BenchStreamBuffer();
+            //BenchStreamBuffer();
+            TestPipes();
 
             return;
             string s = "Hello";
@@ -37,6 +38,57 @@ namespace MVPNClientTest
             //async_test2().LaissezFaire();
             //async_test1().Wait();
             //Thread.Sleep(-1);
+        }
+
+        static void TestPipes()
+        {
+            if (true)
+            {
+                TestPipeTcp();
+            }
+        }
+
+        static async Task TestPipeTcpProc(Socket socket)
+        {
+            using (FastPipeSystem<byte, byte> system = new FastPipeSystem<byte, byte>())
+            {
+                using (var connector = new FastPipeToAsyncSocketConnector(system.A, socket))
+                {
+                    connector.Connect();
+
+                    var pipe = system.B;
+                    var reader = pipe.StreamReader;
+                    Dbg.Where();
+                    while (reader.IsDisconnected == false)
+                    {
+                        while (true)
+                        {
+                            Memory<byte> data = reader.DequeueContiguousSlow(1);
+                            if (data.Length == 0)
+                            {
+                                //Dbg.Where();
+                                break;
+                            }
+                            //Dbg.Where();
+                            Console.Write((char)data.Span[0]);
+                        }
+                        reader.CompleteRead();
+                        await reader.EventReadReady.WaitOneAsync(out _);
+                    }
+                    Dbg.Where(connector.Error);
+                }
+            }
+        }
+
+        static void TestPipeTcp()
+        {
+            TcpListener listener = new TcpListener(IPAddress.Any, 1);
+            listener.Start();
+            while (true)
+            {
+                Socket socket = listener.AcceptSocket();
+                TestPipeTcpProc(socket).LaissezFaire();
+            }
         }
 
         static void BenchStreamBuffer()
@@ -688,7 +740,7 @@ namespace MVPNClientTest
                         int total_size = 0;
                         for (int i = 0; ; i++)
                         {
-                            byte[][] ret = await reader.Read(max_count: 100000);
+                            byte[][] ret = await reader.Read(CancellationToken.None, max_count: 100000);
                             total_size += ret.Length;
                             WriteLine("recv_bulk: " + i + " " + ret.Length + "    total: " + total_size);
                         }
@@ -758,7 +810,7 @@ namespace MVPNClientTest
                             int total_size = 0;
                             for (int i = 0; ; i++)
                             {
-                                byte[][] ret = await reader.Read(max_count: 100000);
+                                byte[][] ret = await reader.Read(CancellationToken.None, max_count: 100000);
                                 total_size += ret.Length;
                                 WriteLine("recv_bulk: " + i + " " + ret.Length);
                             }

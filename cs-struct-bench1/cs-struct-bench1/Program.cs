@@ -275,6 +275,30 @@ namespace cs_struct_bench1
     {
     }
 
+    class ClassA
+    {
+        public void TestReal()
+        {
+            Limbo.SInt++;
+        }
+
+        public virtual void TestVirtual()
+        {
+            Limbo.SInt++;
+        }
+
+        //[ThreadStatic]
+        public static volatile int ThreadInt;
+    }
+
+    class ClassB : ClassA
+    {
+        public override void TestVirtual()
+        {
+            Limbo.SInt++;
+        }
+    }
+
     class Program
     {
         static Semaphore s = new Semaphore(1, 1);
@@ -288,13 +312,196 @@ namespace cs_struct_bench1
         }
 
 
+        static void thread_static_test()
+        {
+            while (true)
+            {
+                int a = ClassA.ThreadInt++;
+                WriteLine(a);
+            }
+        }
+
+        struct TestStructA<T>
+        {
+            public int a;
+        }
+
         static void Main(string[] args)
         {
             WriteLine("Started.");
             WriteLine();
 
-            
+            if (false)
+            {
+                Thread test_thread_1 = new Thread(thread_static_test);
+                test_thread_1.Start();
+                Thread test_thread_2 = new Thread(thread_static_test);
+                test_thread_2.Start();
+                return;
+            }
+
+            if (true)
+            {
+                async Task test1()
+                {
+                    while (true)
+                    {
+                        Stopwatch sw = new Stopwatch();
+                        sw.Start();
+                        await Task.Delay(1000);
+                        sw.Stop();
+                        Console.WriteLine(sw.Elapsed);
+
+                        //await Task.Delay(1000);
+
+                        for (int i = 0; i < 10000000; i++)
+                        {
+                            object x = Task.Delay(10000);
+                        }
+                    }
+
+                }
+
+                test1().Wait();
+
+                return;
+            }
+
+
+            int pool_test_size = 1;
+
             var q = new MicroBenchmarkQueue()
+
+                .Add(new MicroBenchmark<Memory<byte>>("get memory length", 100000, (state, iterations) =>
+                {
+                    TestStructA<byte> aaa = new TestStructA<byte>();
+                    Memory<byte> m = new byte[1];
+                    var f = m.GetType().GetField("_object", System.Reflection.BindingFlags.Instance | System.Reflection.BindingFlags.NonPublic);
+                    IntPtr a = Marshal.OffsetOf<Memory<byte>>("_object");
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        unsafe
+                        {
+                            byte* ptr = (byte *)Unsafe.AsPointer(ref m);
+                            ptr += a.ToInt64();
+                            byte[] o = Unsafe.Read<byte[]>(ptr);
+                            Limbo.SInt += o.Length;
+                        }
+                    }
+                }
+                ), true, 1)
+
+                .Add(new MicroBenchmark<Memory<byte>>("fast alloc / return byte array", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        byte[] data = MemoryHelper.FastAlloc(pool_test_size);
+                        MemoryHelper.FastFree(data);
+                    }
+                }
+                ), true, 190107)
+
+                .Add(new MicroBenchmark<Memory<byte>>("fast alloc byte array without return", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        byte[] data = MemoryHelper.FastAlloc(pool_test_size);
+                    }
+                }
+                ), true, 190107)
+
+                .Add(new MicroBenchmark<Memory<byte>>("fast alloc / return memory", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        Memory<byte> data = MemoryHelper.FastAllocMemory(pool_test_size);
+                        MemoryHelper.FastFree(data);
+                    }
+                }
+                ), true, 190107)
+
+                .Add(new MicroBenchmark<Memory<byte>>("fast alloc byte array without return", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        Memory<byte> data = MemoryHelper.FastAllocMemory(pool_test_size);
+                    }
+                }
+                ), true, 190107)
+
+                .Add(new MicroBenchmark<Memory<byte>>("read/write thread static", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        ClassA.ThreadInt++;
+                    }
+                }
+                ), true, 190105)
+
+                .Add(new MicroBenchmark<Memory<byte>>("read/write thread local", 100000, (state, iterations) =>
+                {
+                    ThreadLocal<int> x = new ThreadLocal<int>();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        x.Value++;
+                    }
+                }
+                ), true, 190105)
+
+                .Add(new MicroBenchmark<Memory<byte>>("shared array pool with return", 100000, (state, iterations) =>
+                {
+                    var pool = ArrayPool<byte>.Shared;
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        byte[] data = pool.Rent(pool_test_size);
+
+                        pool.Return(data);
+                    }
+                }
+                ), true, 190106)
+
+                .Add(new MicroBenchmark<Memory<byte>>("shared array pool without return", 100000, (state, iterations) =>
+                {
+                    var pool = ArrayPool<byte>.Shared;
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        byte[] data = pool.Rent(pool_test_size);
+                    }
+                }
+                ), true, 190106)
+
+                .Add(new MicroBenchmark<Memory<byte>>("new", 100000, (state, iterations) =>
+                {
+                    var pool = ArrayPool<byte>.Shared;
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        byte[] data = new byte[pool_test_size];
+                    }
+                }
+                ), true, 190107)
+
+                .Add(new MicroBenchmark<Memory<byte>>("call virtual functions", 100000, (state, iterations) =>
+                {
+                    ClassA class_a = new ClassB();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        class_a.TestVirtual();
+                    }
+                }
+                ), true, 190106)
+
+                .Add(new MicroBenchmark<Memory<byte>>("call real functions", 100000, (state, iterations) =>
+                {
+                    ClassA class_a = new ClassB();
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        class_a.TestReal();
+                    }
+                }
+                ), true, 190106)
 
                 .Add(new MicroBenchmark<Memory<byte>>("new byte[1]", 256, (state, iterations) =>
                 {
