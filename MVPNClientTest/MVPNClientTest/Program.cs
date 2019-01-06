@@ -25,7 +25,20 @@ namespace MVPNClientTest
         {
             //TestStreamBuffer();
             //BenchStreamBuffer();
-            TestPipes();
+            //TestPipes();
+
+            SharedExceptionQueue q1 = new SharedExceptionQueue();
+            SharedExceptionQueue q2 = new SharedExceptionQueue();
+            SharedExceptionQueue q3 = new SharedExceptionQueue();
+
+            q1.Add(new Exception("e1"));
+            q2.Add(new Exception("e2"));
+            q3.Add(new Exception("e3"));
+
+            q1.Encounter(q2);
+            q2.Encounter(q3);
+
+            WriteLine(q1.Exceptions.Length);
 
             return;
             string s = "Hello";
@@ -75,7 +88,8 @@ namespace MVPNClientTest
                         reader.CompleteRead();
                         await reader.EventReadReady.WaitOneAsync(out _);
                     }
-                    Dbg.Where(connector.Error);
+
+                    Dbg.Where(reader.ExceptionQueue.FirstException + " " + connector.ExceptionQueue.Exceptions.Length);
                 }
             }
         }

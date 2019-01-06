@@ -4420,6 +4420,43 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class SharedExceptionQueue
+    {
+        public const int MaxItems = 128;
+        SharedQueue<Exception> Queue = new SharedQueue<Exception>(MaxItems);
+
+        public void Add(Exception ex)
+        {
+            lock (SharedQueue<Exception>.GlobalLock)
+            {
+                try
+                {
+                    if (ex == null) return;
+                    var aex = ex as AggregateException;
+                    if (aex != null)
+                    {
+                        var exp = aex.Flatten().InnerExceptions;
+                        foreach (var expi in exp)
+                            Queue.Enqueue(expi);
+                    }
+                    else
+                    {
+                        Queue.Enqueue(ex);
+                    }
+                }
+                catch { }
+            }
+        }
+
+        public void Encounter(SharedExceptionQueue other) => this.Queue.Encounter(other.Queue);
+
+        public Exception[] GetExceptions() => this.Queue.ItemsReadOnly;
+        public Exception[] Exceptions => GetExceptions();
+        public Exception FirstException => Exceptions.FirstOrDefault();
+
+        public bool HasError => Exceptions.Length != 0;
+        public bool IsOk => !HasError;
+    }
 
     public class SharedQueue<T>
     {
@@ -4428,17 +4465,26 @@ namespace SoftEther.WebSocket.Helper
             public SortedList<long, T> List = new SortedList<long, T>();
         }
 
+        public static long GlobalTimestamp { get; private set; } = 0;
+
         public static readonly object GlobalLock = new object();
-        static long GlobalTimestamp = 0;
+        public int MaxItems { get; private set; }
 
         SharedQueueBody body = new SharedQueueBody();
+
+        public SharedQueue(int max_items = 0)
+        {
+            if (max_items <= 0) max_items = int.MaxValue;
+            this.MaxItems = max_items;
+        }
 
         public void Enqueue(T value)
         {
             lock (GlobalLock)
             {
                 GlobalTimestamp++;
-                body.List.Add(GlobalTimestamp, value);
+                if (body.List.Count < MaxItems)
+                    body.List.Add(GlobalTimestamp, value);
             }
         }
 
@@ -4475,13 +4521,20 @@ namespace SoftEther.WebSocket.Helper
                 if (list1 != list2)
                 {
                     SharedQueueBody list3 = new SharedQueueBody();
+
                     foreach (long timestamp in list1.List.Keys)
-                        list3.List.Add(timestamp, list1.List[timestamp]);
+                        if (list3.List.Count < MaxItems)
+                            list3.List.Add(timestamp, list1.List[timestamp]);
+
                     foreach (long timestamp in list2.List.Keys)
-                        list3.List.Add(timestamp, list2.List[timestamp]);
+                        if (list3.List.Count < MaxItems)
+                            list3.List.Add(timestamp, list2.List[timestamp]);
 
                     this.body = list3;
                     other.body = list3;
+                    int max_items = Math.Max(this.MaxItems, other.MaxItems);
+                    this.MaxItems = max_items;
+                    other.MaxItems = max_items;
                 }
             }
         }
@@ -4873,6 +4926,8 @@ namespace SoftEther.WebSocket.Helper
         long PinTail { get; }
         long Length { get; }
 
+        SharedExceptionQueue ExceptionQueue { get; }
+
         object LockObj { get; }
 
         bool IsReadyToWrite { get; }
@@ -5051,6 +5106,8 @@ namespace SoftEther.WebSocket.Helper
         public List<Action> OnDisconnected { get; } = new List<Action>();
 
         public object LockObj { get; } = new object();
+
+        public SharedExceptionQueue ExceptionQueue { get; } = new SharedExceptionQueue();
 
         public FastStreamBuffer(bool enable_events = false, long? threshold_length = null)
         {
@@ -5822,6 +5879,8 @@ namespace SoftEther.WebSocket.Helper
 
         public object LockObj { get; } = new object();
 
+        public SharedExceptionQueue ExceptionQueue { get; } = new SharedExceptionQueue();
+
         public FastDatagramBuffer(bool enable_events = false, long? threshold_length = null)
         {
             if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
@@ -6000,6 +6059,8 @@ namespace SoftEther.WebSocket.Helper
         FastDatagramBuffer<TDatagram> DatagramAtoB;
         FastDatagramBuffer<TDatagram> DatagramBtoA;
 
+        public SharedExceptionQueue ExceptionQueue { get; } = new SharedExceptionQueue();
+
         public FastPipe<TStream, TDatagram> A { get; }
         public FastPipe<TStream, TDatagram> B { get; }
 
@@ -6017,6 +6078,12 @@ namespace SoftEther.WebSocket.Helper
 
             DatagramAtoB = new FastDatagramBuffer<TDatagram>(true, threshold_length_datagram);
             DatagramBtoA = new FastDatagramBuffer<TDatagram>(true, threshold_length_datagram);
+
+            StreamAtoB.ExceptionQueue.Encounter(ExceptionQueue);
+            StreamBtoA.ExceptionQueue.Encounter(ExceptionQueue);
+
+            DatagramAtoB.ExceptionQueue.Encounter(ExceptionQueue);
+            DatagramBtoA.ExceptionQueue.Encounter(ExceptionQueue);
 
             StreamAtoB.OnDisconnected.Add(() => Disconnect());
             StreamBtoA.OnDisconnected.Add(() => Disconnect());
@@ -6079,6 +6146,8 @@ namespace SoftEther.WebSocket.Helper
         public FastDatagramBuffer<TDatagram> DatagramWriter { get; }
         public FastDatagramBuffer<TDatagram> DatagramReader { get; }
 
+        public SharedExceptionQueue ExceptionQueue { get => PipeSystem.ExceptionQueue; }
+
         public bool IsDisconnected { get => this.PipeSystem.IsDisconnected; }
         public void Disconnect() { this.PipeSystem.Disconnect(); }
         public void AddOnDisconnected(Action action)
@@ -6110,36 +6179,13 @@ namespace SoftEther.WebSocket.Helper
         public void Disconnect() { this.Pipe.Disconnect(); }
         public void AddOnDisconnected(Action action) => Pipe.AddOnDisconnected(action);
 
-        public Exception Error { get => GetError(); }
-        Exception _error1 = null;
-        Exception _error2 = null;
+        public SharedExceptionQueue ExceptionQueue { get => Pipe.ExceptionQueue; }
 
         public FastPipeToAsyncObjectConnector(FastPipe<TStream, TDatagram> pipe, CancellationToken cancel = default(CancellationToken))
         {
             Pipe = pipe;
             CancelWatcher = Pipe.CancelWatcher;
             CancelWatcher.AddWatch(cancel);
-        }
-
-        public Exception GetError()
-        {
-            if (_error1 != null)
-                return _error1;
-            else
-                return _error2;
-        }
-
-        void SetError(Exception err)
-        {
-            err = err.GetSingleException();
-            if (err is FastBufferDisconnectedException)
-            {
-                if (_error2 == null) _error2 = err;
-            }
-            else
-            {
-                if (_error1 == null) _error1 = err;
-            }
         }
 
         Once connect_flag;
@@ -6196,7 +6242,7 @@ namespace SoftEther.WebSocket.Helper
             }
             catch (Exception ex)
             {
-                SetError(ex);
+                ExceptionQueue.Add(ex);
             }
             finally
             {
@@ -6255,7 +6301,7 @@ namespace SoftEther.WebSocket.Helper
             }
             catch (Exception ex)
             {
-                SetError(ex);
+                ExceptionQueue.Add(ex);
             }
             finally
             {
