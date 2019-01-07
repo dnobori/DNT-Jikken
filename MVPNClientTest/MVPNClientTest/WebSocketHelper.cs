@@ -4470,7 +4470,7 @@ namespace SoftEther.WebSocket.Helper
         public static readonly object GlobalLock = new object();
         public int MaxItems { get; private set; }
 
-        SharedQueueBody body = new SharedQueueBody();
+        Ref<SharedQueueBody> body = new Ref<SharedQueueBody>(new SharedQueueBody());
 
         public SharedQueue(int max_items = 0)
         {
@@ -4483,8 +4483,8 @@ namespace SoftEther.WebSocket.Helper
             lock (GlobalLock)
             {
                 GlobalTimestamp++;
-                if (body.List.Count < MaxItems)
-                    body.List.Add(GlobalTimestamp, value);
+                if (body.Value.List.Count < MaxItems)
+                    body.Value.List.Add(GlobalTimestamp, value);
             }
         }
 
@@ -4492,10 +4492,10 @@ namespace SoftEther.WebSocket.Helper
         {
             lock (GlobalLock)
             {
-                if (body.List.Count == 0) return default(T);
-                long timestamp = body.List.Keys[0];
-                T value = body.List[timestamp];
-                body.List.Remove(timestamp);
+                if (body.Value.List.Count == 0) return default(T);
+                long timestamp = body.Value.List.Keys[0];
+                T value = body.Value.List[timestamp];
+                body.Value.List.Remove(timestamp);
                 return value;
             }
         }
@@ -4506,7 +4506,7 @@ namespace SoftEther.WebSocket.Helper
         {
             lock (GlobalLock)
             {
-                return body.List.Values.ToArray();
+                return body.Value.List.Values.ToArray();
             }
         }
 
@@ -4515,8 +4515,8 @@ namespace SoftEther.WebSocket.Helper
             if (this == other) return;
             lock (GlobalLock)
             {
-                var list1 = this.body;
-                var list2 = other.body;
+                var list1 = this.body.Value;
+                var list2 = other.body.Value;
 
                 if (list1 != list2)
                 {
