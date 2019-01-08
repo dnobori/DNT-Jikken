@@ -25,22 +25,22 @@ namespace MVPNClientTest
         {
             //TestStreamBuffer();
             //BenchStreamBuffer();
-            //TestPipes();
+            TestPipes();
 
-            SharedExceptionQueue q1 = new SharedExceptionQueue();
-            SharedExceptionQueue q2 = new SharedExceptionQueue();
-            SharedExceptionQueue q3 = new SharedExceptionQueue();
+            //SharedExceptionQueue q1 = new SharedExceptionQueue();
+            //SharedExceptionQueue q2 = new SharedExceptionQueue();
+            //SharedExceptionQueue q3 = new SharedExceptionQueue();
 
-            q1.Add(new Exception("e1"));
-            q2.Add(new Exception("e2"));
-            q3.Add(new Exception("e3"));
+            //q1.Add(new Exception("e1"));
+            //q2.Add(new Exception("e2"));
+            //q3.Add(new Exception("e3"));
 
-            q1.Encounter(q2);
-            q2.Encounter(q3);
+            //q1.Encounter(q2);
+            //q2.Encounter(q3);
 
-            WriteLine(q1.Exceptions.Length);
+            //WriteLine(q1.Exceptions.Length);
 
-            return;
+            //return;
             string s = "Hello";
 
             System.String s2 = s;
@@ -63,14 +63,14 @@ namespace MVPNClientTest
 
         static async Task TestPipeTcpProc(Socket socket)
         {
-            using (FastPipeSystem<byte, byte> system = new FastPipeSystem<byte, byte>())
+            using (FastPipe<byte, byte> pipe = new FastPipe<byte, byte>())
             {
-                using (var connector = new FastPipeToAsyncSocketConnector(system.A, socket))
+                using (var wrap = new FastPipeEndSocketWrapper(pipe.A, socket))
                 {
-                    connector.Connect();
+                    wrap.Connect();
 
-                    var pipe = system.B;
-                    var reader = pipe.StreamReader;
+                    var end = pipe.B;
+                    var reader = end.StreamReader;
                     Dbg.Where();
                     while (reader.IsDisconnected == false)
                     {
@@ -89,7 +89,7 @@ namespace MVPNClientTest
                         await reader.EventReadReady.WaitOneAsync(out _);
                     }
 
-                    Dbg.Where(reader.ExceptionQueue.FirstException + " " + connector.ExceptionQueue.Exceptions.Length);
+                    Dbg.Where(reader.ExceptionQueue.FirstException + " " + wrap.ExceptionQueue.Exceptions.Length);
                 }
             }
         }

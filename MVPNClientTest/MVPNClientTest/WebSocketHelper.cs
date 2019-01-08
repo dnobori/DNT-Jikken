@@ -4427,24 +4427,20 @@ namespace SoftEther.WebSocket.Helper
 
         public void Add(Exception ex)
         {
-            lock (SharedQueue<Exception>.GlobalLock)
+            if (ex == null) return;
+            var aex = ex as AggregateException;
+            if (aex != null)
             {
-                try
+                var exp = aex.Flatten().InnerExceptions;
+                lock (SharedQueue<Exception>.GlobalLock)
                 {
-                    if (ex == null) return;
-                    var aex = ex as AggregateException;
-                    if (aex != null)
-                    {
-                        var exp = aex.Flatten().InnerExceptions;
-                        foreach (var expi in exp)
-                            Queue.Enqueue(expi);
-                    }
-                    else
-                    {
-                        Queue.Enqueue(ex);
-                    }
+                    foreach (var expi in exp)
+                        Queue.Enqueue(expi);
                 }
-                catch { }
+            }
+            else
+            {
+                Queue.Enqueue(ex);
             }
         }
 
@@ -4460,84 +4456,151 @@ namespace SoftEther.WebSocket.Helper
 
     public class SharedQueue<T>
     {
-        class SharedQueueBody
+        class QueueBody
         {
+            static long global_timestamp;
+
+            public QueueBody Next;
+
             public SortedList<long, T> List = new SortedList<long, T>();
+            public readonly int MaxItems;
+
+            public QueueBody(int max_items)
+            {
+                if (max_items <= 0) max_items = int.MaxValue;
+                MaxItems = max_items;
+            }
+
+            public void Enqueue(T item)
+            {
+                lock (List)
+                {
+                    if (List.Count > MaxItems) return;
+                    long ts = Interlocked.Increment(ref global_timestamp);
+                    List.Add(ts, item);
+                }
+            }
+
+            public T Dequeue()
+            {
+                lock (List)
+                {
+                    if (List.Count == 0) return default(T);
+                    long ts = List.Keys[0];
+                    T ret = List[ts];
+                    List.Remove(ts);
+                    return ret;
+                }
+            }
+
+            public T[] ToArray()
+            {
+                lock (List)
+                {
+                    return List.Values.ToArray();
+                }
+            }
+
+            public static void Merge(QueueBody q1, QueueBody q2)
+            {
+                if (q1 == q2) return;
+                lock (q1.List)
+                {
+                    lock (q2.List)
+                    {
+                        Debug.Assert(q1.List != null);
+                        Debug.Assert(q2.List != null);
+                        QueueBody q3 = new QueueBody(Math.Max(q1.MaxItems, q2.MaxItems));
+                        foreach (long ts in q1.List.Keys)
+                            q3.List.Add(ts, q1.List[ts]);
+                        foreach (long ts in q2.List.Keys)
+                            q3.List.Add(ts, q2.List[ts]);
+                        if (q3.List.Count > q3.MaxItems)
+                        {
+                            int num = 0;
+                            List<long> remove_list = new List<long>();
+                            foreach (long ts in q3.List.Keys)
+                            {
+                                num++;
+                                if (num > q3.MaxItems)
+                                    remove_list.Add(ts);
+                            }
+                            foreach (long ts in remove_list)
+                                q3.List.Remove(ts);
+                        }
+                        q1.List = null;
+                        q2.List = null;
+                        Debug.Assert(q1.Next == null);
+                        Debug.Assert(q2.Next == null);
+                        q1.Next = q3;
+                        q2.Next = q3;
+                    }
+                }
+            }
+
+            public QueueBody GetLast()
+            {
+                if (Next == null)
+                    return this;
+                else
+                    return Next.GetLast();
+            }
         }
 
-        public static long GlobalTimestamp { get; private set; } = 0;
+        QueueBody First;
 
         public static readonly object GlobalLock = new object();
-        public int MaxItems { get; private set; }
-
-        Ref<SharedQueueBody> body = new Ref<SharedQueueBody>(new SharedQueueBody());
 
         public SharedQueue(int max_items = 0)
         {
-            if (max_items <= 0) max_items = int.MaxValue;
-            this.MaxItems = max_items;
-        }
-
-        public void Enqueue(T value)
-        {
-            lock (GlobalLock)
-            {
-                GlobalTimestamp++;
-                if (body.Value.List.Count < MaxItems)
-                    body.Value.List.Add(GlobalTimestamp, value);
-            }
-        }
-
-        public T Dequeue()
-        {
-            lock (GlobalLock)
-            {
-                if (body.Value.List.Count == 0) return default(T);
-                long timestamp = body.Value.List.Keys[0];
-                T value = body.Value.List[timestamp];
-                body.Value.List.Remove(timestamp);
-                return value;
-            }
-        }
-
-        public T[] ItemsReadOnly { get => ToArray(); }
-
-        public T[] ToArray()
-        {
-            lock (GlobalLock)
-            {
-                return body.Value.List.Values.ToArray();
-            }
+            First = new QueueBody(max_items);
         }
 
         public void Encounter(SharedQueue<T> other)
         {
             if (this == other) return;
+
             lock (GlobalLock)
             {
-                var list1 = this.body.Value;
-                var list2 = other.body.Value;
+                QueueBody last1 = this.First.GetLast();
+                QueueBody last2 = other.First.GetLast();
+                if (last1 == last2) return;
 
-                if (list1 != list2)
-                {
-                    SharedQueueBody list3 = new SharedQueueBody();
-
-                    foreach (long timestamp in list1.List.Keys)
-                        if (list3.List.Count < MaxItems)
-                            list3.List.Add(timestamp, list1.List[timestamp]);
-
-                    foreach (long timestamp in list2.List.Keys)
-                        if (list3.List.Count < MaxItems)
-                            list3.List.Add(timestamp, list2.List[timestamp]);
-
-                    this.body = list3;
-                    other.body = list3;
-                    int max_items = Math.Max(this.MaxItems, other.MaxItems);
-                    this.MaxItems = max_items;
-                    other.MaxItems = max_items;
-                }
+                QueueBody.Merge(last1, last2);
             }
         }
+
+        public void Enqueue(T value)
+        {
+            lock (GlobalLock)
+                this.First.GetLast().Enqueue(value);
+        }
+
+        public T Dequeue()
+        {
+            lock (GlobalLock)
+                return this.First.GetLast().Dequeue();
+        }
+
+        public T[] ToArray()
+        {
+            lock (GlobalLock)
+                return this.First.GetLast().ToArray();
+        }
+
+        public int CountFast
+        {
+            get
+            {
+                var q = this.First.GetLast();
+                var list = q.List;
+                if (list == null) return 0;
+                lock (list)
+                    return list.Count;
+            }
+        }
+
+        public T[] ItemsReadOnly { get => ToArray(); }
     }
 
     public class MicroBenchmarkQueue
@@ -6050,7 +6113,7 @@ namespace SoftEther.WebSocket.Helper
         public T[] ItemsSlow { get => ToArray(); }
     }
 
-    public class FastPipeSystem<TStream, TDatagram> : IDisposable
+    public class FastPipe<TStream, TDatagram> : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
 
@@ -6061,15 +6124,15 @@ namespace SoftEther.WebSocket.Helper
 
         public SharedExceptionQueue ExceptionQueue { get; } = new SharedExceptionQueue();
 
-        public FastPipe<TStream, TDatagram> A { get; }
-        public FastPipe<TStream, TDatagram> B { get; }
+        public FastPipeEnd<TStream, TDatagram> A { get; }
+        public FastPipeEnd<TStream, TDatagram> B { get; }
 
         public List<Action> OnDisconnected { get; } = new List<Action>();
 
         Once InternalDisconnectedFlag;
         public bool IsDisconnected { get => InternalDisconnectedFlag.IsSet; }
 
-        public FastPipeSystem(CancellationToken cancel = default(CancellationToken), long? threshold_length_stream = null, long? threshold_length_datagram = null)
+        public FastPipe(CancellationToken cancel = default(CancellationToken), long? threshold_length_stream = null, long? threshold_length_datagram = null)
         {
             CancelWatcher = new CancelWatcher(cancel);
 
@@ -6096,8 +6159,8 @@ namespace SoftEther.WebSocket.Helper
                 Disconnect();
             });
 
-            A = new FastPipe<TStream, TDatagram>(this, CancelWatcher, StreamAtoB, StreamBtoA, DatagramAtoB, DatagramBtoA);
-            B = new FastPipe<TStream, TDatagram>(this, CancelWatcher, StreamBtoA, StreamAtoB, DatagramBtoA, DatagramAtoB);
+            A = new FastPipeEnd<TStream, TDatagram>(this, CancelWatcher, StreamAtoB, StreamBtoA, DatagramAtoB, DatagramBtoA);
+            B = new FastPipeEnd<TStream, TDatagram>(this, CancelWatcher, StreamBtoA, StreamAtoB, DatagramBtoA, DatagramAtoB);
         }
 
         public void Disconnect()
@@ -6136,9 +6199,9 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastPipe<TStream, TDatagram>
+    public class FastPipeEnd<TStream, TDatagram>
     {
-        FastPipeSystem<TStream, TDatagram> PipeSystem { get; }
+        FastPipe<TStream, TDatagram> Pipe { get; }
 
         public CancelWatcher CancelWatcher { get; }
         public FastStreamBuffer<TStream> StreamWriter { get; }
@@ -6146,22 +6209,22 @@ namespace SoftEther.WebSocket.Helper
         public FastDatagramBuffer<TDatagram> DatagramWriter { get; }
         public FastDatagramBuffer<TDatagram> DatagramReader { get; }
 
-        public SharedExceptionQueue ExceptionQueue { get => PipeSystem.ExceptionQueue; }
+        public SharedExceptionQueue ExceptionQueue { get => Pipe.ExceptionQueue; }
 
-        public bool IsDisconnected { get => this.PipeSystem.IsDisconnected; }
-        public void Disconnect() { this.PipeSystem.Disconnect(); }
+        public bool IsDisconnected { get => this.Pipe.IsDisconnected; }
+        public void Disconnect() { this.Pipe.Disconnect(); }
         public void AddOnDisconnected(Action action)
         {
-            lock (PipeSystem.OnDisconnected)
-                PipeSystem.OnDisconnected.Add(action);
+            lock (Pipe.OnDisconnected)
+                Pipe.OnDisconnected.Add(action);
         }
 
-        internal FastPipe(FastPipeSystem<TStream, TDatagram> pipe_system,
+        internal FastPipeEnd(FastPipe<TStream, TDatagram> pipe,
             CancelWatcher cancel_watcher,
             FastStreamBuffer<TStream> stream_to_write, FastStreamBuffer<TStream> stream_to_read,
             FastDatagramBuffer<TDatagram> datagram_write, FastDatagramBuffer<TDatagram> datagram_read)
         {
-            this.PipeSystem = pipe_system;
+            this.Pipe = pipe;
             this.CancelWatcher = cancel_watcher;
             this.StreamWriter = stream_to_write;
             this.StreamReader = stream_to_read;
@@ -6170,22 +6233,23 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class FastPipeToAsyncObjectConnector<TStream, TDatagram> : IDisposable
+    public abstract class FastPipeEndAsyncObjectWrapper<TStream, TDatagram> : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
-        public FastPipe<TStream, TDatagram> Pipe { get; }
+        public FastPipeEnd<TStream, TDatagram> PipeEnd { get; }
+        public List<CancellationToken> UpperCancels { get; } = new List<CancellationToken>();
 
-        public bool IsDisconnected { get => this.Pipe.IsDisconnected; }
-        public void Disconnect() { this.Pipe.Disconnect(); }
-        public void AddOnDisconnected(Action action) => Pipe.AddOnDisconnected(action);
+        public bool IsDisconnected { get => this.PipeEnd.IsDisconnected; }
+        public void AddOnDisconnected(Action action) => PipeEnd.AddOnDisconnected(action);
 
-        public SharedExceptionQueue ExceptionQueue { get => Pipe.ExceptionQueue; }
+        public SharedExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
 
-        public FastPipeToAsyncObjectConnector(FastPipe<TStream, TDatagram> pipe, CancellationToken cancel = default(CancellationToken))
+        public FastPipeEndAsyncObjectWrapper(FastPipeEnd<TStream, TDatagram> pipe_end, CancellationToken cancel = default(CancellationToken))
         {
-            Pipe = pipe;
-            CancelWatcher = Pipe.CancelWatcher;
-            CancelWatcher.AddWatch(cancel);
+            PipeEnd = pipe_end;
+            UpperCancels.Add(PipeEnd.CancelWatcher.CancelToken);
+            UpperCancels.Add(cancel);
+            CancelWatcher = new CancelWatcher(UpperCancels.ToArray());
         }
 
         Once connect_flag;
@@ -6201,15 +6265,18 @@ namespace SoftEther.WebSocket.Helper
         protected abstract Task StreamWriteToObject(FastStreamBuffer<TStream> buffer, CancellationToken cancel);
         protected abstract Task StreamReadFromObject(FastStreamBuffer<TStream> buffer, CancellationToken cancel);
 
+        protected abstract Task DatagramWriteToObject(FastDatagramBuffer<TDatagram> buffer, CancellationToken cancel);
+        protected abstract Task DatagramReadFromObject(FastDatagramBuffer<TDatagram> buffer, CancellationToken cancel);
+
         async Task StreamReadFromPipeLoop()
         {
             try
             {
-                var p = Pipe.StreamReader;
-                FastStreamBuffer<TStream> buffer = new FastStreamBuffer<TStream>(false, p.Threshold);
+                var reader = PipeEnd.StreamReader;
+                FastStreamBuffer<TStream> buffer = new FastStreamBuffer<TStream>(false, reader.Threshold);
                 while (true)
                 {
-                    CancelWatcher.CancelToken.ThrowIfCancellationRequested();
+                    UpperCancels.ForEach(x => x.ThrowIfCancellationRequested());
                     bool state_changed;
                     do
                     {
@@ -6218,9 +6285,9 @@ namespace SoftEther.WebSocket.Helper
                         // pipe --> buffer
                         while (buffer.IsReadyToWrite)
                         {
-                            lock (p.LockObj)
+                            lock (reader.LockObj)
                             {
-                                if (p.DequeueAllAndEnqueueToOther(buffer) == 0) break;
+                                if (reader.DequeueAllAndEnqueueToOther(buffer) == 0) break;
                                 state_changed = true;
                             }
                         }
@@ -6235,7 +6302,7 @@ namespace SoftEther.WebSocket.Helper
                     while (state_changed);
 
                     await WebSocketHelper.WaitObjectsAsync(
-                        auto_events: new AsyncAutoResetEvent[] { p.EventReadReady },
+                        auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                         cancels: new CancellationToken[] { CancelWatcher.CancelToken }
                         );
                 }
@@ -6254,11 +6321,11 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
-                var p = Pipe.StreamWriter;
-                FastStreamBuffer<TStream> buffer = new FastStreamBuffer<TStream>(false, p.Threshold);
+                var writer = PipeEnd.StreamWriter;
+                FastStreamBuffer<TStream> buffer = new FastStreamBuffer<TStream>(false, writer.Threshold);
                 while (true)
                 {
-                    CancelWatcher.CancelToken.ThrowIfCancellationRequested();
+                    UpperCancels.ForEach(x => x.ThrowIfCancellationRequested());
                     bool state_changed;
                     do
                     {
@@ -6278,23 +6345,23 @@ namespace SoftEther.WebSocket.Helper
                         bool p_changed = false;
 
                         // buffer -> pipe
-                        while (p.IsReadyToWrite && buffer.IsReadyToRead)
+                        while (writer.IsReadyToWrite && buffer.IsReadyToRead)
                         {
-                            lock (p.LockObj)
+                            lock (writer.LockObj)
                             {
-                                if (buffer.DequeueAllAndEnqueueToOther(p) == 0) break;
+                                if (buffer.DequeueAllAndEnqueueToOther(writer) == 0) break;
                                 state_changed = true;
                                 p_changed = true;
                             }
                         }
 
-                        if (p_changed) p.CompleteWrite();
+                        if (p_changed) writer.CompleteWrite();
 
                     }
                     while (state_changed);
 
                     await WebSocketHelper.WaitObjectsAsync(
-                        auto_events: new AsyncAutoResetEvent[] { p.EventWriteReady },
+                        auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                         cancels: new CancellationToken[] { CancelWatcher.CancelToken }
                         );
                 }
@@ -6309,6 +6376,16 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        Once disconnect_flag;
+        public void Disconnect()
+        {
+            if (disconnect_flag.IsFirstCall())
+            {
+                CancelWatcher.Cancel();
+                this.PipeEnd.Disconnect();
+            }
+        }
+
         Once dispose_flag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
@@ -6320,16 +6397,22 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastPipeToAsyncSocketConnector : FastPipeToAsyncObjectConnector<byte, byte>, IDisposable
+    public enum SocketWrapperType
+    {
+        Stream,
+        Datagram,
+    }
+
+    public class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapper<byte, byte>, IDisposable
     {
         public Socket Socket { get; }
-        public bool IsDatagram { get; }
+        public SocketWrapperType Type { get; }
         public int RecvTmpBufferSize { get; private set; }
 
-        public FastPipeToAsyncSocketConnector(FastPipe<byte, byte> pipe, Socket socket, CancellationToken cancel = default(CancellationToken)) : base(pipe, cancel)
+        public FastPipeEndSocketWrapper(FastPipeEnd<byte, byte> pipe_end, Socket socket, CancellationToken cancel = default(CancellationToken)) : base(pipe_end, cancel)
         {
             this.Socket = socket;
-            IsDatagram = (Socket.SocketType != SocketType.Stream);
+            Type = (Socket.SocketType == SocketType.Stream) ? SocketWrapperType.Stream : SocketWrapperType.Datagram;
             this.AddOnDisconnected(() =>
             {
                 Socket.DisposeSafe();
@@ -6338,6 +6421,11 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task StreamWriteToObject(FastStreamBuffer<byte> buffer, CancellationToken cancel)
         {
+            if (Type != SocketWrapperType.Stream)
+            {
+                return;
+            }
+
             List<Memory<byte>> send_list = buffer.DequeueAll(out _);
 
             foreach (Memory<byte> data in send_list)
@@ -6351,7 +6439,7 @@ namespace SoftEther.WebSocket.Helper
             buffer.CompleteRead();
         }
 
-        AsyncBulkReceiver<Memory<byte>, FastPipeToAsyncSocketConnector> BulkReceiver = new AsyncBulkReceiver<Memory<byte>, FastPipeToAsyncSocketConnector>(async me =>
+        AsyncBulkReceiver<Memory<byte>, FastPipeEndSocketWrapper> BulkReceiver = new AsyncBulkReceiver<Memory<byte>, FastPipeEndSocketWrapper>(async me =>
         {
             if (me.RecvTmpBufferSize == 0)
             {
@@ -6369,9 +6457,23 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task StreamReadFromObject(FastStreamBuffer<byte> buffer, CancellationToken cancel)
         {
+            if (Type != SocketWrapperType.Stream)
+            {
+                await WebSocketHelper.WhenCanceled(cancel, out CancellationTokenRegistration reg);
+            }
             Memory<byte>[] recv_list = await BulkReceiver.Read(cancel, this);
             buffer.Enqueue(recv_list);
             buffer.CompleteWrite();
+        }
+
+        protected override Task DatagramWriteToObject(FastDatagramBuffer<byte> buffer, CancellationToken cancel)
+        {
+            throw new NotImplementedException();
+        }
+
+        protected override Task DatagramReadFromObject(FastDatagramBuffer<byte> buffer, CancellationToken cancel)
+        {
+            throw new NotImplementedException();
         }
 
         Once dispose_flag;
