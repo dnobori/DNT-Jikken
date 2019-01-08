@@ -1808,7 +1808,6 @@ namespace cs_struct_bench1
         public static long WalkReadSInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).GetSInt64();
 
 
-
         public static ArraySegment<T> AsSegment<T>(this Memory<T> memory)
         {
             if (MemoryMarshal.TryGetArray(memory, out ArraySegment<T> seg) == false)
@@ -1870,15 +1869,16 @@ namespace cs_struct_bench1
             }
         }
 
+        public const int MemoryUsePoolThreshold = 1024;
+
         public static byte[] FastAlloc(int minimum_size)
         {
-            if (minimum_size < 512)
+            if (minimum_size < MemoryUsePoolThreshold)
                 return new byte[minimum_size];
             else
                 return ArrayPool<byte>.Shared.Rent(minimum_size);
         }
 
-        public const int MemoryUsePoolThreshold = 1024;
         public static Memory<byte> FastAllocMemory(int size)
         {
             if (size < MemoryUsePoolThreshold)
@@ -1893,9 +1893,15 @@ namespace cs_struct_bench1
                 ArrayPool<byte>.Shared.Return(a);
         }
 
-        public static void FastFree(Memory<byte> memory) => memory.GetInternalArray().FastFree();
+        public static void FastFree(this Memory<byte> memory) => memory.GetInternalArray().FastFree();
 
         static readonly int _memory_object_offset = Marshal.OffsetOf<Memory<byte>>("_object").ToInt32();
+        static readonly int _memory_index_offset = Marshal.OffsetOf<Memory<byte>>("_index").ToInt32();
+        static readonly int _memory_length_offset = Marshal.OffsetOf<Memory<byte>>("_length").ToInt32();
+        static readonly int _readonly_memory_object_offset = Marshal.OffsetOf<ReadOnlyMemory<byte>>("_object").ToInt32();
+        static readonly int _readonly_memory_index_offset = Marshal.OffsetOf<ReadOnlyMemory<byte>>("_index").ToInt32();
+        static readonly int _readonly_memory_length_offset = Marshal.OffsetOf<ReadOnlyMemory<byte>>("_length").ToInt32();
+
         public static byte[] GetInternalArray(this Memory<byte> memory)
         {
             unsafe
@@ -1906,8 +1912,69 @@ namespace cs_struct_bench1
                 return o;
             }
         }
-
         public static int GetInternalArrayLength(this Memory<byte> memory) => GetInternalArray(memory).Length;
+
+        public static ArraySegment<byte> AsSegmentFast(this Memory<byte> memory)
+        {
+            unsafe
+            {
+                byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
+                return new ArraySegment<byte>(
+                    Unsafe.Read<byte[]>(ptr + _memory_object_offset),
+                    Unsafe.Read<int>(ptr + _memory_index_offset),
+                    Unsafe.Read<int>(ptr + _memory_length_offset)
+                    );
+            }
+        }
+
+        public static ArraySegment<byte> AsSegmentFast(this ReadOnlyMemory<byte> memory)
+        {
+            unsafe
+            {
+                byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
+                return new ArraySegment<byte>(
+                    Unsafe.Read<byte[]>(ptr + _readonly_memory_object_offset),
+                    Unsafe.Read<int>(ptr + _readonly_memory_index_offset),
+                    Unsafe.Read<int>(ptr + _readonly_memory_length_offset)
+                    );
+            }
+        }
+    }
+
+    public static class FastTick
+    {
+        public static long Now { get => GetTick64(); }
+
+        static volatile uint state = 0;
+
+        static uint GetTickCount()
+        {
+            uint ret = (uint)Environment.TickCount;
+            if (ret == 0) ret = 1;
+            return ret;
+        }
+
+        static long GetTick64()
+        {
+            uint value = GetTickCount();
+            uint value_16bit = (value >> 16) & 0xFFFF;
+
+            uint state_copy = state;
+
+            uint state_16bit = (state_copy >> 16) & 0xFFFF;
+            uint rotate_16bit = state_copy & 0xFFFF;
+
+            if (value_16bit <= 0x1000 && state_16bit >= 0xF000)
+            {
+                rotate_16bit++;
+            }
+
+            uint state_new = (value_16bit << 16) & 0xFFFF0000 | rotate_16bit & 0x0000FFFF;
+
+            state = state_new;
+
+            return (long)value + 0x100000000L * (long)rotate_16bit;
+        }
     }
 
 

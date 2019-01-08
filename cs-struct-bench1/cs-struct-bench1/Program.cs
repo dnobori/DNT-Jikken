@@ -340,7 +340,7 @@ namespace cs_struct_bench1
                 return;
             }
 
-            if (true)
+            if (false)
             {
                 async Task test1()
                 {
@@ -367,10 +367,105 @@ namespace cs_struct_bench1
                 return;
             }
 
+            //Tick.DebugBase = 0xffffffff - (uint)Tick.Tick64 - 500;
 
-            int pool_test_size = 1;
+            //while (true)
+            //{
+            //    Console.WriteLine(Tick.Tick64);
+
+            //    Thread.Sleep(100);
+            //}
+
+
+            int pool_test_size = 1024;
 
             var q = new MicroBenchmarkQueue()
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("tick", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        Limbo.SInt += FastTick.Now;
+                    }
+                }
+                ), true, 190108)
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("triple lock", 100000, (state, iterations) =>
+                {
+                    object lock_obj = new object();
+
+                    void func3()
+                    {
+                        lock (lock_obj)
+                        {
+                            Limbo.SInt++;
+                        }
+                    }
+
+                    void func2()
+                    {
+                        lock (lock_obj)
+                        {
+                            func3();
+                        }
+                    }
+
+                    void func1()
+                    {
+                        lock (lock_obj)
+                        {
+                            func2();
+                        }
+                    }
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        func1();
+                    }
+                }
+                ), true, 190108)
+
+                .Add(new MicroBenchmark<Memory<byte>>("single lock", 100000, (state, iterations) =>
+                {
+                    object lock_obj = new object();
+
+                    void func1()
+                    {
+                        lock (lock_obj)
+                        {
+                            Limbo.SInt++;
+                        }
+                    }
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        func1();
+                    }
+                }
+                ), true, 190108)
+
+                .Add(new MicroBenchmark<Memory<byte>>("TryGetArrayFast", 100000, (state, iterations) =>
+                {
+                    Memory<byte> m = new byte[10];
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        var seg = m.AsSegmentFast();
+                        Limbo.SInt += seg.Count;
+                    }
+                }
+                ), true, 190108)
+
+                .Add(new MicroBenchmark<Memory<byte>>("MemoryMarshal.TryGetArray", 100000, (state, iterations) =>
+                {
+                    Memory<byte> a = new byte[1];
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        MemoryMarshal.TryGetArray(a, out ArraySegment<byte> seg);
+                    }
+                }
+                ), true, 190108)
 
                 .Add(new MicroBenchmark<Memory<byte>>("get memory length", 100000, (state, iterations) =>
                 {
@@ -382,7 +477,7 @@ namespace cs_struct_bench1
                     {
                         unsafe
                         {
-                            byte* ptr = (byte *)Unsafe.AsPointer(ref m);
+                            byte* ptr = (byte*)Unsafe.AsPointer(ref m);
                             ptr += a.ToInt64();
                             byte[] o = Unsafe.Read<byte[]>(ptr);
                             Limbo.SInt += o.Length;

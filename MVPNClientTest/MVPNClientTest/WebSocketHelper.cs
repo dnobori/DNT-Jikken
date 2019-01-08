@@ -1956,6 +1956,44 @@ namespace SoftEther.WebSocket.Helper
     }
 
 
+    public static class FastTick
+    {
+        public static long Now { get => GetTick64(); }
+
+        static volatile uint state = 0;
+
+        static uint GetTickCount()
+        {
+            uint ret = (uint)Environment.TickCount;
+            if (ret == 0) ret = 1;
+            return ret;
+        }
+
+        static long GetTick64()
+        {
+            uint value = GetTickCount();
+            uint value_16bit = (value >> 16) & 0xFFFF;
+
+            uint state_copy = state;
+
+            uint state_16bit = (state_copy >> 16) & 0xFFFF;
+            uint rotate_16bit = state_copy & 0xFFFF;
+
+            if (value_16bit <= 0x1000 && state_16bit >= 0xF000)
+            {
+                rotate_16bit++;
+            }
+
+            uint state_new = (value_16bit << 16) & 0xFFFF0000 | rotate_16bit & 0x0000FFFF;
+
+            state = state_new;
+
+            return (long)value + 0x100000000L * (long)rotate_16bit;
+        }
+    }
+
+
+
     // ---------------
 
     public class RefInt
@@ -5017,7 +5055,7 @@ namespace SoftEther.WebSocket.Helper
     public class FastBufferDisconnectedException : Exception { }
     public class SocketDisconnectedException : Exception { }
 
-    public interface IFastBuffer<T>
+    public interface IFastBufferState
     {
         long PinHead { get; }
         long PinTail { get; }
@@ -5033,14 +5071,19 @@ namespace SoftEther.WebSocket.Helper
         AsyncAutoResetEvent EventWriteReady { get; }
         AsyncAutoResetEvent EventReadReady { get; }
 
+        void CompleteRead();
+        void CompleteWrite();
+    }
+
+    public interface IFastBuffer<T> : IFastBufferState
+    {
+
         void Clear();
         void Enqueue(T item);
         void Enqueue(T[] item_list);
         List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true);
         List<T> DequeueAll(out long total_read_size);
         long DequeueAllAndEnqueueToOther(IFastBuffer<T> other);
-        void CompleteRead();
-        void CompleteWrite();
     }
 
     public readonly struct FastBufferSegment<T>
@@ -5057,7 +5100,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastFifo<T>
+    public class Fifo<T>
     {
         public T[] PhysicalData { get; private set; }
         public int Size { get; private set; }
@@ -5070,7 +5113,7 @@ namespace SoftEther.WebSocket.Helper
 
         public int ReAllocMemSize { get; }
 
-        public FastFifo(int realloc_mem_size = FifoReAllocSize)
+        public Fifo(int realloc_mem_size = FifoReAllocSize)
         {
             ReAllocMemSize = realloc_mem_size;
             Size = Position = 0;
@@ -5980,7 +6023,7 @@ namespace SoftEther.WebSocket.Helper
 
     public class FastDatagramBuffer<T> : IFastBuffer<T>
     {
-        FastFifo<T> Fifo = new FastFifo<T>();
+        Fifo<T> Fifo = new Fifo<T>();
 
         public long PinHead { get; private set; } = 0;
         public long PinTail { get; private set; } = 0;
@@ -6151,7 +6194,7 @@ namespace SoftEther.WebSocket.Helper
                     long length = this.Length;
                     Debug.Assert(other.Fifo.Size == 0);
                     other.Fifo = this.Fifo;
-                    this.Fifo = new FastFifo<T>();
+                    this.Fifo = new Fifo<T>();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
                     return length;
@@ -6303,6 +6346,91 @@ namespace SoftEther.WebSocket.Helper
             this.StreamReader = stream_to_read;
             this.DatagramWriter = datagram_write;
             this.DatagramReader = datagram_read;
+        }
+    }
+
+    public class FastPipeNonblockStateHelper
+    {
+        byte[] LastState = new byte[0];
+
+        public FastPipeNonblockStateHelper() { }
+        public FastPipeNonblockStateHelper(IFastBufferState reader, IFastBufferState writer, CancellationToken cancel = default(CancellationToken)) : this()
+        {
+            AddWatchReader(reader);
+            AddWatchWriter(writer);
+            AddCancel(cancel);
+        }
+
+        List<IFastBufferState> StateWatchList = new List<IFastBufferState>();
+        List<AsyncAutoResetEvent> WaitEventList = new List<AsyncAutoResetEvent>();
+        List<CancellationToken> WaitCancelList = new List<CancellationToken>();
+
+        public void AddWatchReader(IFastBufferState obj)
+        {
+            if (StateWatchList.Contains(obj) == false)
+                StateWatchList.Add(obj);
+            AddEvent(obj.EventReadReady);
+        }
+
+        public void AddWatchWriter(IFastBufferState obj)
+        {
+            if (StateWatchList.Contains(obj) == false)
+                StateWatchList.Add(obj);
+            AddEvent(obj.EventWriteReady);
+        }
+
+        public void AddEvent(AsyncAutoResetEvent ev) => AddEvents(new AsyncAutoResetEvent[] { ev });
+        public void AddEvents(params AsyncAutoResetEvent[] events)
+        {
+            foreach (var ev in events)
+                if (WaitEventList.Contains(ev) == false)
+                    WaitEventList.Add(ev);
+        }
+
+        public void AddCancel(CancellationToken c) => AddCancels(new CancellationToken[] { c });
+        public void AddCancels(params CancellationToken[] cancels)
+        {
+            foreach (var cancel in cancels)
+                if (cancel.CanBeCanceled)
+                    if (WaitCancelList.Contains(cancel) == false)
+                        WaitCancelList.Add(cancel);
+        }
+
+        public byte[] SnapshotState(long salt = 0)
+        {
+            SpanBuffer<byte> ret = new SpanBuffer<byte>();
+            foreach (var s in StateWatchList)
+            {
+                ret.WriteUInt8((byte)(s.IsReadyToRead ? 1 : 0));
+                ret.WriteUInt8((byte)(s.IsReadyToWrite ? 1 : 0));
+                ret.WriteSInt64(s.Length);
+                ret.WriteSInt64(s.PinHead);
+                ret.WriteSInt64(s.PinTail);
+                ret.WriteSInt64(salt);
+            }
+            return ret.Span.ToArray();
+        }
+
+        public bool IsStateChanged(int salt = 0)
+        {
+            byte[] new_state = SnapshotState(salt);
+            if (LastState.SequenceEqual(new_state))
+                return false;
+            LastState = new_state;
+            return true;
+        }
+
+        public async Task<bool> WaitIfNothingChanged(int timeout = Timeout.Infinite, int salt = 0)
+        {
+            if (timeout <= 0) return false;
+            if (IsStateChanged(salt)) return false;
+
+            await WebSocketHelper.WaitObjectsAsync(
+                cancels: WaitCancelList.ToArray(),
+                auto_events: WaitEventList.ToArray(),
+                timeout: timeout);
+
+            return true;
         }
     }
 

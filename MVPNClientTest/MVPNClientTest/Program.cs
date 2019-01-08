@@ -278,7 +278,7 @@ namespace MVPNClientTest
         static void TestFifo()
         {
             Fifo a = new Fifo();
-            FastFifo<byte> b = new FastFifo<byte>();
+            Fifo<byte> b = new Fifo<byte>();
             int num = 0;
             int standard = 10;
             while (true)
@@ -639,9 +639,12 @@ namespace MVPNClientTest
                     w.Connect();
 
                     long next_send = 0;
-                    while (pipe.IsDisconnected == false)
+
+                    FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
+
+                    long now = FastTick.Now;
+                    while (true)
                     {
-                        long now = Time.Tick64;
                         if (next_send == 0 || next_send <= now)
                         {
                             next_send = now + 500;
@@ -673,11 +676,10 @@ namespace MVPNClientTest
                             writer.CompleteWrite();
                         }
 
-                        await WebSocketHelper.WaitObjectsAsync(
-                            cancels: new CancellationToken[] { pipe.CancelWatcher.CancelToken },
-                            auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady, writer.EventWriteReady },
-                            timeout: (int)(next_send - now));
-                        //Dbg.Where();
+                        if (await helper.WaitIfNothingChanged((int)(next_send - now)))
+                        {
+                            now = FastTick.Now;
+                        }
                     }
                     Dbg.Where("Disconnected.");
                 }
