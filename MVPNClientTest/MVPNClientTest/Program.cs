@@ -23,12 +23,12 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            pipe_socket_udp_proc().Wait();
-            return;
+            //pipe_socket_udp_proc().Wait();
+            //return;
 
             //TestStreamBuffer();
             //BenchStreamBuffer();
-            //TestPipes();
+            TestPipes();
 
             //SharedExceptionQueue q1 = new SharedExceptionQueue();
             //SharedExceptionQueue q2 = new SharedExceptionQueue();
@@ -74,8 +74,11 @@ namespace MVPNClientTest
 
                     var end = pipe.B;
                     var reader = end.StreamReader;
+                    var writer = end.StreamWriter;
                     Dbg.Where();
-                    while (reader.IsDisconnected == false)
+                    FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
+
+                    while (true)
                     {
                         while (true)
                         {
@@ -93,7 +96,7 @@ namespace MVPNClientTest
                             end.StreamWriter.CompleteWrite();
                         }
                         reader.CompleteRead();
-                        await reader.EventReadReady.WaitOneAsync(out _);
+                        await helper.WaitIfNothingChanged();
                     }
 
                     Dbg.Where(reader.ExceptionQueue.FirstException + " " + wrap.ExceptionQueue.Exceptions.Length);
@@ -255,7 +258,7 @@ namespace MVPNClientTest
 
                     for (int i = 0; i < iterations; i++)
                     {
-                        dg.Enqueue(tmp);
+                        dg.EnqueueAll(tmp);
                     }
 
                     if (call_deque)
@@ -326,15 +329,15 @@ namespace MVPNClientTest
             FastDatagramBuffer<int> new_test_datagram_buf()
             {
                 var buf = new FastDatagramBuffer<int>();
-                buf.Enqueue(new int[] { 1, 2, 3, 4 });
-                buf.Enqueue(new int[] { 5, 6, 7, 8, 9, 10 });
+                buf.EnqueueAll(new int[] { 1, 2, 3, 4 });
+                buf.EnqueueAll(new int[] { 5, 6, 7, 8, 9, 10 });
                 return buf;
             }
 
 
             {
                 var buf = new_test_datagram_buf();
-                buf.Enqueue(new int[] { 11, 12, 13 });
+                buf.EnqueueAll(new int[] { 11, 12, 13 });
 
                 var a1 = buf.Dequeue(2, out _);
                 var a2 = buf.Dequeue(2, out _);
@@ -345,7 +348,7 @@ namespace MVPNClientTest
                 var buf = new_test_datagram_buf();
                 var x1 = new int[88888];
                 Array.Fill(x1, 88);
-                buf.Enqueue(x1);
+                buf.EnqueueAll(x1);
 
                 var a1 = buf.Dequeue(2, out _);
                 buf.Enqueue(31);
@@ -366,7 +369,7 @@ namespace MVPNClientTest
                 var buf2 = new FastDatagramBuffer<int>();
                 var x1 = new int[88888];
                 Array.Fill(x1, 88);
-                buf.Enqueue(x1);
+                buf.EnqueueAll(x1);
 
                 var a1 = buf.Dequeue(2, out _);
                 buf.Enqueue(31);
@@ -384,11 +387,11 @@ namespace MVPNClientTest
 
             {
                 var buf1 = new_test_datagram_buf();
-                buf1.Enqueue(new int[] { 97, 98, 99 });
+                buf1.EnqueueAll(new int[] { 97, 98, 99 });
                 buf1.Dequeue(3, out _);
 
                 var buf2 = new_test_datagram_buf();
-                buf2.Enqueue(new int[] { 87, 88, 89 });
+                buf2.EnqueueAll(new int[] { 87, 88, 89 });
                 buf2.Dequeue(3, out _);
 
                 buf2.DequeueAllAndEnqueueToOther(buf1);
@@ -680,6 +683,8 @@ namespace MVPNClientTest
                         {
                             now = FastTick.Now;
                         }
+
+                        //Dbg.Where();
                     }
                     Dbg.Where("Disconnected.");
                 }

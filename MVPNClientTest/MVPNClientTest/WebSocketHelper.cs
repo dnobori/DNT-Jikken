@@ -3664,6 +3664,24 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
         }
+
+        public static int GetMinTimeout(params int[] values)
+        {
+            long min_value = long.MaxValue;
+            foreach (int v in values)
+            {
+                long vv;
+                if (v < 0)
+                    vv = long.MaxValue;
+                else
+                    vv = v;
+                min_value = Math.Min(min_value, vv);
+            }
+            if (min_value == long.MaxValue)
+                return Timeout.Infinite;
+            else
+                return (int)min_value;
+        }
     }
 
     public struct Once
@@ -5080,9 +5098,11 @@ namespace SoftEther.WebSocket.Helper
 
         void Clear();
         void Enqueue(T item);
-        void Enqueue(T[] item_list);
+        void EnqueueAll(T[] item_list);
+        void EnqueueAllWithLock(T[] item_list);
         List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true);
         List<T> DequeueAll(out long total_read_size);
+        List<T> DequeueAllWithLock(out long total_read_size);
         long DequeueAllAndEnqueueToOther(IFastBuffer<T> other);
     }
 
@@ -5290,15 +5310,21 @@ namespace SoftEther.WebSocket.Helper
         {
             if (IsEventsEnabled)
             {
-                bool current = IsReadyToWrite;
-                if (current != LastReadyToWrite)
+                bool set_flag = false;
+                lock (LockObj)
                 {
-                    LastReadyToWrite = current;
-                    if (current)
+                    bool current = IsReadyToWrite;
+                    if (current != LastReadyToWrite)
                     {
-                        EventWriteReady.Set();
+                        LastReadyToWrite = current;
+                        if (current)
+                        {
+                            set_flag = true;
+                        }
                     }
                 }
+                if (set_flag)
+                    EventWriteReady.Set();
             }
         }
 
@@ -5308,12 +5334,18 @@ namespace SoftEther.WebSocket.Helper
         {
             if (IsEventsEnabled)
             {
-                long current = PinTail;
-                if (LastTailPin != current)
+                bool set_flag = false;
+                lock (LockObj)
                 {
-                    LastTailPin = current;
-                    EventReadReady.Set();
+                    long current = PinTail;
+                    if (LastTailPin != current)
+                    {
+                        LastTailPin = current;
+                        set_flag = true;
+                    }
                 }
+                if (set_flag)
+                    EventReadReady.Set();
             }
             CheckDisconnected();
         }
@@ -5606,7 +5638,13 @@ namespace SoftEther.WebSocket.Helper
             InsertTail(item);
         }
 
-        public void Enqueue(Memory<T>[] item_list)
+        public void EnqueueAllWithLock(Memory<T>[] item_list)
+        {
+            lock (LockObj)
+                EnqueueAll(item_list);
+        }
+
+        public void EnqueueAll(Memory<T>[] item_list)
         {
             CheckDisconnected();
             checked
@@ -5661,6 +5699,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        public List<Memory<T>> DequeueAllWithLock(out long total_read_size)
+        {
+            lock (this.LockObj)
+                return DequeueAll(out total_read_size);
+        }
         public List<Memory<T>> DequeueAll(out long total_read_size) => Dequeue(long.MaxValue, out total_read_size);
         public List<Memory<T>> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
         {
@@ -6089,15 +6132,21 @@ namespace SoftEther.WebSocket.Helper
         {
             if (IsEventsEnabled)
             {
-                bool current = IsReadyToWrite;
-                if (current != LastReadyToWrite)
+                bool set_flag = false;
+
+                lock (LockObj)
                 {
-                    LastReadyToWrite = current;
-                    if (current)
+                    bool current = IsReadyToWrite;
+                    if (current != LastReadyToWrite)
                     {
-                        EventWriteReady.Set();
+                        LastReadyToWrite = current;
+                        if (current)
+                            set_flag = true;
                     }
                 }
+
+                if (set_flag)
+                    EventWriteReady.Set();
             }
         }
 
@@ -6107,12 +6156,20 @@ namespace SoftEther.WebSocket.Helper
         {
             if (IsEventsEnabled)
             {
-                long current = PinTail;
-                if (LastTailPin != current)
+                bool set_flag = false;
+
+                lock (LockObj)
                 {
-                    LastTailPin = current;
-                    EventReadReady.Set();
+                    long current = PinTail;
+                    if (LastTailPin != current)
+                    {
+                        LastTailPin = current;
+                        set_flag = true;
+                    }
                 }
+
+                if (set_flag)
+                    EventReadReady.Set();
             }
             CheckDisconnected();
         }
@@ -6136,7 +6193,13 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void Enqueue(T[] item_list)
+        public void EnqueueAllWithLock(T[] item_list)
+        {
+            lock (LockObj)
+                EnqueueAll(item_list);
+        }
+
+        public void EnqueueAll(T[] item_list)
         {
             CheckDisconnected();
             checked
@@ -6172,6 +6235,12 @@ namespace SoftEther.WebSocket.Helper
         }
 
         public List<T> DequeueAll(out long total_read_size) => Dequeue(long.MaxValue, out total_read_size);
+
+        public List<T> DequeueAllWithLock(out long total_read_size)
+        {
+            lock (LockObj)
+                return DequeueAll(out total_read_size);
+        }
 
         public long DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer<T>)other);
 
@@ -6232,6 +6301,7 @@ namespace SoftEther.WebSocket.Helper
     public class FastPipe : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
+        public const int MaxTimeout = 512;
 
         FastStreamFifo StreamAtoB;
         FastStreamFifo StreamBtoA;
@@ -6361,21 +6431,22 @@ namespace SoftEther.WebSocket.Helper
             AddCancel(cancel);
         }
 
-        List<IFastBufferState> StateWatchList = new List<IFastBufferState>();
+        List<IFastBufferState> ReaderList = new List<IFastBufferState>();
+        List<IFastBufferState> WriterList = new List<IFastBufferState>();
         List<AsyncAutoResetEvent> WaitEventList = new List<AsyncAutoResetEvent>();
         List<CancellationToken> WaitCancelList = new List<CancellationToken>();
 
         public void AddWatchReader(IFastBufferState obj)
         {
-            if (StateWatchList.Contains(obj) == false)
-                StateWatchList.Add(obj);
+            if (ReaderList.Contains(obj) == false)
+                ReaderList.Add(obj);
             AddEvent(obj.EventReadReady);
         }
 
         public void AddWatchWriter(IFastBufferState obj)
         {
-            if (StateWatchList.Contains(obj) == false)
-                StateWatchList.Add(obj);
+            if (WriterList.Contains(obj) == false)
+                WriterList.Add(obj);
             AddEvent(obj.EventWriteReady);
         }
 
@@ -6399,14 +6470,22 @@ namespace SoftEther.WebSocket.Helper
         public byte[] SnapshotState(long salt = 0)
         {
             SpanBuffer<byte> ret = new SpanBuffer<byte>();
-            foreach (var s in StateWatchList)
+            ret.WriteSInt64(salt);
+            foreach (var s in ReaderList)
             {
-                ret.WriteUInt8((byte)(s.IsReadyToRead ? 1 : 0));
-                ret.WriteUInt8((byte)(s.IsReadyToWrite ? 1 : 0));
-                ret.WriteSInt64(s.Length);
-                ret.WriteSInt64(s.PinHead);
-                ret.WriteSInt64(s.PinTail);
-                ret.WriteSInt64(salt);
+                lock (s.LockObj)
+                {
+                    ret.WriteUInt8((byte)(s.IsReadyToRead ? 1 : 0));
+                    ret.WriteSInt64(s.PinTail);
+                }
+            }
+            foreach (var s in WriterList)
+            {
+                lock (s.LockObj)
+                {
+                    ret.WriteUInt8((byte)(s.IsReadyToWrite ? 1 : 0));
+                    ret.WriteSInt64(s.PinHead);
+                }
             }
             return ret.Span.ToArray();
         }
@@ -6422,7 +6501,8 @@ namespace SoftEther.WebSocket.Helper
 
         public async Task<bool> WaitIfNothingChanged(int timeout = Timeout.Infinite, int salt = 0)
         {
-            if (timeout <= 0) return false;
+            timeout = WebSocketHelper.GetMinTimeout(timeout, FastPipe.MaxTimeout);
+            if (timeout == 0) return false;
             if (IsStateChanged(salt)) return false;
 
             await WebSocketHelper.WaitObjectsAsync(
@@ -6482,7 +6562,6 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 var reader = PipeEnd.StreamReader;
-                FastStreamFifo tmp = new FastStreamFifo(false, reader.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6490,20 +6569,9 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // pipe --> tmp
-                        while (tmp.IsReadyToWrite)
+                        while (reader.IsReadyToRead)
                         {
-                            lock (reader.LockObj)
-                            {
-                                if (reader.DequeueAllAndEnqueueToOther(tmp) == 0) break;
-                                state_changed = true;
-                            }
-                        }
-
-                        // tmp --> connected object
-                        while (tmp.IsReadyToRead)
-                        {
-                            await StreamWriteToObject(tmp, CancelWatcher.CancelToken);
+                            await StreamWriteToObject(reader, CancelWatcher.CancelToken);
                             state_changed = true;
                         }
                     }
@@ -6511,7 +6579,8 @@ namespace SoftEther.WebSocket.Helper
 
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken }
+                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                        timeout: FastPipe.MaxTimeout
                         );
                 }
             }
@@ -6531,7 +6600,6 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 var writer = PipeEnd.StreamWriter;
-                FastStreamFifo tmp = new FastStreamFifo(false, writer.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6539,38 +6607,23 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // connected_object -> tmp
-                        if (tmp.IsReadyToWrite)
+                        if (writer.IsReadyToWrite)
                         {
-                            long last_tail = tmp.PinTail;
-                            await StreamReadFromObject(tmp, CancelWatcher.CancelToken);
-                            if (tmp.PinTail != last_tail)
+                            long last_tail = writer.PinTail;
+                            await StreamReadFromObject(writer, CancelWatcher.CancelToken);
+                            if (writer.PinTail != last_tail)
                             {
                                 state_changed = true;
                             }
                         }
-
-                        bool p_changed = false;
-
-                        // tmp -> pipe
-                        while (writer.IsReadyToWrite && tmp.IsReadyToRead)
-                        {
-                            lock (writer.LockObj)
-                            {
-                                if (tmp.DequeueAllAndEnqueueToOther(writer) == 0) break;
-                                state_changed = true;
-                                p_changed = true;
-                            }
-                        }
-
-                        if (p_changed) writer.CompleteWrite();
 
                     }
                     while (state_changed);
 
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken }
+                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                        timeout: FastPipe.MaxTimeout
                         );
                 }
             }
@@ -6589,7 +6642,6 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 var reader = PipeEnd.DatagramReader;
-                FastDatagramFifo tmp = new FastDatagramFifo(false, reader.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6597,20 +6649,9 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // pipe --> tmp
-                        while (tmp.IsReadyToWrite)
+                        while (reader.IsReadyToRead)
                         {
-                            lock (reader.LockObj)
-                            {
-                                if (reader.DequeueAllAndEnqueueToOther(tmp) == 0) break;
-                                state_changed = true;
-                            }
-                        }
-
-                        // tmp --> connected object
-                        while (tmp.IsReadyToRead)
-                        {
-                            await DatagramWriteToObject(tmp, CancelWatcher.CancelToken);
+                            await DatagramWriteToObject(reader, CancelWatcher.CancelToken);
                             state_changed = true;
                         }
                     }
@@ -6618,7 +6659,8 @@ namespace SoftEther.WebSocket.Helper
 
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken }
+                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                        timeout: FastPipe.MaxTimeout
                         );
                 }
             }
@@ -6638,7 +6680,6 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 var writer = PipeEnd.DatagramWriter;
-                FastDatagramFifo tmp = new FastDatagramFifo(false, writer.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6646,38 +6687,23 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // connected_object -> tmp
-                        if (tmp.IsReadyToWrite)
+                        if (writer.IsReadyToWrite)
                         {
-                            long last_tail = tmp.PinTail;
-                            await DatagramReadFromObject(tmp, CancelWatcher.CancelToken);
-                            if (tmp.PinTail != last_tail)
+                            long last_tail = writer.PinTail;
+                            await DatagramReadFromObject(writer, CancelWatcher.CancelToken);
+                            if (writer.PinTail != last_tail)
                             {
                                 state_changed = true;
                             }
                         }
-
-                        bool p_changed = false;
-
-                        // tmp -> pipe
-                        while (writer.IsReadyToWrite && tmp.IsReadyToRead)
-                        {
-                            lock (writer.LockObj)
-                            {
-                                if (tmp.DequeueAllAndEnqueueToOther(writer) == 0) break;
-                                state_changed = true;
-                                p_changed = true;
-                            }
-                        }
-
-                        if (p_changed) writer.CompleteWrite();
 
                     }
                     while (state_changed);
 
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken }
+                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                        timeout: FastPipe.MaxTimeout
                         );
                 }
             }
@@ -6738,7 +6764,10 @@ namespace SoftEther.WebSocket.Helper
         {
             if (Type != SocketWrapperType.Stream) return;
 
-            List<Memory<byte>> send_array = fifo.DequeueAll(out long _);
+            List<Memory<byte>> send_array;
+
+            send_array = fifo.DequeueAllWithLock(out long _);
+
             List<ArraySegment<byte>> send_array2 = new List<ArraySegment<byte>>();
             foreach (Memory<byte> mem in send_array)
             {
@@ -6784,7 +6813,9 @@ namespace SoftEther.WebSocket.Helper
             }
 
             Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
-            fifo.Enqueue(recv_list);
+
+            fifo.EnqueueAllWithLock(recv_list);
+
             fifo.CompleteWrite();
         }
 
@@ -6792,7 +6823,9 @@ namespace SoftEther.WebSocket.Helper
         {
             if (Type != SocketWrapperType.Datagram) return;
 
-            List<Datagram> send_list = fifo.DequeueAll(out _);
+            List<Datagram> send_list;
+
+            send_list = fifo.DequeueAllWithLock(out _);
 
             await WebSocketHelper.DoAsyncWithTimeout<int>(
                 async c =>
@@ -6829,7 +6862,9 @@ namespace SoftEther.WebSocket.Helper
             }
 
             Datagram[] pkts = await DatagramBulkReceiver.Recv(cancel, this);
-            fifo.Enqueue(pkts);
+
+            fifo.EnqueueAllWithLock(pkts);
+
             fifo.CompleteWrite();
         }
 
