@@ -6174,16 +6174,26 @@ namespace SoftEther.WebSocket.Helper
         public T[] ItemsSlow { get => ToArray(); }
     }
 
-    public class FastG : FastStreamBuffer<byte> { }
+    public class FastStreamFifo : FastStreamBuffer<byte>
+    {
+        public FastStreamFifo(bool enable_events = false, long? threshold_length = null)
+            : base(enable_events, threshold_length) { }
+    }
 
-    public class FastPipe: IDisposable
+    public class FastDatagramFifo : FastDatagramBuffer<Datagram>
+    {
+        public FastDatagramFifo(bool enable_events = false, long? threshold_length = null)
+            : base(enable_events, threshold_length) { }
+    }
+
+    public class FastPipe : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
 
-        FastStreamBuffer<byte> StreamAtoB;
-        FastStreamBuffer<byte> StreamBtoA;
-        FastDatagramBuffer<Datagram> DatagramAtoB;
-        FastDatagramBuffer<Datagram> DatagramBtoA;
+        FastStreamFifo StreamAtoB;
+        FastStreamFifo StreamBtoA;
+        FastDatagramFifo DatagramAtoB;
+        FastDatagramFifo DatagramBtoA;
 
         public SharedExceptionQueue ExceptionQueue { get; } = new SharedExceptionQueue();
 
@@ -6199,11 +6209,11 @@ namespace SoftEther.WebSocket.Helper
         {
             CancelWatcher = new CancelWatcher(cancel);
 
-            StreamAtoB = new FastStreamBuffer<byte>(true, threshold_length_stream);
-            StreamBtoA = new FastStreamBuffer<byte>(true, threshold_length_stream);
+            StreamAtoB = new FastStreamFifo(true, threshold_length_stream);
+            StreamBtoA = new FastStreamFifo(true, threshold_length_stream);
 
-            DatagramAtoB = new FastDatagramBuffer<Datagram>(true, threshold_length_datagram);
-            DatagramBtoA = new FastDatagramBuffer<Datagram>(true, threshold_length_datagram);
+            DatagramAtoB = new FastDatagramFifo(true, threshold_length_datagram);
+            DatagramBtoA = new FastDatagramFifo(true, threshold_length_datagram);
 
             StreamAtoB.ExceptionQueue.Encounter(ExceptionQueue);
             StreamBtoA.ExceptionQueue.Encounter(ExceptionQueue);
@@ -6267,10 +6277,10 @@ namespace SoftEther.WebSocket.Helper
         FastPipe Pipe { get; }
 
         public CancelWatcher CancelWatcher { get; }
-        public FastStreamBuffer<byte> StreamWriter { get; }
-        public FastStreamBuffer<byte> StreamReader { get; }
-        public FastDatagramBuffer<Datagram> DatagramWriter { get; }
-        public FastDatagramBuffer<Datagram> DatagramReader { get; }
+        public FastStreamFifo StreamWriter { get; }
+        public FastStreamFifo StreamReader { get; }
+        public FastDatagramFifo DatagramWriter { get; }
+        public FastDatagramFifo DatagramReader { get; }
 
         public SharedExceptionQueue ExceptionQueue { get => Pipe.ExceptionQueue; }
 
@@ -6284,8 +6294,8 @@ namespace SoftEther.WebSocket.Helper
 
         internal FastPipeEnd(FastPipe pipe,
             CancelWatcher cancel_watcher,
-            FastStreamBuffer<byte> stream_to_write, FastStreamBuffer<byte> stream_to_read,
-            FastDatagramBuffer<Datagram> datagram_write, FastDatagramBuffer<Datagram> datagram_read)
+            FastStreamFifo stream_to_write, FastStreamFifo stream_to_read,
+            FastDatagramFifo datagram_write, FastDatagramFifo datagram_read)
         {
             this.Pipe = pipe;
             this.CancelWatcher = cancel_watcher;
@@ -6333,18 +6343,18 @@ namespace SoftEther.WebSocket.Helper
         List<Action> OnDisconnectedList = new List<Action>();
         public void AddOnDisconnected(Action proc) => OnDisconnectedList.Add(proc);
 
-        protected abstract Task StreamWriteToObject(FastStreamBuffer<byte> buffer, CancellationToken cancel);
-        protected abstract Task StreamReadFromObject(FastStreamBuffer<byte> buffer, CancellationToken cancel);
+        protected abstract Task StreamWriteToObject(FastStreamFifo fifo, CancellationToken cancel);
+        protected abstract Task StreamReadFromObject(FastStreamFifo fifo, CancellationToken cancel);
 
-        protected abstract Task DatagramWriteToObject(FastDatagramBuffer<Datagram> buffer, CancellationToken cancel);
-        protected abstract Task DatagramReadFromObject(FastDatagramBuffer<Datagram> buffer, CancellationToken cancel);
+        protected abstract Task DatagramWriteToObject(FastDatagramFifo fifo, CancellationToken cancel);
+        protected abstract Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel);
 
         async Task StreamReadFromPipeLoopAsync()
         {
             try
             {
                 var reader = PipeEnd.StreamReader;
-                FastStreamBuffer<byte> buffer = new FastStreamBuffer<byte>(false, reader.Threshold);
+                FastStreamFifo fifo = new FastStreamFifo(false, reader.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6352,20 +6362,20 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // pipe --> buffer
-                        while (buffer.IsReadyToWrite)
+                        // pipe --> fifo
+                        while (fifo.IsReadyToWrite)
                         {
                             lock (reader.LockObj)
                             {
-                                if (reader.DequeueAllAndEnqueueToOther(buffer) == 0) break;
+                                if (reader.DequeueAllAndEnqueueToOther(fifo) == 0) break;
                                 state_changed = true;
                             }
                         }
 
-                        // buffer --> connected object
-                        while (buffer.IsReadyToRead)
+                        // fifo --> connected object
+                        while (fifo.IsReadyToRead)
                         {
-                            await StreamWriteToObject(buffer, CancelWatcher.CancelToken);
+                            await StreamWriteToObject(fifo, CancelWatcher.CancelToken);
                             state_changed = true;
                         }
                     }
@@ -6393,7 +6403,7 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 var writer = PipeEnd.StreamWriter;
-                FastStreamBuffer<byte> buffer = new FastStreamBuffer<byte>(false, writer.Threshold);
+                FastStreamFifo fifo = new FastStreamFifo(false, writer.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6401,12 +6411,12 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // connected_object -> buffer
-                        if (buffer.IsReadyToWrite)
+                        // connected_object -> fifo
+                        if (fifo.IsReadyToWrite)
                         {
-                            long last_tail = buffer.PinTail;
-                            await StreamReadFromObject(buffer, CancelWatcher.CancelToken);
-                            if (buffer.PinTail != last_tail)
+                            long last_tail = fifo.PinTail;
+                            await StreamReadFromObject(fifo, CancelWatcher.CancelToken);
+                            if (fifo.PinTail != last_tail)
                             {
                                 state_changed = true;
                             }
@@ -6414,12 +6424,12 @@ namespace SoftEther.WebSocket.Helper
 
                         bool p_changed = false;
 
-                        // buffer -> pipe
-                        while (writer.IsReadyToWrite && buffer.IsReadyToRead)
+                        // fifo -> pipe
+                        while (writer.IsReadyToWrite && fifo.IsReadyToRead)
                         {
                             lock (writer.LockObj)
                             {
-                                if (buffer.DequeueAllAndEnqueueToOther(writer) == 0) break;
+                                if (fifo.DequeueAllAndEnqueueToOther(writer) == 0) break;
                                 state_changed = true;
                                 p_changed = true;
                             }
@@ -6451,7 +6461,7 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 var reader = PipeEnd.DatagramReader;
-                FastDatagramBuffer<Datagram> buffer = new FastDatagramBuffer<Datagram>(false, reader.Threshold);
+                FastDatagramFifo fifo = new FastDatagramFifo(false, reader.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6459,20 +6469,20 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // pipe --> buffer
-                        while (buffer.IsReadyToWrite)
+                        // pipe --> fifo
+                        while (fifo.IsReadyToWrite)
                         {
                             lock (reader.LockObj)
                             {
-                                if (reader.DequeueAllAndEnqueueToOther(buffer) == 0) break;
+                                if (reader.DequeueAllAndEnqueueToOther(fifo) == 0) break;
                                 state_changed = true;
                             }
                         }
 
-                        // buffer --> connected object
-                        while (buffer.IsReadyToRead)
+                        // fifo --> connected object
+                        while (fifo.IsReadyToRead)
                         {
-                            await DatagramWriteToObject(buffer, CancelWatcher.CancelToken);
+                            await DatagramWriteToObject(fifo, CancelWatcher.CancelToken);
                             state_changed = true;
                         }
                     }
@@ -6500,7 +6510,7 @@ namespace SoftEther.WebSocket.Helper
             try
             {
                 var writer = PipeEnd.DatagramWriter;
-                FastDatagramBuffer<Datagram> buffer = new FastDatagramBuffer<Datagram>(false, writer.Threshold);
+                FastDatagramFifo fifo = new FastDatagramFifo(false, writer.Threshold);
                 while (true)
                 {
                     bool state_changed;
@@ -6508,12 +6518,12 @@ namespace SoftEther.WebSocket.Helper
                     {
                         state_changed = false;
 
-                        // connected_object -> buffer
-                        if (buffer.IsReadyToWrite)
+                        // connected_object -> fifo
+                        if (fifo.IsReadyToWrite)
                         {
-                            long last_tail = buffer.PinTail;
-                            await DatagramReadFromObject(buffer, CancelWatcher.CancelToken);
-                            if (buffer.PinTail != last_tail)
+                            long last_tail = fifo.PinTail;
+                            await DatagramReadFromObject(fifo, CancelWatcher.CancelToken);
+                            if (fifo.PinTail != last_tail)
                             {
                                 state_changed = true;
                             }
@@ -6521,12 +6531,12 @@ namespace SoftEther.WebSocket.Helper
 
                         bool p_changed = false;
 
-                        // buffer -> pipe
-                        while (writer.IsReadyToWrite && buffer.IsReadyToRead)
+                        // fifo -> pipe
+                        while (writer.IsReadyToWrite && fifo.IsReadyToRead)
                         {
                             lock (writer.LockObj)
                             {
-                                if (buffer.DequeueAllAndEnqueueToOther(writer) == 0) break;
+                                if (fifo.DequeueAllAndEnqueueToOther(writer) == 0) break;
                                 state_changed = true;
                                 p_changed = true;
                             }
@@ -6597,11 +6607,11 @@ namespace SoftEther.WebSocket.Helper
             this.AddOnDisconnected(() => Socket.DisposeSafe());
         }
 
-        protected override async Task StreamWriteToObject(FastStreamBuffer<byte> buffer, CancellationToken cancel)
+        protected override async Task StreamWriteToObject(FastStreamFifo fifo, CancellationToken cancel)
         {
             if (Type != SocketWrapperType.Stream) return;
 
-            List<Memory<byte>> send_array = buffer.DequeueAll(out long _);
+            List<Memory<byte>> send_array = fifo.DequeueAll(out long _);
             List<ArraySegment<byte>> send_array2 = new List<ArraySegment<byte>>();
             foreach (Memory<byte> mem in send_array)
             {
@@ -6619,7 +6629,7 @@ namespace SoftEther.WebSocket.Helper
             foreach (ArraySegment<byte> a in send_array2)
                 a.Array.FastFree();
 
-            buffer.CompleteRead();
+            fifo.CompleteRead();
         }
 
         AsyncBulkReceiver<Memory<byte>, FastPipeEndSocketWrapper> StreamBulkReceiver = new AsyncBulkReceiver<Memory<byte>, FastPipeEndSocketWrapper>(async me =>
@@ -6638,7 +6648,7 @@ namespace SoftEther.WebSocket.Helper
             return tmp;
         });
 
-        protected override async Task StreamReadFromObject(FastStreamBuffer<byte> buffer, CancellationToken cancel)
+        protected override async Task StreamReadFromObject(FastStreamFifo fifo, CancellationToken cancel)
         {
             if (Type != SocketWrapperType.Stream)
             {
@@ -6647,15 +6657,15 @@ namespace SoftEther.WebSocket.Helper
             }
 
             Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
-            buffer.Enqueue(recv_list);
-            buffer.CompleteWrite();
+            fifo.Enqueue(recv_list);
+            fifo.CompleteWrite();
         }
 
-        protected override async Task DatagramWriteToObject(FastDatagramBuffer<Datagram> buffer, CancellationToken cancel)
+        protected override async Task DatagramWriteToObject(FastDatagramFifo fifo, CancellationToken cancel)
         {
             if (Type != SocketWrapperType.Datagram) return;
 
-            List<Datagram> send_list = buffer.DequeueAll(out _);
+            List<Datagram> send_list = fifo.DequeueAll(out _);
 
             await WebSocketHelper.DoAsyncWithTimeout<int>(
                 async c =>
@@ -6670,7 +6680,7 @@ namespace SoftEther.WebSocket.Helper
                 },
                 cancel: cancel);
 
-            buffer.CompleteRead();
+            fifo.CompleteRead();
         }
 
         AsyncBulkReceiver<Datagram, FastPipeEndSocketWrapper> DatagramBulkReceiver = new AsyncBulkReceiver<Datagram, FastPipeEndSocketWrapper>(async me =>
@@ -6683,7 +6693,7 @@ namespace SoftEther.WebSocket.Helper
             return pkt;
         });
 
-        protected override async Task DatagramReadFromObject(FastDatagramBuffer<Datagram> buffer, CancellationToken cancel)
+        protected override async Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
         {
             if (Type != SocketWrapperType.Datagram)
             {
@@ -6692,8 +6702,8 @@ namespace SoftEther.WebSocket.Helper
             }
 
             Datagram[] pkts = await DatagramBulkReceiver.Recv(cancel, this);
-            buffer.Enqueue(pkts);
-            buffer.CompleteWrite();
+            fifo.Enqueue(pkts);
+            fifo.CompleteWrite();
         }
 
         Once dispose_flag;
