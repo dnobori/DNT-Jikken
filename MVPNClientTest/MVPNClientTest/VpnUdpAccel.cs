@@ -51,7 +51,7 @@ namespace SoftEther.VpnClient
         byte[] TmpBuf = new byte[TmpBufSize];
         long LastRecvYourTick;
         long LastRecvMyTick;
-        public Queue<UdpPacket> RecvBlockQueue { get; } = new Queue<UdpPacket>();
+        public Queue<Datagram> RecvBlockQueue { get; } = new Queue<Datagram>();
         public bool PlainTextMode { get; set; }
         long LastSetSrcIpAndPortTick;
         long LastRecvTick;
@@ -226,14 +226,14 @@ namespace SoftEther.VpnClient
 
             while (true)
             {
-                UdpPacket ret = Nb.RecvFromNonBlock();
+                Datagram ret = Nb.RecvFromNonBlock();
 
                 if (ret == null)
                 {
                     break;
                 }
 
-                if (nat_t_ip != null && nat_t_ip.Equals(ret.EndPoint.Address) && ret.EndPoint.Port == UdpNatTPort)
+                if (nat_t_ip != null && nat_t_ip.Equals(ret.IPEndPoint.Address) && ret.IPEndPoint.Port == UdpNatTPort)
                 {
                     var ep = ParseIPAndPortStr(ret.Data);
                     if (ep != null && ep.Port >= 1 && ep.Port <= 65535)
@@ -250,7 +250,7 @@ namespace SoftEther.VpnClient
                 {
                     try
                     {
-                        UdpPacket b = UdpAccelProcessRecvPacket(ret.Data, ret.EndPoint);
+                        Datagram b = UdpAccelProcessRecvPacket(ret.Data, ret.IPEndPoint);
                         if (b.Data.Length >= 1)
                         {
                             RecvBlockQueue.Enqueue(b);
@@ -295,7 +295,7 @@ namespace SoftEther.VpnClient
                         {
                             if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                             {
-                                Nb.SendUdpQueue.Enqueue(new UdpPacket(new byte[] { c }, new IPEndPoint(nat_t_ip, RudpConsts.NatTPort)));
+                                Nb.SendUdpQueue.Enqueue(new Datagram(new byte[] { c }, new IPEndPoint(nat_t_ip, RudpConsts.NatTPort)));
                                 Nb.EventSendNow.SetLazy();
                             }
                         }
@@ -304,9 +304,9 @@ namespace SoftEther.VpnClient
             }
         }
 
-        UdpPacket UdpAccelProcessRecvPacket(MemoryBuffer<byte> buf, IPEndPoint src)
+        Datagram UdpAccelProcessRecvPacket(MemoryBuffer<byte> buf, IPEndPoint src)
         {
-            UdpPacket ret;
+            Datagram ret;
 
             if (PlainTextMode == false)
             {
@@ -344,7 +344,7 @@ namespace SoftEther.VpnClient
             LastRecvMyTick = Math.Max(LastRecvMyTick, your_tick);
             LastRecvYourTick = Math.Max(LastRecvYourTick, my_tick);
 
-            ret = new UdpPacket(inner_data.ToArray(), null, flag);
+            ret = new Datagram(inner_data.ToArray(), null, flag);
 
             if (LastSetSrcIpAndPortTick < LastRecvYourTick)
             {
@@ -461,7 +461,7 @@ namespace SoftEther.VpnClient
             {
                 if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                 {
-                    Nb.SendUdpQueue.Enqueue(new UdpPacket(send_data.ToArray(), YourEndPoint));
+                    Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), YourEndPoint));
                     Nb.EventSendNow.SetLazy();
                 }
             }
@@ -476,7 +476,7 @@ namespace SoftEther.VpnClient
                         {
                             if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                             {
-                                Nb.SendUdpQueue.Enqueue(new UdpPacket(send_data.ToArray(), new IPEndPoint(YourEndPoint.Address, YourPortByNatTServer)));
+                                Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), new IPEndPoint(YourEndPoint.Address, YourPortByNatTServer)));
                                 Nb.EventSendNow.SetLazy();
                             }
                         }
@@ -488,10 +488,10 @@ namespace SoftEther.VpnClient
                         {
                             if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                             {
-                                Nb.SendUdpQueue.Enqueue(new UdpPacket(send_data.ToArray(), YourEndPoint2));
+                                Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), YourEndPoint2));
                                 if (YourPortByNatTServer != 0 && YourEndPoint2.Port != YourPortByNatTServer)
                                 {
-                                    Nb.SendUdpQueue.Enqueue(new UdpPacket(send_data.ToArray(), new IPEndPoint(YourEndPoint2.Address, YourPortByNatTServer)));
+                                    Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), new IPEndPoint(YourEndPoint2.Address, YourPortByNatTServer)));
                                     Nb.EventSendNow.SetLazy();
                                 }
                             }

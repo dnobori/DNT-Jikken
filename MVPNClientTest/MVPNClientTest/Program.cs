@@ -23,9 +23,12 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
+            pipe_socket_udp_proc().Wait();
+            return;
+
             //TestStreamBuffer();
             //BenchStreamBuffer();
-            TestPipes();
+            //TestPipes();
 
             //SharedExceptionQueue q1 = new SharedExceptionQueue();
             //SharedExceptionQueue q2 = new SharedExceptionQueue();
@@ -63,7 +66,7 @@ namespace MVPNClientTest
 
         static async Task TestPipeTcpProc(Socket socket)
         {
-            using (FastPipe<byte, byte> pipe = new FastPipe<byte, byte>())
+            using (FastPipe pipe = new FastPipe())
             {
                 using (var wrap = new FastPipeEndSocketWrapper(pipe.A, socket))
                 {
@@ -84,6 +87,10 @@ namespace MVPNClientTest
                             }
                             //Dbg.Where();
                             Console.Write((char)data.Span[0]);
+                            end.StreamWriter.Enqueue(new byte[] { (byte)'[' });
+                            end.StreamWriter.Enqueue(data);
+                            end.StreamWriter.Enqueue(new byte[] { (byte)']' });
+                            end.StreamWriter.CompleteWrite();
                         }
                         reader.CompleteRead();
                         await reader.EventReadReady.WaitOneAsync(out _);
@@ -585,7 +592,7 @@ namespace MVPNClientTest
 
                         lock (b.SendUdpQueue)
                         {
-                            b.SendUdpQueue.Enqueue(new UdpPacket(new byte[] { (byte)'B' }, new IPEndPoint(server_ip, 5004)));
+                            b.SendUdpQueue.Enqueue(new Datagram(new byte[] { (byte)'B' }, new IPEndPoint(server_ip, 5004)));
                         }
 
                         b.EventSendNow.Set();
@@ -595,10 +602,10 @@ namespace MVPNClientTest
                     {
                         while (b.RecvUdpQueue.Count >= 1)
                         {
-                            UdpPacket pkt = b.RecvUdpQueue.Dequeue();
-                            Dbg.Where($"recv: {pkt.Data.Length} {pkt.EndPoint}");
+                            Datagram pkt = b.RecvUdpQueue.Dequeue();
+                            Dbg.Where($"recv: {pkt.Data.Length} {pkt.IPEndPoint}");
 
-                            string tmp = Encoding.ASCII.GetString(pkt.Data);
+                            string tmp = Encoding.ASCII.GetString(pkt.Data.Span);
                             var ep = UdpAccel.ParseIPAndPortStr(tmp);
                             Console.WriteLine(ep);
                         }
@@ -612,6 +619,70 @@ namespace MVPNClientTest
                 }
                 Dbg.Where("Disconnected.");
             }
+        }
+
+        static async Task pipe_socket_udp_proc()
+        {
+            UdpClient uc = new UdpClient(AddressFamily.InterNetwork);
+            uc.Client.Bind(new IPEndPoint(IPAddress.Any, 0));
+            Console.WriteLine($"port: {((IPEndPoint)uc.Client.LocalEndPoint).Port}");
+
+            IPAddress server_ip = IPAddress.Parse("130.158.6.60");
+
+            using (FastPipe pipe = new FastPipe())
+            {
+                var reader = pipe.A.DatagramReader;
+                var writer = pipe.A.DatagramWriter;
+
+                using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.B, uc.Client))
+                {
+                    w.Connect();
+
+                    long next_send = 0;
+                    while (pipe.IsDisconnected == false)
+                    {
+                        long now = Time.Tick64;
+                        if (next_send == 0 || next_send <= now)
+                        {
+                            next_send = now + 500;
+
+                            lock (writer.LockObj)
+                            {
+                                writer.Enqueue(new Datagram(new byte[] { (byte)'B' }, new IPEndPoint(server_ip, 5004)));
+                            }
+
+                            writer.CompleteWrite();
+                        }
+
+                        List<Datagram> pkts;
+
+                        lock (reader.LockObj)
+                        {
+                            pkts = reader.DequeueAll(out _);
+                        }
+                        reader.CompleteRead();
+
+                        foreach (var pkt in pkts)
+                        {
+                            //Dbg.Where($"recv: {pkt.Data.Length} {pkt.IPEndPoint}");
+
+                            string tmp = Encoding.ASCII.GetString(pkt.Data.Span);
+                            var ep = UdpAccel.ParseIPAndPortStr(tmp);
+                            //Console.WriteLine(ep);
+                            writer.Enqueue(pkt);
+                            writer.CompleteWrite();
+                        }
+
+                        await WebSocketHelper.WaitObjectsAsync(
+                            cancels: new CancellationToken[] { pipe.CancelWatcher.CancelToken },
+                            auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady, writer.EventWriteReady },
+                            timeout: (int)(next_send - now));
+                        //Dbg.Where();
+                    }
+                    Dbg.Where("Disconnected.");
+                }
+            }
+
         }
 
         static async Task nb_socket_tcp_proc(Socket s)
@@ -754,7 +825,7 @@ namespace MVPNClientTest
                         int total_size = 0;
                         for (int i = 0; ; i++)
                         {
-                            byte[][] ret = await reader.Read(CancellationToken.None, max_count: 100000);
+                            byte[][] ret = await reader.Recv(CancellationToken.None, max_count: 100000);
                             total_size += ret.Length;
                             WriteLine("recv_bulk: " + i + " " + ret.Length + "    total: " + total_size);
                         }
@@ -824,7 +895,7 @@ namespace MVPNClientTest
                             int total_size = 0;
                             for (int i = 0; ; i++)
                             {
-                                byte[][] ret = await reader.Read(CancellationToken.None, max_count: 100000);
+                                byte[][] ret = await reader.Recv(CancellationToken.None, max_count: 100000);
                                 total_size += ret.Length;
                                 WriteLine("recv_bulk: " + i + " " + ret.Length);
                             }

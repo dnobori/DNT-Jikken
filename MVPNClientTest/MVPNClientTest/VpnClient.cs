@@ -464,7 +464,7 @@ namespace SoftEther.VpnClient
                         UdpAccel.Poll();
                         UdpAccel.SendFinish();
 
-                        while (UdpAccel.RecvBlockQueue.TryDequeue(out UdpPacket pkt))
+                        while (UdpAccel.RecvBlockQueue.TryDequeue(out Datagram pkt))
                         {
                             this.info.LastCommunicationDateTime = DateTimeOffset.Now;
 
@@ -593,7 +593,7 @@ namespace SoftEther.VpnClient
                     buf.WriteInt(VpnProtocolConsts.PacketMagicNumber);
                     buf.WriteByte((byte)p.Type);
                     buf.WriteShort((ushort)p.Data.Length);
-                    buf.Write(p.Data);
+                    buf.Write(p.Data.Span.ToArray());
 
                     lock (SockSendFifo)
                     {
@@ -698,9 +698,9 @@ namespace SoftEther.VpnClient
     public class VpnPacket
     {
         public readonly VpnProtocolPacketType Type;
-        public readonly byte[] Data;
+        public readonly Memory<byte> Data;
 
-        public VpnPacket(VpnProtocolPacketType type, byte[] data)
+        public VpnPacket(VpnProtocolPacketType type, Memory<byte> data)
         {
             this.Type = type;
             this.Data = data;
