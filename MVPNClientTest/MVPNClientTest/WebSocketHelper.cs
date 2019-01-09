@@ -4938,6 +4938,83 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class LeakChecker
+    {
+        static public LeakChecker Shared { get; } = new LeakChecker();
+
+        Dictionary<long, string> List = new Dictionary<long, string>();
+        long CurrentId = 0;
+
+        public Holder Enter([CallerMemberName] string caller = null) => new Holder(this, caller);
+
+        public static Holder EnterShared([CallerMemberName] string caller = null) => new Holder(Shared, caller);
+
+        public int Count
+        {
+            get
+            {
+                lock (List)
+                    return List.Count;
+            }
+        }
+
+        public void Print()
+        {
+            lock (List)
+            {
+                if (Count == 0)
+                {
+                    Console.WriteLine("@@@ No leaks @@@");
+                }
+                else
+                {
+                    Console.WriteLine("*** Leaked !!! ***");
+                    Console.WriteLine("-----");
+                    Console.Write(this.ToString());
+                    Console.WriteLine("-----");
+                }
+            }
+        }
+
+        public override string ToString()
+        {
+            StringWriter w = new StringWriter();
+            lock (List)
+            {
+                foreach (var v in List.OrderBy(x => x.Key))
+                    w.WriteLine($"{v.Key}: {v.Value}");
+            }
+            return w.ToString();
+        }
+
+        public class Holder : IDisposable
+        {
+            LeakChecker Checker;
+            long Id;
+
+            internal Holder(LeakChecker checker, string name)
+            {
+                if (string.IsNullOrEmpty(name)) name = "<untitled>";
+                Checker = checker;
+                Id = Interlocked.Increment(ref checker.CurrentId);
+                lock (checker.List)
+                    checker.List.Add(Id, name);
+            }
+
+            Once dispose_flag;
+            public void Dispose()
+            {
+                if (dispose_flag.IsFirstCall())
+                {
+                    lock (Checker.List)
+                    {
+                        Debug.Assert(Checker.List.ContainsKey(Id));
+                        Checker.List.Remove(Id);
+                    }
+                }
+            }
+        }
+    }
 
     public class FastLinkedListNode<T>
     {
@@ -5169,6 +5246,146 @@ namespace SoftEther.WebSocket.Helper
                     node = node.Next;
                 }
                 return ret.ToArray();
+            }
+        }
+    }
+
+    public enum IPVersion
+    {
+        IPv4 = 0,
+        IPv6 = 1,
+    }
+
+    public enum ListenStatus
+    {
+        Trying,
+        Listening,
+        Stopped,
+    }
+
+    public class TcpListenManager : IDisposable
+    {
+        public class Listener
+        {
+            public IPVersion IPVersion { get; }
+            public IPAddress IPAddress { get; }
+            public int Port { get; }
+
+            public ListenStatus Status { get; internal set; }
+            public Exception LastError { get; internal set; }
+
+            internal Task InternalTask { get; }
+
+            internal CancellationTokenSource InternalSelfCancelSource { get; }
+            internal CancellationToken InternalSelfCancelToken { get => InternalSelfCancelSource.Token; }
+
+            public TcpListenManager Manager { get; }
+
+            internal Listener(TcpListenManager manager, IPVersion ver, IPAddress addr, int port)
+            {
+                Manager = manager;
+                IPVersion = ver;
+                IPAddress = addr;
+                Port = port;
+                LastError = null;
+                Status = ListenStatus.Trying;
+                InternalSelfCancelSource = new CancellationTokenSource();
+
+                InternalTask = ListenLoop();
+            }
+
+            async Task ListenLoop()
+            {
+                Status = ListenStatus.Trying;
+
+                try
+                {
+                    while (true)
+                    {
+                        Status = ListenStatus.Trying;
+                        InternalSelfCancelToken.ThrowIfCancellationRequested();
+
+                        try
+                        {
+                            TcpListener listener = new TcpListener(IPAddress, Port);
+                            listener.Start();
+
+                            var reg = InternalSelfCancelToken.Register(() =>
+                            {
+                                try { listener.Stop(); } catch { };
+                            });
+
+                            try
+                            {
+                                Status = ListenStatus.Listening;
+
+                                var socket = await listener.AcceptSocketAsync();
+
+                                Manager.SocketAccepted(socket);
+                            }
+                            finally
+                            {
+                                reg.DisposeSafe();
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LastError = ex;
+                        }
+                    }
+                }
+                finally
+                {
+                    Status = ListenStatus.Stopped;
+                }
+            }
+        }
+
+        readonly object LockObj = new object();
+
+        readonly List<Listener> List = new List<Listener>();
+
+        readonly CancellationTokenSource CancelSource = new CancellationTokenSource();
+
+        public Listener Add(int port, IPAddress addr = null, IPVersion? ip_ver = null)
+        {
+            if (addr == null)
+                addr = ((ip_ver ?? IPVersion.IPv4) == IPVersion.IPv4) ? IPAddress.Any : IPAddress.IPv6Any;
+            if (ip_ver == null)
+            {
+                if (addr.AddressFamily == AddressFamily.InterNetwork)
+                    ip_ver = IPVersion.IPv4;
+                else if (addr.AddressFamily == AddressFamily.InterNetworkV6)
+                    ip_ver = IPVersion.IPv6;
+                else
+                    throw new ArgumentException("Unsupported AddressFamily.");
+            }
+            if (port < 1 || port > 65535) throw new ArgumentOutOfRangeException("Port number is out of range.");
+
+            lock (LockObj)
+            {
+                var s = Search(port, addr, (IPVersion)ip_ver);
+                if (s != null)
+                    return s;
+                s = new Listener(this, (IPVersion)ip_ver, addr, port);
+                List.Add(s);
+                return s;
+            }
+        }
+
+        Listener Search(int port, IPAddress addr, IPVersion ip_ver)
+            => List.Where(x => x.IPAddress == addr).Where(x => x.IPVersion == ip_ver).Where(x => x.Port == port).SingleOrDefault();
+
+        private void SocketAccepted(Socket s)
+        {
+            s.DisposeSafe();
+        }
+
+        Once dispose_flag;
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
             }
         }
     }
@@ -6404,7 +6621,7 @@ namespace SoftEther.WebSocket.Helper
     public class FastPipe : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
-        public const int MaxTimeout = 512;
+        public const int MaxTimeout = 512000;
 
         FastStreamFifo StreamAtoB;
         FastStreamFifo StreamBtoA;
@@ -6629,6 +6846,7 @@ namespace SoftEther.WebSocket.Helper
         public CancelWatcher CancelWatcher { get; }
         public FastPipeEnd PipeEnd { get; }
         public abstract PipeSupportedDataTypes SupportedDataTypes { get; }
+        public Task LoopCompletedTask { get; private set; } = Task.CompletedTask;
 
         public SharedExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
 
@@ -6639,33 +6857,38 @@ namespace SoftEther.WebSocket.Helper
         }
 
         Once connect_flag;
-        public void Connect()
+        public Task StartLoopAsync()
         {
             if (connect_flag.IsFirstCall())
             {
-                ConnectAndWaitAsync().LaissezFaire();
+                LoopCompletedTask = ConnectAndWaitAsync();
             }
+
+            return LoopCompletedTask;
         }
 
         async Task ConnectAndWaitAsync()
         {
             try
             {
-                List<Task> tasks = new List<Task>();
-
-                if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream))
+                using (LeakChecker.EnterShared())
                 {
-                    tasks.Add(StreamReadFromPipeLoopAsync());
-                    tasks.Add(StreamWriteToPipeLoopAsync());
-                }
+                    List<Task> tasks = new List<Task>();
 
-                if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Datagram))
-                {
-                    tasks.Add(DatagramReadFromPipeLoopAsync());
-                    tasks.Add(DatagramWriteToPipeLoopAsync());
-                }
+                    if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream))
+                    {
+                        tasks.Add(StreamReadFromPipeLoopAsync());
+                        tasks.Add(StreamWriteToPipeLoopAsync());
+                    }
 
-                await Task.WhenAll(tasks.ToArray());
+                    if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Datagram))
+                    {
+                        tasks.Add(DatagramReadFromPipeLoopAsync());
+                        tasks.Add(DatagramWriteToPipeLoopAsync());
+                    }
+
+                    await Task.WhenAll(tasks.ToArray());
+                }
             }
             finally
             {

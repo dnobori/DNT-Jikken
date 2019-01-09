@@ -64,39 +64,45 @@ namespace MVPNClientTest
             }
         }
 
-        static async Task TestPipeTcpProc(Socket socket)
+        static async Task TestPipeTcpProc(Socket socket, CancellationToken cancel)
         {
-            using (FastPipe pipe = new FastPipe())
+            using (FastPipe pipe = new FastPipe(cancel))
             {
                 using (var wrap = new FastPipeEndSocketWrapper(pipe.A, socket))
                 {
-                    wrap.Connect();
-
-                    var end = pipe.B;
-                    var reader = end.StreamReader;
-                    var writer = end.StreamWriter;
-                    Dbg.Where();
-                    FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
-
-                    while (true)
+                    Task loop = wrap.StartLoopAsync();
+                    try
                     {
+                        var end = pipe.B;
+                        var reader = end.StreamReader;
+                        var writer = end.StreamWriter;
+                        Dbg.Where();
+                        FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
+
                         while (true)
                         {
-                            Memory<byte> data = reader.DequeueContiguousSlow(1);
-                            if (data.Length == 0)
+                            while (true)
                             {
+                                Memory<byte> data = reader.DequeueContiguousSlow(1);
+                                if (data.Length == 0)
+                                {
+                                    //Dbg.Where();
+                                    break;
+                                }
                                 //Dbg.Where();
-                                break;
+                                Console.Write((char)data.Span[0]);
+                                end.StreamWriter.Enqueue(new byte[] { (byte)'[' });
+                                end.StreamWriter.Enqueue(data);
+                                end.StreamWriter.Enqueue(new byte[] { (byte)']' });
+                                end.StreamWriter.CompleteWrite();
                             }
-                            //Dbg.Where();
-                            Console.Write((char)data.Span[0]);
-                            end.StreamWriter.Enqueue(new byte[] { (byte)'[' });
-                            end.StreamWriter.Enqueue(data);
-                            end.StreamWriter.Enqueue(new byte[] { (byte)']' });
-                            end.StreamWriter.CompleteWrite();
+                            reader.CompleteRead();
+                            await helper.WaitIfNothingChanged();
                         }
-                        reader.CompleteRead();
-                        await helper.WaitIfNothingChanged();
+                    }
+                    finally
+                    {
+                        await loop;
                     }
                 }
             }
@@ -106,10 +112,23 @@ namespace MVPNClientTest
         {
             TcpListener listener = new TcpListener(IPAddress.Any, 1);
             listener.Start();
+
+            CancellationTokenSource cts = new CancellationTokenSource();
+
+            new Thread(() =>
+            {
+                Console.ReadLine();
+                listener.Stop();
+                cts.Cancel();
+                WriteLine("Cancelled.");
+
+                LeakChecker.Shared.Print();
+            }).Start();
+
             while (true)
             {
                 Socket socket = listener.AcceptSocket();
-                TestPipeTcpProc(socket).LaissezFaire();
+                TestPipeTcpProc(socket, cts.Token).LaissezFaire();
             }
         }
 
@@ -637,54 +656,60 @@ namespace MVPNClientTest
 
                 using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.B, uc.Client))
                 {
-                    w.Connect();
-
-                    long next_send = 0;
-
-                    FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
-
-                    long now = FastTick.Now;
-                    while (true)
+                    Task loop = w.StartLoopAsync();
+                    try
                     {
-                        if (next_send == 0 || next_send <= now)
-                        {
-                            next_send = now + 500;
+                        long next_send = 0;
 
-                            lock (writer.LockObj)
+                        FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
+
+                        long now = FastTick.Now;
+                        while (true)
+                        {
+                            if (next_send == 0 || next_send <= now)
                             {
-                                writer.Enqueue(new Datagram(new byte[] { (byte)'B' }, new IPEndPoint(server_ip, 5004)));
+                                next_send = now + 500;
+
+                                lock (writer.LockObj)
+                                {
+                                    writer.Enqueue(new Datagram(new byte[] { (byte)'B' }, new IPEndPoint(server_ip, 5004)));
+                                }
+
+                                writer.CompleteWrite();
                             }
 
-                            writer.CompleteWrite();
+                            List<Datagram> pkts;
+
+                            lock (reader.LockObj)
+                            {
+                                pkts = reader.DequeueAll(out _);
+                            }
+                            reader.CompleteRead();
+
+                            foreach (var pkt in pkts)
+                            {
+                                //Dbg.Where($"recv: {pkt.Data.Length} {pkt.IPEndPoint}");
+
+                                string tmp = Encoding.ASCII.GetString(pkt.Data.Span);
+                                var ep = UdpAccel.ParseIPAndPortStr(tmp);
+                                //Console.WriteLine(ep);
+                                writer.Enqueue(pkt);
+                                writer.CompleteWrite();
+                            }
+
+                            if (await helper.WaitIfNothingChanged((int)(next_send - now)))
+                            {
+                                now = FastTick.Now;
+                            }
+
+                            //Dbg.Where();
                         }
-
-                        List<Datagram> pkts;
-
-                        lock (reader.LockObj)
-                        {
-                            pkts = reader.DequeueAll(out _);
-                        }
-                        reader.CompleteRead();
-
-                        foreach (var pkt in pkts)
-                        {
-                            //Dbg.Where($"recv: {pkt.Data.Length} {pkt.IPEndPoint}");
-
-                            string tmp = Encoding.ASCII.GetString(pkt.Data.Span);
-                            var ep = UdpAccel.ParseIPAndPortStr(tmp);
-                            //Console.WriteLine(ep);
-                            writer.Enqueue(pkt);
-                            writer.CompleteWrite();
-                        }
-
-                        if (await helper.WaitIfNothingChanged((int)(next_send - now)))
-                        {
-                            now = FastTick.Now;
-                        }
-
-                        //Dbg.Where();
+                        Dbg.Where("Disconnected.");
                     }
-                    Dbg.Where("Disconnected.");
+                    finally
+                    {
+                        await loop;
+                    }
                 }
             }
 
