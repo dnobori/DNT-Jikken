@@ -16,6 +16,7 @@ using System.IO;
 
 namespace cs_struct_bench1
 {
+    #region for_benchmark
     public ref struct SpanBuffer<T>
     {
         Span<T> InternalSpan;
@@ -740,6 +741,7 @@ namespace cs_struct_bench1
         public static SpanBuffer<T> AsSpanBuffer<T>(this Memory<T> memory) => new SpanBuffer<T>(memory.Span);
         public static SpanBuffer<T> AsSpanBuffer<T>(this T[] data, int offset, int size) => new SpanBuffer<T>(data.AsSpan(offset, size));
 
+        public static void WriteBool8(this ref SpanBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
         public static void WriteUInt8(this ref SpanBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
         public static void WriteUInt16(this ref SpanBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
         public static void WriteUInt32(this ref SpanBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
@@ -749,6 +751,7 @@ namespace cs_struct_bench1
         public static void WriteSInt32(this ref SpanBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
         public static void WriteSInt64(this ref SpanBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
 
+        public static void SetBool8(this ref SpanBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
         public static void SetUInt8(this ref SpanBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
         public static void SetUInt16(this ref SpanBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
         public static void SetUInt32(this ref SpanBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
@@ -758,6 +761,7 @@ namespace cs_struct_bench1
         public static void SetSInt32(this ref SpanBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
         public static void SetSInt64(this ref SpanBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
 
+        public static bool ReadBool8(ref this SpanBuffer<byte> buf) => buf.Read(1).GetBool8();
         public static byte ReadUInt8(ref this SpanBuffer<byte> buf) => buf.Read(1).GetUInt8();
         public static ushort ReadUInt16(ref this SpanBuffer<byte> buf) => buf.Read(2).GetUInt16();
         public static uint ReadUInt32(ref this SpanBuffer<byte> buf) => buf.Read(4).GetUInt32();
@@ -767,6 +771,7 @@ namespace cs_struct_bench1
         public static int ReadSInt32(ref this SpanBuffer<byte> buf) => buf.Read(4).GetSInt32();
         public static long ReadSInt64(ref this SpanBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
+        public static bool PeekBool8(ref this SpanBuffer<byte> buf) => buf.Peek(1).GetBool8();
         public static byte PeekUInt8(ref this SpanBuffer<byte> buf) => buf.Peek(1).GetUInt8();
         public static ushort PeekUInt16(ref this SpanBuffer<byte> buf) => buf.Peek(2).GetUInt16();
         public static uint PeekUInt32(ref this SpanBuffer<byte> buf) => buf.Peek(4).GetUInt32();
@@ -782,6 +787,7 @@ namespace cs_struct_bench1
         public static ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer<T>(this ReadOnlyMemory<T> memory) => new ReadOnlySpanBuffer<T>(memory.Span);
         public static ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer<T>(this T[] data, int offset, int size) => new ReadOnlySpanBuffer<T>(data.AsReadOnlySpan(offset, size));
 
+        public static bool ReadBool8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(1).GetBool8();
         public static byte ReadUInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(1).GetUInt8();
         public static ushort ReadUInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(2).GetUInt16();
         public static uint ReadUInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(4).GetUInt32();
@@ -791,6 +797,7 @@ namespace cs_struct_bench1
         public static int ReadSInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(4).GetSInt32();
         public static long ReadSInt64(ref this ReadOnlySpanBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
+        public static bool PeekBool8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(1).GetBool8();
         public static byte PeekUInt8(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(1).GetUInt8();
         public static ushort PeekUInt16(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(2).GetUInt16();
         public static uint PeekUInt32(ref this ReadOnlySpanBuffer<byte> buf) => buf.Peek(4).GetUInt32();
@@ -805,6 +812,7 @@ namespace cs_struct_bench1
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this Memory<T> memory) => new MemoryBuffer<T>(memory);
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this T[] data, int offset, int size) => new MemoryBuffer<T>(data.AsMemory(offset, size));
 
+        public static void WriteBool8(this ref MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
         public static void WriteUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
         public static void WriteUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
         public static void WriteUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
@@ -814,6 +822,7 @@ namespace cs_struct_bench1
         public static void WriteSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
         public static void WriteSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
 
+        public static void SetBool8(this ref MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
         public static void SetUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
         public static void SetUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
         public static void SetUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
@@ -823,6 +832,7 @@ namespace cs_struct_bench1
         public static void SetSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
         public static void SetSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
 
+        public static bool ReadBool8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
         public static byte ReadUInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
         public static ushort ReadUInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
         public static uint ReadUInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
@@ -832,6 +842,7 @@ namespace cs_struct_bench1
         public static int ReadSInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
         public static long ReadSInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
+        public static bool PeekBool8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
         public static byte PeekUInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
         public static ushort PeekUInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
         public static uint PeekUInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
@@ -844,6 +855,7 @@ namespace cs_struct_bench1
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this T[] data, int offset, int size) => new ReadOnlyMemoryBuffer<T>(data.AsReadOnlyMemory(offset, size));
 
+        public static bool ReadBool8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
         public static byte ReadUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
         public static ushort ReadUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
         public static uint ReadUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
@@ -853,6 +865,7 @@ namespace cs_struct_bench1
         public static int ReadSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
         public static long ReadSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
+        public static bool PeekBool8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
         public static byte PeekUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
         public static ushort PeekUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
         public static uint PeekUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
@@ -896,6 +909,13 @@ namespace cs_struct_bench1
 
 
 
+
+        #region AutoGenerated
+
+        public static unsafe bool GetBool8(this byte[] data, int offset = 0)
+        {
+            return (data[offset] == 0) ? false : true;
+        }
 
         public static unsafe byte GetUInt8(this byte[] data, int offset = 0)
         {
@@ -955,6 +975,11 @@ namespace cs_struct_bench1
                 return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr + offset))) : *((long*)(ptr + offset));
         }
 
+        public static unsafe bool GetBool8(this Span<byte> span)
+        {
+            return (span[0] == 0) ? false : true;
+        }
+
         public static unsafe byte GetUInt8(this Span<byte> span)
         {
             return (byte)span[0];
@@ -1005,6 +1030,11 @@ namespace cs_struct_bench1
             if (span.Length < sizeof(long)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
                 return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
+        }
+
+        public static unsafe bool GetBool8(this ReadOnlySpan<byte> span)
+        {
+            return (span[0] == 0) ? false : true;
         }
 
         public static unsafe byte GetUInt8(this ReadOnlySpan<byte> span)
@@ -1059,6 +1089,11 @@ namespace cs_struct_bench1
                 return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
         }
 
+        public static unsafe bool GetBool8(this Memory<byte> memory)
+        {
+            return (memory.Span[0] == 0) ? false : true;
+        }
+
         public static unsafe byte GetUInt8(this Memory<byte> memory)
         {
             return (byte)memory.Span[0];
@@ -1109,6 +1144,11 @@ namespace cs_struct_bench1
             if (memory.Length < sizeof(long)) throw new ArgumentOutOfRangeException("memory.Length is too small");
             fixed (byte* ptr = memory.Span)
                 return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
+        }
+
+        public static unsafe bool GetBool8(this ReadOnlyMemory<byte> memory)
+        {
+            return (memory.Span[0] == 0) ? false : true;
         }
 
         public static unsafe byte GetUInt8(this ReadOnlyMemory<byte> memory)
@@ -1163,6 +1203,16 @@ namespace cs_struct_bench1
                 return BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(*((long*)(ptr))) : *((long*)(ptr));
         }
 
+
+        public static unsafe void SetBool8(this bool value, byte[] data, int offset = 0)
+        {
+            data[offset] = (byte)(value ? 1 : 0);
+        }
+
+        public static unsafe void SetBool8(this byte[] data, bool value, int offset = 0)
+        {
+            data[offset] = (byte)(value ? 1 : 0);
+        }
 
         public static unsafe void SetUInt8(this byte value, byte[] data, int offset = 0)
         {
@@ -1280,6 +1330,16 @@ namespace cs_struct_bench1
                 *((long*)(ptr + offset)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
         }
 
+        public static unsafe void SetBool8(this bool value, Span<byte> span)
+        {
+            span[0] = (byte)(value ? 1 : 0);
+        }
+
+        public static unsafe void SetBool8(this Span<byte> span, bool value)
+        {
+            span[0] = (byte)(value ? 1 : 0);
+        }
+
         public static unsafe void SetUInt8(this byte value, Span<byte> span)
         {
             span[0] = (byte)value;
@@ -1382,6 +1442,16 @@ namespace cs_struct_bench1
             if (span.Length < sizeof(long)) throw new ArgumentOutOfRangeException("span.Length is too small");
             fixed (byte* ptr = span)
                 *((long*)(ptr)) = BitConverter.IsLittleEndian ? BinaryPrimitives.ReverseEndianness(value) : value;
+        }
+
+        public static unsafe void SetBool8(this bool value, Memory<byte> memory)
+        {
+            memory.Span[0] = (byte)(value ? 1 : 0);
+        }
+
+        public static unsafe void SetBool8(this Memory<byte> memory, bool value)
+        {
+            memory.Span[0] = (byte)(value ? 1 : 0);
         }
 
         public static unsafe void SetUInt8(this byte value, Memory<byte> memory)
@@ -1489,6 +1559,13 @@ namespace cs_struct_bench1
         }
 
 
+        public static unsafe byte[] GetBool8(this bool value)
+        {
+            byte[] data = new byte[1];
+            data[0] = (byte)(value ? 1 : 0);
+            return data;
+        }
+
         public static unsafe byte[] GetUInt8(this byte value)
         {
             byte[] data = new byte[1];
@@ -1553,6 +1630,9 @@ namespace cs_struct_bench1
 
 
 
+        #endregion
+
+
 
         public static void WalkWrite<T>(ref this Span<T> span, Span<T> data) => data.CopyTo(span.Walk(data.Length));
 
@@ -1576,6 +1656,7 @@ namespace cs_struct_bench1
             return original.Slice(0, size);
         }
 
+        public static void WalkWriteBool8(ref this Span<byte> span, bool value) => value.SetBool8(span.Walk(1));
         public static void WalkWriteUInt8(ref this Span<byte> span, byte value) => value.SetUInt8(span.Walk(1));
         public static void WalkWriteUInt16(ref this Span<byte> span, ushort value) => value.SetUInt16(span.Walk(2));
         public static void WalkWriteUInt32(ref this Span<byte> span, uint value) => value.SetUInt32(span.Walk(4));
@@ -1589,6 +1670,7 @@ namespace cs_struct_bench1
 
         public static ReadOnlySpan<T> WalkRead<T>(ref this ReadOnlySpan<T> span, int size) => span.Walk(size);
 
+        public static bool WalkReadBool8(ref this Span<byte> span) => span.WalkRead(1).GetBool8();
         public static byte WalkReadUInt8(ref this Span<byte> span) => span.WalkRead(1).GetUInt8();
         public static ushort WalkReadUInt16(ref this Span<byte> span) => span.WalkRead(2).GetUInt16();
         public static uint WalkReadUInt32(ref this Span<byte> span) => span.WalkRead(4).GetUInt32();
@@ -1598,6 +1680,7 @@ namespace cs_struct_bench1
         public static int WalkReadSInt32(ref this Span<byte> span) => span.WalkRead(4).GetSInt32();
         public static long WalkReadSInt64(ref this Span<byte> span) => span.WalkRead(8).GetSInt64();
 
+        public static bool WalkReadBool8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).GetBool8();
         public static byte WalkReadUInt8(ref this ReadOnlySpan<byte> span) => span.WalkRead(1).GetUInt8();
         public static ushort WalkReadUInt16(ref this ReadOnlySpan<byte> span) => span.WalkRead(2).GetUInt16();
         public static uint WalkReadUInt32(ref this ReadOnlySpan<byte> span) => span.WalkRead(4).GetUInt32();
@@ -1750,6 +1833,7 @@ namespace cs_struct_bench1
             }
         }
 
+        public static void WalkWriteBool8(ref this Memory<byte> memory, bool value) => value.SetBool8(memory.Walk(1));
         public static void WalkWriteUInt8(ref this Memory<byte> memory, byte value) => value.SetUInt8(memory.Walk(1));
         public static void WalkWriteUInt16(ref this Memory<byte> memory, ushort value) => value.SetUInt16(memory.Walk(2));
         public static void WalkWriteUInt32(ref this Memory<byte> memory, uint value) => value.SetUInt32(memory.Walk(4));
@@ -1762,6 +1846,7 @@ namespace cs_struct_bench1
         public static void WalkWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.Walk(data.Length).Span);
         public static void WalkWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.Walk(data.Length).Span);
 
+        public static void WalkAutoDynamicWriteBool8(ref this Memory<byte> memory, bool value) => value.SetBool8(memory.WalkAutoDynamic(1));
         public static void WalkAutoDynamicWriteUInt8(ref this Memory<byte> memory, byte value) => value.SetUInt8(memory.WalkAutoDynamic(1));
         public static void WalkAutoDynamicWriteUInt16(ref this Memory<byte> memory, ushort value) => value.SetUInt16(memory.WalkAutoDynamic(2));
         public static void WalkAutoDynamicWriteUInt32(ref this Memory<byte> memory, uint value) => value.SetUInt32(memory.WalkAutoDynamic(4));
@@ -1774,6 +1859,7 @@ namespace cs_struct_bench1
         public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, Span<T> data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
         public static void WalkAutoDynamicWrite<T>(ref this Memory<T> memory, T[] data) => data.CopyTo(memory.WalkAutoDynamic(data.Length).Span);
 
+        public static void WalkAutoStaticWriteBool8(ref this Memory<byte> memory, bool value) => value.SetBool8(memory.WalkAutoStatic(1));
         public static void WalkAutoStaticWriteUInt8(ref this Memory<byte> memory, byte value) => value.SetUInt8(memory.WalkAutoStatic(1));
         public static void WalkAutoStaticWriteUInt16(ref this Memory<byte> memory, ushort value) => value.SetUInt16(memory.WalkAutoStatic(2));
         public static void WalkAutoStaticWriteUInt32(ref this Memory<byte> memory, uint value) => value.SetUInt32(memory.WalkAutoStatic(4));
@@ -1789,6 +1875,7 @@ namespace cs_struct_bench1
         public static ReadOnlyMemory<T> WalkRead<T>(ref this ReadOnlyMemory<T> memory, int size) => memory.Walk(size);
         public static Memory<T> WalkRead<T>(ref this Memory<T> memory, int size) => memory.Walk(size);
 
+        public static bool WalkReadBool8(ref this Memory<byte> memory) => memory.WalkRead(1).GetBool8();
         public static byte WalkReadUInt8(ref this Memory<byte> memory) => memory.WalkRead(1).GetUInt8();
         public static ushort WalkReadUInt16(ref this Memory<byte> memory) => memory.WalkRead(2).GetUInt16();
         public static uint WalkReadUInt32(ref this Memory<byte> memory) => memory.WalkRead(4).GetUInt32();
@@ -1798,6 +1885,7 @@ namespace cs_struct_bench1
         public static int WalkReadSInt32(ref this Memory<byte> memory) => memory.WalkRead(4).GetSInt32();
         public static long WalkReadSInt64(ref this Memory<byte> memory) => memory.WalkRead(8).GetSInt64();
 
+        public static bool WalkReadBool8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).GetBool8();
         public static byte WalkReadUInt8(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(1).GetUInt8();
         public static ushort WalkReadUInt16(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(2).GetUInt16();
         public static uint WalkReadUInt32(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(4).GetUInt32();
@@ -1977,5 +2065,5 @@ namespace cs_struct_bench1
         }
     }
 
-
+    #endregion
 }
