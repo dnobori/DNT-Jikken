@@ -3290,7 +3290,20 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public static void LaissezFaire(this Task task) { }
+        public static void LaissezFaire(this Task task)
+        {
+            new Task(async () =>
+            {
+                try
+                {
+                    await task;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine("LaissezFaire: " + ex.ToString());
+                }
+            }).Start();
+        }
 
         public static IAsyncResult AsApm<T>(this Task<T> task,
                                             AsyncCallback callback,
@@ -4515,22 +4528,25 @@ namespace SoftEther.WebSocket.Helper
         public const int MaxItems = 128;
         SharedQueue<Exception> Queue = new SharedQueue<Exception>(MaxItems);
 
-        public void Add(Exception ex)
+        public void Raise(Exception ex)
         {
-            if (ex == null) return;
-            var aex = ex as AggregateException;
-            if (aex != null)
+            if (ex == null)
+                ex = new Exception("null exception");
+
+            lock (SharedQueue<Exception>.GlobalLock)
             {
-                var exp = aex.Flatten().InnerExceptions;
-                lock (SharedQueue<Exception>.GlobalLock)
+                AggregateException aex = ex as AggregateException;
+                if (aex != null)
                 {
+                    var exp = aex.Flatten().InnerExceptions;
                     foreach (var expi in exp)
                         Queue.Enqueue(expi);
                 }
-            }
-            else
-            {
-                Queue.Enqueue(ex);
+                else
+                {
+                    Queue.Enqueue(ex);
+                }
+                throw Queue.ItemsReadOnly[0];
             }
         }
 
@@ -5286,7 +5302,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void CheckDisconnected()
         {
-            if (IsDisconnected) throw new FastBufferDisconnectedException();
+            if (IsDisconnected) ExceptionQueue.Raise(new FastBufferDisconnectedException());
         }
 
         public void Disconnect()
@@ -6106,7 +6122,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void CheckDisconnected()
         {
-            if (IsDisconnected) throw new FastBufferDisconnectedException();
+            if (IsDisconnected) ExceptionQueue.Raise(new FastBufferDisconnectedException());
         }
 
         public void Disconnect()
@@ -6514,10 +6530,18 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    [Flags]
+    public enum PipeSupportedDataTypes
+    {
+        Stream = 1,
+        Datagram = 2,
+    }
+
     public abstract class FastPipeEndAsyncObjectWrapper : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
         public FastPipeEnd PipeEnd { get; }
+        public abstract PipeSupportedDataTypes SupportedDataTypes { get; }
 
         public SharedExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
 
@@ -6538,14 +6562,28 @@ namespace SoftEther.WebSocket.Helper
 
         async Task ConnectAndWaitAsync()
         {
-            await Task.WhenAll(
-                StreamReadFromPipeLoopAsync(),
-                StreamWriteToPipeLoopAsync(),
-                DatagramReadFromPipeLoopAsync(),
-                DatagramWriteToPipeLoopAsync()
-                );
+            try
+            {
+                List<Task> tasks = new List<Task>();
 
-            Disconnect();
+                if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream))
+                {
+                    tasks.Add(StreamReadFromPipeLoopAsync());
+                    tasks.Add(StreamWriteToPipeLoopAsync());
+                }
+
+                if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Datagram))
+                {
+                    tasks.Add(DatagramReadFromPipeLoopAsync());
+                    tasks.Add(DatagramWriteToPipeLoopAsync());
+                }
+
+                await Task.WhenAll(tasks.ToArray());
+            }
+            finally
+            {
+                Disconnect();
+            }
         }
 
         List<Action> OnDisconnectedList = new List<Action>();
@@ -6586,7 +6624,7 @@ namespace SoftEther.WebSocket.Helper
             }
             catch (Exception ex)
             {
-                ExceptionQueue.Add(ex);
+                ExceptionQueue.Raise(ex);
             }
             finally
             {
@@ -6629,11 +6667,12 @@ namespace SoftEther.WebSocket.Helper
             }
             catch (Exception ex)
             {
-                ExceptionQueue.Add(ex);
+                ExceptionQueue.Raise(ex);
             }
             finally
             {
                 PipeEnd.Disconnect();
+
             }
         }
 
@@ -6666,7 +6705,7 @@ namespace SoftEther.WebSocket.Helper
             }
             catch (Exception ex)
             {
-                ExceptionQueue.Add(ex);
+                ExceptionQueue.Raise(ex);
             }
             finally
             {
@@ -6709,7 +6748,7 @@ namespace SoftEther.WebSocket.Helper
             }
             catch (Exception ex)
             {
-                ExceptionQueue.Add(ex);
+                ExceptionQueue.Raise(ex);
             }
             finally
             {
@@ -6741,28 +6780,22 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public enum SocketWrapperType
-    {
-        Stream,
-        Datagram,
-    }
-
     public class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapper, IDisposable
     {
         public Socket Socket { get; }
-        public SocketWrapperType Type { get; }
         public int RecvTmpBufferSize { get; private set; }
+        public override PipeSupportedDataTypes SupportedDataTypes { get; }
 
         public FastPipeEndSocketWrapper(FastPipeEnd pipe_end, Socket socket, CancellationToken cancel = default(CancellationToken)) : base(pipe_end, cancel)
         {
             this.Socket = socket;
-            Type = (Socket.SocketType == SocketType.Stream) ? SocketWrapperType.Stream : SocketWrapperType.Datagram;
+            SupportedDataTypes = (Socket.SocketType == SocketType.Stream) ? PipeSupportedDataTypes.Stream : PipeSupportedDataTypes.Datagram;
             this.AddOnDisconnected(() => Socket.DisposeSafe());
         }
 
         protected override async Task StreamWriteToObject(FastStreamFifo fifo, CancellationToken cancel)
         {
-            if (Type != SocketWrapperType.Stream) return;
+            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
             List<Memory<byte>> send_array;
 
@@ -6806,11 +6839,7 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task StreamReadFromObject(FastStreamFifo fifo, CancellationToken cancel)
         {
-            if (Type != SocketWrapperType.Stream)
-            {
-                await WebSocketHelper.WhenCanceled(cancel, out CancellationTokenRegistration reg);
-                return;
-            }
+            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
             Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
 
@@ -6821,7 +6850,7 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task DatagramWriteToObject(FastDatagramFifo fifo, CancellationToken cancel)
         {
-            if (Type != SocketWrapperType.Datagram) return;
+            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Datagram) == false) throw new NotSupportedException();
 
             List<Datagram> send_list;
 
@@ -6855,11 +6884,7 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
         {
-            if (Type != SocketWrapperType.Datagram)
-            {
-                await WebSocketHelper.WhenCanceled(cancel, out CancellationTokenRegistration reg);
-                return;
-            }
+            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Datagram) == false) throw new NotSupportedException();
 
             Datagram[] pkts = await DatagramBulkReceiver.Recv(cancel, this);
 

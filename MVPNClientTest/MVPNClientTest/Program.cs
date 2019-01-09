@@ -98,8 +98,6 @@ namespace MVPNClientTest
                         reader.CompleteRead();
                         await helper.WaitIfNothingChanged();
                     }
-
-                    Dbg.Where(reader.ExceptionQueue.FirstException + " " + wrap.ExceptionQueue.Exceptions.Length);
                 }
             }
         }
