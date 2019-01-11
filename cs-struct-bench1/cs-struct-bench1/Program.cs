@@ -13,6 +13,9 @@ using System.IO.Pipelines;
 using System.Buffers;
 using System.Linq;
 using System.Buffers.Binary;
+using System.Net.NetworkInformation;
+using System.Net;
+using System.IO;
 
 namespace cs_struct_bench1
 {
@@ -326,10 +329,48 @@ namespace cs_struct_bench1
             public int a;
         }
 
+        struct TestStructB
+        {
+            public int A;
+            public int B;
+        }
+
+        struct CCC
+        {
+            public int x;
+        }
+
+
+        static volatile int vol1 = 1, vol2 = 2, vol3 = 3;
+
         static void Main(string[] args)
         {
             WriteLine("Started.");
             WriteLine();
+
+            if (true)
+            {
+            }
+
+            if (false)
+            {
+                TestStructB bb1 = new TestStructB();
+                bb1.A = 123;
+                bb1.B = 456;
+
+                TestStructB bb2 = new TestStructB();
+                bb2.A = 123;
+                bb2.B = 456;
+
+                Console.WriteLine(bb1.GetHashCode());
+                Console.WriteLine(bb2.GetHashCode());
+
+                Console.WriteLine(FastHashHelper.ComputeHash32<TestStructB>(ref bb1));
+                Console.WriteLine(FastHashHelper.ComputeHash32<TestStructB>(ref bb2));
+
+                Console.WriteLine(FastHashHelper.ComputeHash32<TestStructB>(new TestStructB[] { bb1 }));
+                return;
+            }
 
             if (false)
             {
@@ -382,11 +423,40 @@ namespace cs_struct_bench1
             var q = new MicroBenchmarkQueue()
 
 
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("struct hash 10", 100000, (state, iterations) =>
+                {
+                    TestStructB bb = new TestStructB();
+                    bb.A = 12345;
+                    bb.B = 65790;
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        Limbo.SInt += FastHashHelper.ComputeHash32(ref bb);
+                        Limbo.SInt += bb.GetHashCode();
+                    }
+                }
+                ), true, 190111)
+
+
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("netinfo", 1000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        //IPGlobalProperties prop = IPGlobalProperties.GetIPGlobalProperties();
+                        //UnicastIPAddressInformationCollection info = prop.GetUnicastAddressesAsync().Result;
+                        Dns.GetHostAddresses(Dns.GetHostName());
+                    }
+                }
+                ), true, 190111)
+
                 .Add(new MicroBenchmark<Memory<byte>>("tick", 100000, (state, iterations) =>
                 {
                     for (int i = 0; i < iterations; i++)
                     {
-                        Limbo.SInt += FastTick.Now;
+                        Limbo.SInt += FastTick64.Now;
                     }
                 }
                 ), true, 190108)

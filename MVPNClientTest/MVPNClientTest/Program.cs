@@ -9,6 +9,7 @@ using System.Text;
 using System.Security.Cryptography.X509Certificates;
 using System.Threading;
 using System.Threading.Tasks;
+using System.Linq;
 using Newtonsoft.Json;
 using static System.Console;
 using SoftEther.WebSocket;
@@ -29,6 +30,7 @@ namespace MVPNClientTest
             //TestStreamBuffer();
             //BenchStreamBuffer();
             TestPipes();
+            return;
 
             //SharedExceptionQueue q1 = new SharedExceptionQueue();
             //SharedExceptionQueue q2 = new SharedExceptionQueue();
@@ -58,10 +60,78 @@ namespace MVPNClientTest
 
         static void TestPipes()
         {
-            if (true)
+            if (false)
+            {
+                RefInt num_error = new RefInt();
+                for (int i = 1; i < 40000; i++)
+                {
+                    new Task(async (state) =>
+                    {
+                        await Task.Yield();
+                        int port = (int)state;
+                        TcpListener tcp = new TcpListener(IPAddress.Any, port);
+                        try
+                        {
+                            tcp.Start();
+                            if ((port % 50) == 0)
+                                Console.WriteLine(port);
+                            await tcp.AcceptSocketAsync();
+                        }
+                        catch (Exception ex)
+                        {
+                            Console.WriteLine("" + port + " " + ex);
+                            num_error.Increment();
+                        }
+                        if ((port % 50) == 0)
+                            Console.WriteLine(port);
+                    }, i).Start();
+                }
+                while (true)
+                {
+                    Thread.Sleep(1000);
+                    Console.WriteLine(num_error);
+                }
+            }
+
+            if (false)
             {
                 TestPipeTcp();
             }
+
+            TcpListenManager man = new TcpListenManager(
+                async (m, l, s) =>
+                {
+                    Console.WriteLine("Access! " + s.RemoteEndPoint.ToString() + "  --> " + s.LocalEndPoint.ToString());
+                    while (true)
+                    {
+                        byte[] a = new byte[] { (byte)'a' };
+                        await s.SendAsync(a, SocketFlags.None);
+                        await Task.Delay(100);
+                    }
+                });
+
+            new Task(async () =>
+            {
+                while (man.Disposed == false)
+                {
+                    //man.Listeners.ToList().ForEach(x => Console.WriteLine(x.Port + "  " + x.Status));
+                    var listeners = man.Listeners;
+                    //Console.WriteLine("ports: " + listeners.Length + ", ok = " + listeners.Where(x => x.Status == ListenStatus.Listening).Count());
+
+                    //Console.WriteLine("conn: " + man.CurrentConnections);
+                    await Task.Delay(1000);
+                }
+            }).Start();
+
+            for (int i = 1; i < 40000; i++)
+            {
+                man.Add(i, IPVersion.IPv4);
+                man.Add(i, IPVersion.IPv6);
+            }
+
+            Console.ReadLine();
+
+            man.Dispose();
         }
 
         static async Task TestPipeTcpProc(Socket socket, CancellationToken cancel)
@@ -177,7 +247,7 @@ namespace MVPNClientTest
                     Memory<byte> add_data = new byte[] { 1, 2, 3, 4, 5, };
 
                     FastStreamBuffer<byte> buf = new_test_buf();
-                    
+
                     for (int i = 0; i < iterations; i++)
                     {
                         long pin = buf.PinHead + rands[i % rands.Count] % (buf.Length - add_data.Length);
@@ -663,7 +733,7 @@ namespace MVPNClientTest
 
                         FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
 
-                        long now = FastTick.Now;
+                        long now = FastTick64.Now;
                         while (true)
                         {
                             if (next_send == 0 || next_send <= now)
@@ -699,7 +769,7 @@ namespace MVPNClientTest
 
                             if (await helper.WaitIfNothingChanged((int)(next_send - now)))
                             {
-                                now = FastTick.Now;
+                                now = FastTick64.Now;
                             }
 
                             //Dbg.Where();
