@@ -2843,9 +2843,9 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class AsyncLock : IDisposable
+    public sealed class AsyncLock : IDisposable
     {
-        public class LockHolder : IDisposable
+        public sealed class LockHolder : IDisposable
         {
             AsyncLock parent;
             internal LockHolder(AsyncLock parent)
@@ -4000,9 +4000,10 @@ namespace SoftEther.WebSocket.Helper
         volatile private int flag;
         public bool IsFirstCall() => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
         public bool IsSet => (this.flag != 0);
+        public void Clear() => flag = 0;
     }
 
-    public class TimeoutDetector : IDisposable
+    public sealed class TimeoutDetector : IDisposable
     {
         Task main_loop;
 
@@ -4104,7 +4105,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class CancelWatcher : IDisposable
+    public sealed class CancelWatcher : IDisposable
     {
         CancellationTokenSource cts = new CancellationTokenSource();
         public CancellationToken CancelToken { get => cts.Token; }
@@ -4478,7 +4479,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class NonBlockSocket : IDisposable
+    public sealed class NonBlockSocket : IDisposable
     {
         public Socket Sock { get; }
         public bool IsStream { get; }
@@ -4826,7 +4827,9 @@ namespace SoftEther.WebSocket.Helper
         public const int MaxItems = 128;
         SharedQueue<Exception> Queue = new SharedQueue<Exception>(MaxItems);
 
-        public void Raise(Exception ex)
+        public void Raise(Exception ex) => Add(ex, true);
+
+        public void Add(Exception ex, bool raise_first_exception = false)
         {
             if (ex == null)
                 ex = new Exception("null exception");
@@ -4844,7 +4847,8 @@ namespace SoftEther.WebSocket.Helper
                 {
                     Queue.Enqueue(ex);
                 }
-                throw Queue.ItemsReadOnly[0];
+                if (raise_first_exception)
+                    throw Queue.ItemsReadOnly[0];
             }
         }
 
@@ -5198,7 +5202,7 @@ namespace SoftEther.WebSocket.Helper
             return w.ToString();
         }
 
-        public class Holder : IDisposable
+        public sealed class Holder : IDisposable
         {
             LeakChecker Checker;
             long Id;
@@ -5461,6 +5465,82 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public sealed class LocalTimer
+    {
+        SortedSet<long> List = new SortedSet<long>();
+        HashSet<long> Hash = new HashSet<long>();
+        public long Now { get; private set; } = FastTick64.Now;
+        public bool AutomaticUpdateNow { get; }
+
+        public LocalTimer(bool automatic_update_now = true)
+        {
+            AutomaticUpdateNow = automatic_update_now;
+        }
+
+        public void UpdateNow() => Now = FastTick64.Now;
+        public void UpdateNow(long now_tick) => Now = now_tick;
+
+        public void AddTick(long tick)
+        {
+            if (Hash.Add(tick))
+                List.Add(tick);
+        }
+
+        public long AddTimeout(int interval)
+        {
+            if (interval < 0) return long.MaxValue;
+            interval = Math.Max(interval, 0);
+            if (AutomaticUpdateNow) UpdateNow();
+            long v = Now + interval;
+            AddTick(v);
+            return v;
+        }
+
+        public int GetNextInterval()
+        {
+            int ret = Timeout.Infinite;
+            if (AutomaticUpdateNow) UpdateNow();
+            long now = Now;
+            List<long> delete_list = null;
+
+            foreach (long v in List)
+            {
+                if (now >= v)
+                {
+                    ret = 0;
+                    if (delete_list == null) delete_list = new List<long>();
+                    delete_list.Add(v);
+                }
+                else
+                {
+                    break;
+                }
+            }
+
+            if (delete_list != null)
+            {
+                foreach (long v in delete_list)
+                {
+                    List.Remove(v);
+                    Hash.Remove(v);
+                }
+            }
+
+            if (ret == Timeout.Infinite)
+            {
+                if (List.Count >= 1)
+                {
+                    long v = List.First();
+                    ret = (int)(v - now);
+                    Debug.Assert(ret > 0);
+                    if (ret <= 0) ret = 0;
+                }
+            }
+
+            return ret;
+        }
+    }
+
     public class HostNetworkInfo : IEquatable<HostNetworkInfo>
     {
         public int Version;
@@ -5694,9 +5774,9 @@ namespace SoftEther.WebSocket.Helper
         Stopped,
     }
 
-    public class TcpListenManager : IDisposable
+    public sealed class TcpListenManager : IDisposable
     {
-        public class Listener : IEquatable<Listener>
+        public class Listener
         {
             public IPVersion IPVersion { get; }
             public IPAddress IPAddress { get; }
@@ -5824,11 +5904,6 @@ namespace SoftEther.WebSocket.Helper
                     await InternalTask;
                 }
                 catch { }
-            }
-
-            public bool Equals(Listener other)
-            {
-                throw new NotImplementedException();
             }
         }
 
@@ -5993,12 +6068,11 @@ namespace SoftEther.WebSocket.Helper
         AsyncAutoResetEvent EventReadReady { get; }
 
         void CompleteRead();
-        void CompleteWrite();
+        void CompleteWrite(bool check_disconnect = true);
     }
 
     public interface IFastBuffer<T> : IFastBufferState
     {
-
         void Clear();
         void Enqueue(T item);
         void EnqueueAll(Span<T> item_list);
@@ -6188,8 +6262,27 @@ namespace SoftEther.WebSocket.Helper
         public long Length { get { long ret = checked(PinTail - PinHead); Debug.Assert(ret >= 0); return ret; } }
         public long Threshold { get; set; }
 
-        public bool IsReadyToWrite { get => IsDisconnected || (Length <= Threshold); }
-        public bool IsReadyToRead { get => IsDisconnected || (Length >= 1); }
+        public bool IsReadyToWrite
+        {
+            get
+            {
+                if (IsDisconnected) return true;
+                if (Length <= Threshold) return true;
+                CompleteWrite(false);
+                return false;
+            }
+        }
+
+        public bool IsReadyToRead
+        {
+            get
+            {
+                if (IsDisconnected) return true;
+                if (Length >= 1) return true;
+                CompleteRead();
+                return false;
+            }
+        }
         public bool IsEventsEnabled { get; }
 
         Once InternalDisconnectedFlag;
@@ -6267,7 +6360,7 @@ namespace SoftEther.WebSocket.Helper
 
         long LastTailPin = long.MinValue;
 
-        public void CompleteWrite()
+        public void CompleteWrite(bool check_disconnect = true)
         {
             if (IsEventsEnabled)
             {
@@ -6284,7 +6377,8 @@ namespace SoftEther.WebSocket.Helper
                 if (set_flag)
                     EventReadReady.Set();
             }
-            CheckDisconnected();
+            if (check_disconnect)
+                CheckDisconnected();
         }
 
         public void Clear()
@@ -7010,8 +7104,28 @@ namespace SoftEther.WebSocket.Helper
         public long Length { get { long ret = checked(PinTail - PinHead); Debug.Assert(ret >= 0); return ret; } }
         public long Threshold { get; set; }
 
-        public bool IsReadyToWrite { get => IsDisconnected || (Length <= Threshold); }
-        public bool IsReadyToRead { get => IsDisconnected || (Length >= 1); }
+        public bool IsReadyToWrite
+        {
+            get
+            {
+                if (IsDisconnected) return true;
+                if (Length <= Threshold) return true;
+                CompleteWrite(false);
+                return false;
+            }
+        }
+
+        public bool IsReadyToRead
+        {
+            get
+            {
+                if (IsDisconnected) return true;
+                if (Length >= 1) return true;
+                CompleteRead();
+                return false;
+            }
+        }
+
         public bool IsEventsEnabled { get; }
 
         public AsyncAutoResetEvent EventWriteReady { get; } = null;
@@ -7089,7 +7203,7 @@ namespace SoftEther.WebSocket.Helper
 
         long LastTailPin = long.MinValue;
 
-        public void CompleteWrite()
+        public void CompleteWrite(bool check_disconnect = true)
         {
             if (IsEventsEnabled)
             {
@@ -7108,7 +7222,8 @@ namespace SoftEther.WebSocket.Helper
                 if (set_flag)
                     EventReadReady.Set();
             }
-            CheckDisconnected();
+            if (check_disconnect)
+                CheckDisconnected();
         }
 
         public void Clear()
@@ -7235,10 +7350,57 @@ namespace SoftEther.WebSocket.Helper
             : base(enable_events, threshold_length) { }
     }
 
+    public static class FastPipeHelper
+    {
+        public static async Task WaitForReadyToWrite(this IFastBufferState writer, CancellationToken cancel, int timeout)
+        {
+            LocalTimer timer = new LocalTimer();
+
+            timer.AddTimeout(FastPipe.MaxPollingTimeout);
+            long timeout_tick = timer.AddTimeout(timeout);
+
+            while (writer.IsReadyToWrite == false)
+            {
+                if (FastTick64.Now >= timeout_tick) throw new TimeoutException();
+                cancel.ThrowIfCancellationRequested();
+
+                await WebSocketHelper.WaitObjectsAsync(
+                    cancels: new CancellationToken[] { cancel },
+                    auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
+                    timeout: timer.GetNextInterval()
+                    );
+            }
+
+            cancel.ThrowIfCancellationRequested();
+        }
+
+        public static async Task WaitForReadyToRead(this IFastBufferState reader, CancellationToken cancel, int timeout)
+        {
+            LocalTimer timer = new LocalTimer();
+
+            timer.AddTimeout(FastPipe.MaxPollingTimeout);
+            long timeout_tick = timer.AddTimeout(timeout);
+
+            while (reader.IsReadyToWrite == false)
+            {
+                if (FastTick64.Now >= timeout_tick) throw new TimeoutException();
+                cancel.ThrowIfCancellationRequested();
+
+                await WebSocketHelper.WaitObjectsAsync(
+                    cancels: new CancellationToken[] { cancel },
+                    auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
+                    timeout: timer.GetNextInterval()
+                    );
+            }
+
+            cancel.ThrowIfCancellationRequested();
+        }
+    }
+
     public class FastPipe : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
-        public const int MaxTimeout = 512000;
+        public const int MaxPollingTimeout = 512;
 
         FastStreamFifo StreamAtoB;
         FastStreamFifo StreamBtoA;
@@ -7277,13 +7439,14 @@ namespace SoftEther.WebSocket.Helper
             DatagramAtoB.OnDisconnected.Add(() => Disconnect());
             DatagramBtoA.OnDisconnected.Add(() => Disconnect());
 
-            CancelWatcher.CancelToken.Register(() =>
-            {
-                Disconnect();
-            });
-
             A = new FastPipeEnd(this, CancelWatcher, StreamAtoB, StreamBtoA, DatagramAtoB, DatagramBtoA);
             B = new FastPipeEnd(this, CancelWatcher, StreamBtoA, StreamAtoB, DatagramBtoA, DatagramAtoB);
+
+            CancelWatcher.CancelToken.Register(() =>
+            {
+                ExceptionQueue.Add(new OperationCanceledException());
+                Disconnect();
+            });
         }
 
         public void Disconnect()
@@ -7354,6 +7517,130 @@ namespace SoftEther.WebSocket.Helper
             this.DatagramWriter = datagram_write;
             this.DatagramReader = datagram_read;
         }
+
+        Once attach_flag;
+        public void EnsureAttachOnlyOnce()
+        {
+            if (attach_flag.IsFirstCall() == false)
+                throw new ApplicationException("Bug! This FastPipeEnd is already attached.");
+        }
+    }
+
+    public class FastPipeEndSocket : Stream, IDisposable
+    {
+        public FastPipeEnd End { get; }
+
+        public FastPipeEndSocket(FastPipeEnd end)
+        {
+            End = end;
+        }
+
+        public Task WaitReadyToSend(CancellationToken cancel, int timeout)
+        {
+            cancel.ThrowIfCancellationRequested();
+            if (End.StreamWriter.IsReadyToWrite) return Task.CompletedTask;
+            return End.StreamWriter.WaitForReadyToWrite(cancel, timeout);
+        }
+
+        public Task WaitReadyToReceive(CancellationToken cancel, int timeout)
+        {
+            cancel.ThrowIfCancellationRequested();
+            if (End.StreamWriter.IsReadyToRead) return Task.CompletedTask;
+            return End.StreamWriter.WaitForReadyToRead(cancel, timeout);
+        }
+
+        public async Task FastSend(Memory<Memory<byte>> items, CancellationToken cancel, bool flush = true)
+        {
+            await WaitReadyToSend(cancel, WriteTimeout);
+
+            End.StreamWriter.EnqueueAllWithLock(items.Span);
+
+            if (flush) FastFlush(true, false);
+        }
+
+        public async Task FastSend(Memory<byte> item, CancellationToken cancel, bool flush = true)
+        {
+            await WaitReadyToSend(cancel, WriteTimeout);
+
+            lock (End.StreamWriter.LockObj)
+            {
+                End.StreamWriter.Enqueue(item);
+            }
+
+            if (flush) FastFlush(true, false);
+        }
+
+        public async Task<List<Memory<byte>>> FastReceive(CancellationToken cancel)
+        {
+            await WaitReadyToReceive(cancel, ReadTimeout);
+
+            var ret = End.StreamReader.DequeueAllWithLock(out _);
+
+            End.StreamReader.CompleteRead();
+
+            return ret;
+        }
+
+        public void FastFlush(bool stream = true, bool datagram = true)
+        {
+            if (stream)
+                End.StreamWriter.CompleteWrite();
+            if (datagram)
+                End.DatagramWriter.CompleteWrite();
+        }
+       
+        Once dispose_flag;
+        protected override void Dispose(bool disposing)
+        {
+            if (dispose_flag.IsFirstCall() && disposing)
+            {
+                // Here
+            }
+            base.Dispose(disposing);
+        }
+
+        public override bool CanRead => true;
+        public override bool CanSeek => false;
+        public override bool CanWrite => true;
+        public override long Length => throw new NotImplementedException();
+        public override long Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
+        public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
+        public override void SetLength(long value) => throw new NotImplementedException();
+
+        public override bool CanTimeout => true;
+        public override int ReadTimeout { get; set; } = Timeout.Infinite;
+        public override int WriteTimeout { get; set; } = Timeout.Infinite;
+
+        public override void Flush() => FastFlush();
+
+        public override async Task FlushAsync(CancellationToken cancellationToken) => Flush();
+
+        public override int Read(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override void Write(byte[] buffer, int offset, int count)
+        {
+            throw new NotImplementedException();
+        }
+
+        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return base.ReadAsync(buffer, offset, count, cancellationToken);
+        }
+
+        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        {
+            return base.WriteAsync(buffer, offset, count, cancellationToken);
+        }
+
+        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            => ReadAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
+        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
+            => WriteAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
+        public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
+        public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
     }
 
     public class FastPipeNonblockStateHelper
@@ -7438,7 +7725,7 @@ namespace SoftEther.WebSocket.Helper
 
         public async Task<bool> WaitIfNothingChanged(int timeout = Timeout.Infinite, int salt = 0)
         {
-            timeout = WebSocketHelper.GetMinTimeout(timeout, FastPipe.MaxTimeout);
+            timeout = WebSocketHelper.GetMinTimeout(timeout, FastPipe.MaxPollingTimeout);
             if (timeout == 0) return false;
             if (IsStateChanged(salt)) return false;
 
@@ -7463,7 +7750,7 @@ namespace SoftEther.WebSocket.Helper
         public CancelWatcher CancelWatcher { get; }
         public FastPipeEnd PipeEnd { get; }
         public abstract PipeSupportedDataTypes SupportedDataTypes { get; }
-        public Task LoopCompletedTask { get; private set; } = Task.CompletedTask;
+        Task LoopCompletedTask = Task.CompletedTask;
 
         public SharedExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
 
@@ -7488,6 +7775,8 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
+                PipeEnd.EnsureAttachOnlyOnce();
+
                 using (LeakChecker.EnterShared())
                 {
                     List<Task> tasks = new List<Task>();
@@ -7545,7 +7834,7 @@ namespace SoftEther.WebSocket.Helper
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                         cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipe.MaxTimeout
+                        timeout: FastPipe.MaxPollingTimeout
                         );
                 }
             }
@@ -7588,7 +7877,7 @@ namespace SoftEther.WebSocket.Helper
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                         cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipe.MaxTimeout
+                        timeout: FastPipe.MaxPollingTimeout
                         );
                 }
             }
@@ -7626,7 +7915,7 @@ namespace SoftEther.WebSocket.Helper
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                         cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipe.MaxTimeout
+                        timeout: FastPipe.MaxPollingTimeout
                         );
                 }
             }
@@ -7669,7 +7958,7 @@ namespace SoftEther.WebSocket.Helper
                     await WebSocketHelper.WaitObjectsAsync(
                         auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                         cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipe.MaxTimeout
+                        timeout: FastPipe.MaxPollingTimeout
                         );
                 }
             }
@@ -7828,6 +8117,67 @@ namespace SoftEther.WebSocket.Helper
                 Socket.DisposeSafe();
             }
             base.Dispose(disposing);
+        }
+    }
+
+    public class FastTcpPipe : FastPipe
+    {
+        public Socket Socket { get; }
+        public IPEndPoint LocalEndPoint { get; }
+        public IPEndPoint RemoteEndPoint { get; }
+
+        public FastTcpPipe(Socket socket, CancellationToken cancel = default(CancellationToken), long? threshold_length_stream = null)
+            : base(cancel, threshold_length_stream)
+        {
+            Socket = socket;
+            LocalEndPoint = (IPEndPoint)Socket.LocalEndPoint;
+            RemoteEndPoint = (IPEndPoint)Socket.RemoteEndPoint;
+        }
+    }
+
+    public sealed class FastPipeTcpListener : IDisposable
+    {
+        public TcpListenManager ListenerManager { get; }
+        public int? QueueThresholdLengthStream = null;
+        public object UserState;
+
+        CancellationTokenSource CancelSource = new CancellationTokenSource();
+
+        public delegate Task FastPipeTcpListenerAcceptProc(FastPipeTcpListener listener, FastTcpPipe pipe, FastPipeEnd end);
+
+        FastPipeTcpListenerAcceptProc AcceptProc;
+
+        public FastPipeTcpListener(FastPipeTcpListenerAcceptProc accept_proc, object user_state = null)
+        {
+            this.UserState = user_state;
+            this.AcceptProc = accept_proc;
+
+            ListenerManager = new TcpListenManager(ListenManagerAcceptProc);
+        }
+
+        async Task ListenManagerAcceptProc(TcpListenManager manager, TcpListenManager.Listener listener, Socket socket)
+        {
+            FastTcpPipe p = new FastTcpPipe(socket, CancelSource.Token, QueueThresholdLengthStream);
+
+            using (var wrapper = new FastPipeEndSocketWrapper(p.A, p.Socket, CancelSource.Token))
+            {
+                Task loop = wrapper.StartLoopAsync();
+
+                await AcceptProc(this, p, p.B);
+
+                await loop;
+            }
+        }
+
+        Once dispose_flag;
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
+                CancelSource.TryCancel();
+
+                ListenerManager.DisposeSafe();
+            }
         }
     }
 }

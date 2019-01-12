@@ -98,42 +98,35 @@ namespace MVPNClientTest
                 TestPipeTcp();
             }
 
-            TcpListenManager man = new TcpListenManager(
-                async (m, l, s) =>
+            FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, p, end) =>
+            {
+                try
                 {
-                    Console.WriteLine("Access! " + s.RemoteEndPoint.ToString() + "  --> " + s.LocalEndPoint.ToString());
+                    Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
+
                     while (true)
                     {
-                        byte[] a = new byte[] { (byte)'a' };
-                        await s.SendAsync(a, SocketFlags.None);
+                        var w = end.StreamWriter;
+                        w.Enqueue(new byte[] { (byte)'a' });
+                        w.CompleteWrite();
+
                         await Task.Delay(100);
                     }
-                });
-
-            new Task(async () =>
-            {
-                while (man.Disposed == false)
-                {
-                    //man.Listeners.ToList().ForEach(x => Console.WriteLine(x.Port + "  " + x.Status));
-                    var listeners = man.Listeners;
-                    //Console.WriteLine("ports: " + listeners.Length + ", ok = " + listeners.Where(x => x.Status == ListenStatus.Listening).Count());
-
-                    //Console.WriteLine("conn: " + man.CurrentConnections);
-                    await Task.Delay(1000);
                 }
-            }).Start();
+                catch (Exception ex)
+                {
+                    WriteLine(ex);
+                }
+            });
 
-            for (int i = 1; i < 40000; i++)
-            {
-                var a = man.Add(i, IPVersion.IPv4);
-                var b = man.Add(i, IPVersion.IPv6);
-                //WriteLine(i);
-            }
+            listener.ListenerManager.Add(1);
 
             Console.ReadLine();
 
             Console.WriteLine("Stopping...");
-            man.Dispose();
+
+            listener.Dispose();
+
             Console.WriteLine("Stopped.");
         }
 
