@@ -2032,6 +2032,60 @@ namespace cs_struct_bench1
         }
     }
 
+    public sealed class FastMemoryAllocator<T>
+    {
+        Memory<T> Pool;
+        int CurrentPos;
+        int MinReserveSize;
+
+        public FastMemoryAllocator(int initial_size = 0)
+        {
+            initial_size = Math.Min(initial_size, 1);
+            Pool = new T[initial_size];
+            MinReserveSize = initial_size;
+        }
+
+        public Memory<T> Reserve(int max_size)
+        {
+            checked
+            {
+                if (max_size < 0) throw new ArgumentOutOfRangeException("size");
+                if (max_size == 0) return Memory<T>.Empty;
+
+                Debug.Assert((Pool.Length - CurrentPos) >= 0);
+
+                if ((Pool.Length - CurrentPos) < max_size)
+                {
+                    MinReserveSize = Math.Max(MinReserveSize, max_size * 5);
+                    Pool = new T[MinReserveSize];
+                    CurrentPos = 0;
+                }
+
+                var ret = Pool.Slice(CurrentPos, max_size);
+                CurrentPos += max_size;
+                return ret;
+            }
+        }
+
+        public Memory<T> Commit(Memory<T> reserved_memory, int commit_size)
+        {
+            checked
+            {
+                int return_size = reserved_memory.Length - commit_size;
+                Debug.Assert(return_size >= 0);
+                if (return_size == 0) return reserved_memory;
+
+                CurrentPos -= return_size;
+                Debug.Assert(CurrentPos >= 0);
+
+                if (commit_size >= 1)
+                    return reserved_memory.Slice(0, commit_size);
+                else
+                    return Memory<T>.Empty;
+            }
+        }
+    }
+
     public static class FastTick64
     {
         public static long Now { get => GetTick64(); }

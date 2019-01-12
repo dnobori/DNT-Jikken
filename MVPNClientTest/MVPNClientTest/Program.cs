@@ -104,18 +104,19 @@ namespace MVPNClientTest
                 {
                     Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
-                    while (true)
+                    using (var st = end.GetStream())
                     {
-                        var w = end.StreamWriter;
-                        w.Enqueue(new byte[] { (byte)'a' });
-                        w.CompleteWrite();
-
-                        await Task.Delay(100);
+                        while (true)
+                        {
+                            byte[] tmp = new byte[1024];
+                            int r = await st.ReadAsync(tmp, 0, tmp.Length, CancellationToken.None);
+                            WriteLine(r);
+                        }
                     }
                 }
                 catch (Exception ex)
                 {
-                    WriteLine(ex);
+                    WriteLine(ex.GetSingleException());
                 }
             });
 
@@ -128,6 +129,8 @@ namespace MVPNClientTest
             listener.Dispose();
 
             Console.WriteLine("Stopped.");
+
+            LeakChecker.Shared.Print();
         }
 
         static async Task TestPipeTcpProc(Socket socket, CancellationToken cancel)

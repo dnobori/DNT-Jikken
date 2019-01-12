@@ -422,9 +422,42 @@ namespace cs_struct_bench1
 
 
             WriteLine("Start Bench");
+            FastMemoryAllocator<byte> alloc = new FastMemoryAllocator<byte>();
+            alloc.Reserve(65536);
 
             var q = new MicroBenchmarkQueue()
 
+
+                .Add(new MicroBenchmark<Memory<byte>>("normal new byte[64]", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        var x = new byte[64];
+                        Limbo.SInt += x.Length;
+                    }
+                }
+                ), true, 190111)
+
+                .Add(new MicroBenchmark<Memory<byte>>("normal new byte[65536]", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        var x = new byte[65536];
+                        Limbo.SInt += x.Length;
+                    }
+                }
+                ), true, 190111)
+
+                .Add(new MicroBenchmark<Memory<byte>>("FastMemoryAllocator alloc 65536 and use 64", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        var mem = alloc.Reserve(65536);
+                        mem = alloc.Commit(mem, 64);
+                        Limbo.SInt += mem.Length;
+                    }
+                }
+                ), true, 190111)
 
                 //.Add(new MicroBenchmark<Memory<byte>>("FastArray read 10000 * 10000", 1000, (state, iterations) =>
                 //{
