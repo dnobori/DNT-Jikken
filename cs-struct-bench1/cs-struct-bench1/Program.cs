@@ -420,9 +420,20 @@ namespace cs_struct_bench1
 
             int pool_test_size = 1024;
 
+
+            WriteLine("Start Bench");
+
             var q = new MicroBenchmarkQueue()
 
 
+                //.Add(new MicroBenchmark<Memory<byte>>("FastArray read 10000 * 10000", 1000, (state, iterations) =>
+                //{
+                //    for (int i = 0; i < iterations; i++)
+                //    {
+                //        Limbo.SInt += fa2.ReadAsMemoryList().Count;
+                //    }
+                //}
+                //), true, 190111)
 
 
                 .Add(new MicroBenchmark<Memory<byte>>("struct hash 10", 100000, (state, iterations) =>

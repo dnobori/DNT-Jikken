@@ -12,12 +12,14 @@ using System.Collections;
 using System.IO.Pipelines;
 using System.Buffers;
 using System.Buffers.Binary;
+using System.Linq;
 using System.IO;
 using System.Security.Cryptography;
 
 namespace cs_struct_bench1
 {
     #region for_benchmark
+
     public ref struct SpanBuffer<T>
     {
         Span<T> InternalSpan;

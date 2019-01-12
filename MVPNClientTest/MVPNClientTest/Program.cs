@@ -125,13 +125,16 @@ namespace MVPNClientTest
 
             for (int i = 1; i < 40000; i++)
             {
-                man.Add(i, IPVersion.IPv4);
-                man.Add(i, IPVersion.IPv6);
+                var a = man.Add(i, IPVersion.IPv4);
+                var b = man.Add(i, IPVersion.IPv6);
+                //WriteLine(i);
             }
 
             Console.ReadLine();
 
+            Console.WriteLine("Stopping...");
             man.Dispose();
+            Console.WriteLine("Stopped.");
         }
 
         static async Task TestPipeTcpProc(Socket socket, CancellationToken cancel)
@@ -218,6 +221,41 @@ namespace MVPNClientTest
             }
 
             MicroBenchmarkQueue q = new MicroBenchmarkQueue();
+
+            int num_test_data = 10000;
+            object[] test_data_array = new object[num_test_data];
+            for (int i = 0; i < num_test_data; i++)
+                test_data_array[i] = new object();
+
+            q.Add(new MicroBenchmark<int>("Queue insert test: .NET Queue", 10000,
+                (x, iterations) =>
+                {
+                    Queue<object> queue = new Queue<object>();
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        foreach (object o in test_data_array)
+                            queue.Enqueue(o);
+                    }
+
+                },
+                () => 0), true, 0);
+
+
+            q.Add(new MicroBenchmark<int>("Queue insert test: Fifo<T>", 10000,
+                (x, iterations) =>
+                {
+                    Fifo<object> fifo = new Fifo<object>();
+                    var span = test_data_array.AsSpan();
+
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        fifo.Write(span);
+                    }
+
+                },
+                () => 0), true, 0);
+
 
             q.Add(new MicroBenchmark<int>("InsertFirst", 1000,
                 (x, iterations) =>

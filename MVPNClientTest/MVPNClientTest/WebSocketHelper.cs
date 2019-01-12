@@ -5884,7 +5884,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public async Task<bool> Delete(Listener listener)
+        public async Task<bool> DeleteAsync(Listener listener)
         {
             Listener s;
             lock (LockObj)
@@ -6001,8 +6001,8 @@ namespace SoftEther.WebSocket.Helper
 
         void Clear();
         void Enqueue(T item);
-        void EnqueueAll(T[] item_list);
-        void EnqueueAllWithLock(T[] item_list);
+        void EnqueueAll(Span<T> item_list);
+        void EnqueueAllWithLock(Span<T> item_list);
         List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true);
         List<T> DequeueAll(out long total_read_size);
         List<T> DequeueAllWithLock(out long total_read_size);
@@ -6053,6 +6053,11 @@ namespace SoftEther.WebSocket.Helper
             WriteInternal(data, data.Length);
         }
 
+        public void Write(T data)
+        {
+            WriteInternal(data);
+        }
+
         public void WriteSkip(int length)
         {
             WriteInternal(null, length);
@@ -6085,6 +6090,35 @@ namespace SoftEther.WebSocket.Helper
                 Size = new_size;
             }
         }
+
+        void WriteInternal(T src)
+        {
+            checked
+            {
+                int old_size, new_size, need_size;
+
+                old_size = Size;
+                new_size = old_size + 1;
+                need_size = Position + new_size;
+
+                bool realloc_flag = false;
+                int new_physical_size = PhysicalData.Length;
+                while (need_size > new_physical_size)
+                {
+                    new_physical_size = Math.Max(new_physical_size, FifoInitSize) * 3;
+                    realloc_flag = true;
+                }
+
+                if (realloc_flag)
+                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, new_physical_size);
+
+                if (src != null)
+                    PhysicalData[Position + old_size] = src;
+
+                Size = new_size;
+            }
+        }
+
 
         public int Read(Span<T> dest)
         {
@@ -6541,13 +6575,13 @@ namespace SoftEther.WebSocket.Helper
             InsertTail(item);
         }
 
-        public void EnqueueAllWithLock(Memory<T>[] item_list)
+        public void EnqueueAllWithLock(Span<Memory<T>> item_list)
         {
             lock (LockObj)
                 EnqueueAll(item_list);
         }
 
-        public void EnqueueAll(Memory<T>[] item_list)
+        public void EnqueueAll(Span<Memory<T>> item_list)
         {
             CheckDisconnected();
             checked
@@ -7091,18 +7125,18 @@ namespace SoftEther.WebSocket.Helper
             CheckDisconnected();
             checked
             {
-                Fifo.Write(new T[] { item });
+                Fifo.Write(item);
                 PinTail++;
             }
         }
 
-        public void EnqueueAllWithLock(T[] item_list)
+        public void EnqueueAllWithLock(Span<T> item_list)
         {
             lock (LockObj)
                 EnqueueAll(item_list);
         }
 
-        public void EnqueueAll(T[] item_list)
+        public void EnqueueAll(Span<T> item_list)
         {
             CheckDisconnected();
             checked
