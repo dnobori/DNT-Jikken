@@ -425,7 +425,31 @@ namespace cs_struct_bench1
             FastMemoryAllocator<byte> alloc = new FastMemoryAllocator<byte>();
             alloc.Reserve(65536);
 
+            Memory<byte> byte12345 = new byte[12345];
+
             var q = new MicroBenchmarkQueue()
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("boxing", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        object o = (object)byte12345;
+                        Limbo.ObjectSlow = o;
+                    }
+                }
+                ), true, 190111)
+
+                .Add(new MicroBenchmark<Memory<byte>>("unboxing", 100000, (state, iterations) =>
+                {
+                    object o = (object)byte12345;
+                    Limbo.ObjectSlow = o;
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        byte12345 = (Memory<byte>)Limbo.ObjectSlow;
+                    }
+                }
+                ), true, 190111)
 
 
                 .Add(new MicroBenchmark<Memory<byte>>("normal new byte[64]", 100000, (state, iterations) =>

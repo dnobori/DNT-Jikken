@@ -45,6 +45,10 @@ namespace MVPNClientTest
         {
             using (FastTcpPipe p = await FastTcpPipe.ConnectAsync("www.google.com", 80))
             {
+                p.LocalPipeEnd.StreamReader.EventListeners.Register((b, t, s) =>
+                {
+                    WriteLine(t.ToString());
+                });
                 using (Stream st = p.GetStream())
                 {
                     WriteLine("Connected.");

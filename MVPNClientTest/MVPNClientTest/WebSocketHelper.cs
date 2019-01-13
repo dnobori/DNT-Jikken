@@ -6270,24 +6270,20 @@ namespace SoftEther.WebSocket.Helper
     public class FastBufferDisconnectedException : DisconnectedException { }
     public class SocketDisconnectedException : DisconnectedException { }
 
-    public enum FastBufferCallbackEventType
-    {
-    }
+    public delegate void FastEventCallback<TCaller, TEventType>(TCaller buffer, TEventType type, object user_state);
 
-    public delegate void FastBufferEventCallback(IFastBufferState buffer, FastBufferCallbackEventType type, object user_state);
-
-    public class FastBufferEvent
+    public class FastEvent<TCaller, TEventType>
     {
-        public FastBufferEventCallback Proc { get; }
+        public FastEventCallback<TCaller, TEventType> Proc { get; }
         public object UserState { get; }
 
-        public FastBufferEvent(FastBufferEventCallback proc, object user_state)
+        public FastEvent(FastEventCallback<TCaller, TEventType> proc, object user_state)
         {
             this.Proc = proc;
             this.UserState = user_state;
         }
 
-        public void CallSafe(IFastBufferState buffer, FastBufferCallbackEventType type)
+        public void CallSafe(TCaller buffer, TEventType type)
         {
             try
             {
@@ -6297,14 +6293,14 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public struct FastBufferEventListenerList
+    public class FastEventListenerList<TCaller, TEventType>
     {
-        FastReadList<FastBufferEvent> ListenerList;
+        FastReadList<FastEvent<TCaller, TEventType>> ListenerList;
 
-        public int Register(FastBufferEventCallback proc, object user_state = null)
+        public int Register(FastEventCallback<TCaller, TEventType> proc, object user_state = null)
         {
             if (proc == null) return 0;
-            return ListenerList.Add(new FastBufferEvent(proc, user_state));
+            return ListenerList.Add(new FastEvent<TCaller, TEventType>(proc, user_state));
         }
 
         public bool Unregister(int id)
@@ -6312,13 +6308,21 @@ namespace SoftEther.WebSocket.Helper
             return ListenerList.Delete(id);
         }
 
-        public void Notify(IFastBufferState buffer, FastBufferCallbackEventType type)
+        public void Fire(TCaller buffer, TEventType type)
         {
             var list = ListenerList.GetListFast();
             if (list != null)
                 foreach (var e in list)
                     e.CallSafe(buffer, type);
         }
+    }
+
+    public enum FastBufferCallbackEventType
+    {
+        Init,
+        Written,
+        Read,
+        Disconnected,
     }
 
     public interface IFastBufferState
@@ -6339,7 +6343,7 @@ namespace SoftEther.WebSocket.Helper
         AsyncAutoResetEvent EventWriteReady { get; }
         AsyncAutoResetEvent EventReadReady { get; }
 
-        //int AddEventLis
+        FastEventListenerList<IFastBufferState, FastBufferCallbackEventType> EventListeners { get; }
 
         void CompleteRead();
         void CompleteWrite(bool check_disconnect = true);
@@ -6543,6 +6547,9 @@ namespace SoftEther.WebSocket.Helper
         public long Threshold { get; set; }
         public long Id { get; }
 
+        public FastEventListenerList<IFastBufferState, FastBufferCallbackEventType> EventListeners { get; }
+            = new FastEventListenerList<IFastBufferState, FastBufferCallbackEventType>();
+
         public bool IsReadyToWrite
         {
             get
@@ -6593,6 +6600,8 @@ namespace SoftEther.WebSocket.Helper
             }
 
             Id = FastBufferGlobalIdCounter.NewId();
+
+            EventListeners.Fire(this, FastBufferCallbackEventType.Init);
         }
 
         bool LastReadyToWrite = false;
@@ -6616,6 +6625,8 @@ namespace SoftEther.WebSocket.Helper
                 }
                 EventReadReady.Set();
                 EventWriteReady.Set();
+
+                EventListeners.Fire(this, FastBufferCallbackEventType.Disconnected);
             }
         }
 
@@ -6637,7 +6648,9 @@ namespace SoftEther.WebSocket.Helper
                     }
                 }
                 if (set_flag)
+                {
                     EventWriteReady.Set();
+                }
             }
         }
 
@@ -6658,7 +6671,9 @@ namespace SoftEther.WebSocket.Helper
                     }
                 }
                 if (set_flag)
+                {
                     EventReadReady.Set();
+                }
             }
             if (check_disconnect)
                 CheckDisconnected();
@@ -6878,7 +6893,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public FastBufferSegment<Memory<T>>[] ReadFast(ref long pin, long size, out long read_size, bool allow_partial = false)
+        public FastBufferSegment<Memory<T>>[] ReadForwardFast(ref long pin, long size, out long read_size, bool allow_partial = false)
         {
             checked
             {
@@ -6912,7 +6927,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public Memory<T> ReadContiguous(ref long pin, long size, bool allow_partial = false)
+        public Memory<T> ReadForwardContiguous(ref long pin, long size, bool allow_partial = false)
         {
             checked
             {
@@ -6936,7 +6951,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public Memory<T> WriteContiguous(ref long pin, long size, bool append_if_overrun = false)
+        public Memory<T> WriteForwardContiguous(ref long pin, long size, bool append_if_overrun = false)
         {
             checked
             {
@@ -6949,7 +6964,9 @@ namespace SoftEther.WebSocket.Helper
         public void Enqueue(Memory<T> item)
         {
             CheckDisconnected();
+            if (item.Length == 0) return;
             InsertTail(item);
+            EventListeners.Fire(this, FastBufferCallbackEventType.Written);
         }
 
         public void EnqueueAllWithLock(Span<Memory<T>> item_list)
@@ -6963,14 +6980,18 @@ namespace SoftEther.WebSocket.Helper
             CheckDisconnected();
             checked
             {
+                int num = 0;
                 foreach (Memory<T> t in item_list)
                 {
                     if (t.Length != 0)
                     {
                         List.AddLast(t);
                         PinTail += t.Length;
+                        num++;
                     }
                 }
+                if (num >= 1)
+                    EventListeners.Fire(this, FastBufferCallbackEventType.Written);
             }
         }
 
@@ -6994,6 +7015,7 @@ namespace SoftEther.WebSocket.Helper
                     pos += mem.Length;
                 }
                 Debug.Assert(pos == total_size);
+                EventListeners.Fire(this, FastBufferCallbackEventType.Read);
                 return (int)total_size;
             }
         }
@@ -7010,6 +7032,7 @@ namespace SoftEther.WebSocket.Helper
                 int r = DequeueContiguousSlow(ret, read_size);
                 Debug.Assert(r <= read_size);
                 ret = ret.Slice(0, r);
+                EventListeners.Fire(this, FastBufferCallbackEventType.Read);
                 return ret;
             }
         }
@@ -7051,6 +7074,7 @@ namespace SoftEther.WebSocket.Helper
                             total_read_size += last_segment_read_size;
                             PinHead += total_read_size;
                             Debug.Assert(min_read_size >= total_read_size);
+                            EventListeners.Fire(this, FastBufferCallbackEventType.Read);
                             return ret;
                         }
                         else
@@ -7060,6 +7084,7 @@ namespace SoftEther.WebSocket.Helper
                             List.Remove(node);
                             PinHead += total_read_size;
                             Debug.Assert(min_read_size <= total_read_size);
+                            EventListeners.Fire(this, FastBufferCallbackEventType.Read);
                             return ret;
                         }
                     }
@@ -7076,6 +7101,7 @@ namespace SoftEther.WebSocket.Helper
                         if (node == null)
                         {
                             PinHead += total_read_size;
+                            EventListeners.Fire(this, FastBufferCallbackEventType.Read);
                             return ret;
                         }
                     }
@@ -7107,6 +7133,8 @@ namespace SoftEther.WebSocket.Helper
                     this.List = new FastLinkedList<Memory<T>>();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
+                    EventListeners.Fire(this, FastBufferCallbackEventType.Read);
+                    other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
                     return length;
                 }
                 else
@@ -7118,6 +7146,8 @@ namespace SoftEther.WebSocket.Helper
                     this.List.Clear();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
+                    EventListeners.Fire(this, FastBufferCallbackEventType.Read);
+                    other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
                     return length;
                 }
             }
@@ -7389,6 +7419,9 @@ namespace SoftEther.WebSocket.Helper
         public long Threshold { get; set; }
         public long Id { get; }
 
+        public FastEventListenerList<IFastBufferState, FastBufferCallbackEventType> EventListeners { get; }
+            = new FastEventListenerList<IFastBufferState, FastBufferCallbackEventType>();
+
         public bool IsReadyToWrite
         {
             get
@@ -7440,6 +7473,8 @@ namespace SoftEther.WebSocket.Helper
             }
 
             Id = FastBufferGlobalIdCounter.NewId();
+
+            EventListeners.Fire(this, FastBufferCallbackEventType.Init);
         }
 
         public void CheckDisconnected()
@@ -7461,6 +7496,8 @@ namespace SoftEther.WebSocket.Helper
                 }
                 EventReadReady.Set();
                 EventWriteReady.Set();
+
+                EventListeners.Fire(this, FastBufferCallbackEventType.Disconnected);
             }
         }
 
@@ -7484,7 +7521,9 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 if (set_flag)
+                {
                     EventWriteReady.Set();
+                }
             }
         }
 
@@ -7507,7 +7546,9 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 if (set_flag)
+                {
                     EventReadReady.Set();
+                }
             }
             if (check_disconnect)
                 CheckDisconnected();
@@ -7529,6 +7570,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 Fifo.Write(item);
                 PinTail++;
+                EventListeners.Fire(this, FastBufferCallbackEventType.Written);
             }
         }
 
@@ -7545,6 +7587,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 Fifo.Write(item_list);
                 PinTail += item_list.Length;
+                EventListeners.Fire(this, FastBufferCallbackEventType.Written);
             }
         }
 
@@ -7568,6 +7611,8 @@ namespace SoftEther.WebSocket.Helper
                 List<T> ret = new List<T>(tmp);
 
                 PinHead += total_read_size;
+
+                EventListeners.Fire(this, FastBufferCallbackEventType.Read);
 
                 return ret;
             }
@@ -7605,6 +7650,8 @@ namespace SoftEther.WebSocket.Helper
                     this.Fifo = new Fifo<T>();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
+                    EventListeners.Fire(this, FastBufferCallbackEventType.Read);
+                    other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
                     return length;
                 }
                 else
@@ -7614,6 +7661,8 @@ namespace SoftEther.WebSocket.Helper
                     other.Fifo.Write(data);
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
+                    EventListeners.Fire(this, FastBufferCallbackEventType.Read);
+                    other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
                     return length;
                 }
             }
