@@ -148,7 +148,7 @@ namespace SoftEther.VpnClient
 
             ssl = new SslStream(sock, true, check_cert);
 
-            await WebSocketHelper.DoAsyncWithTimeout<int>(
+            await WebSocketHelper.DoAsyncWithTimeout(
                 main_proc: async c =>
                 {
                     await ssl.AuthenticateAsClientAsync(Setting.Host.Hostname);

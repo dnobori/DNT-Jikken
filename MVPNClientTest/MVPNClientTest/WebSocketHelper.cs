@@ -2107,6 +2107,7 @@ namespace SoftEther.WebSocket.Helper
     public static class FastTick64
     {
         public static long Now { get => GetTick64(); }
+        public static int NowSeconds32 { get => GetSeconds32(); }
 
         static volatile uint state = 0;
 
@@ -2138,6 +2139,8 @@ namespace SoftEther.WebSocket.Helper
 
             return (long)value + 0x100000000L * (long)rotate_16bit;
         }
+
+        static int GetSeconds32() => (int)(GetTick64() / 1000L);
     }
 
     public static class FastHashHelper
@@ -3081,6 +3084,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     throw;
                 }
+                await Task.Yield();
                 goto LABEL_RETRY;
             }
         }
@@ -3111,7 +3115,7 @@ namespace SoftEther.WebSocket.Helper
         public static async Task ConnectAsync(this TcpClient tc, string host, int port,
             int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
         {
-            await DoAsyncWithTimeout<int>(
+            await DoAsyncWithTimeout(
             main_proc: async c =>
             {
                 await tc.ConnectAsync(host, port);
@@ -3481,7 +3485,7 @@ namespace SoftEther.WebSocket.Helper
 
             try
             {
-                int ret = await DoAsyncWithTimeout<int>(async (cancel_for_proc) =>
+                int ret = await DoAsyncWithTimeout(async (cancel_for_proc) =>
                 {
                     if (read_all == false)
                     {
@@ -3532,7 +3536,7 @@ namespace SoftEther.WebSocket.Helper
 
             try
             {
-                await DoAsyncWithTimeout<int>(async (cancel_for_proc) =>
+                await DoAsyncWithTimeout(async (cancel_for_proc) =>
                 {
                     await stream.WriteAsync(buffer, offset, target_write_size, cancel_for_proc);
                     return 0;
@@ -4059,6 +4063,56 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public struct FastReadList<T>
+    {
+        static object GlobalWriteLock = new object();
+        static volatile int IdSeed = 0;
+
+        SortedDictionary<int, T> Hash;
+
+        volatile T[] InternalFastList;
+
+        public T[] GetListFast() => InternalFastList;
+
+        public int Add(T value)
+        {
+            lock (GlobalWriteLock)
+            {
+                if (Hash == null)
+                    Hash = new SortedDictionary<int, T>();
+
+                int id = ++IdSeed;
+                Hash.Add(id, value);
+                Update();
+                return id;
+            }
+        }
+
+        public bool Delete(int id)
+        {
+            lock (GlobalWriteLock)
+            {
+                if (Hash == null)
+                    return false;
+
+                bool ret = Hash.Remove(id);
+                if (ret)
+                {
+                    Update();
+                }
+                return ret;
+            }
+        }
+
+        void Update()
+        {
+            if (Hash.Count == 0)
+                InternalFastList = null;
+            else
+                InternalFastList = Hash.Values.ToArray();
+        }
+    }
+
     public struct Once
     {
         volatile private int flag;
@@ -4073,12 +4127,9 @@ namespace SoftEther.WebSocket.Helper
 
         object LockObj = new object();
 
-        Stopwatch sw = new Stopwatch();
-        long tick { get => this.sw.ElapsedMilliseconds; }
-
         public long Timeout { get; }
 
-        long next_timeout;
+        long NextTimeout;
 
         AsyncAutoResetEvent ev = new AsyncAutoResetEvent();
 
@@ -4096,66 +4147,66 @@ namespace SoftEther.WebSocket.Helper
 
         public TimeoutDetector(int timeout, CancelWatcher watcher = null, AutoResetEvent event_auto = null, ManualResetEvent event_manual = null, Action callme = null)
         {
+            if (timeout == System.Threading.Timeout.Infinite || timeout == int.MaxValue)
+            {
+                return;
+            }
+
             this.Timeout = timeout;
             this.watcher = watcher;
             this.event_auto = event_auto;
             this.event_manual = event_manual;
             this.callme = callme;
 
-            sw.Start();
-            next_timeout = tick + this.Timeout;
+            NextTimeout = FastTick64.Now + this.Timeout;
             main_loop = timeout_detector_main_loop();
         }
 
         public void Keep()
         {
-            lock (LockObj)
-            {
-                this.next_timeout = tick + this.Timeout;
-            }
+            Interlocked.Exchange(ref this.NextTimeout, FastTick64.Now + this.Timeout);
         }
 
         async Task timeout_detector_main_loop()
         {
-            while (halt.IsCancellationRequested == false)
+            using (LeakChecker.EnterShared())
             {
-                long now, remain_time;
-
-                lock (LockObj)
+                while (halt.IsCancellationRequested == false)
                 {
-                    now = tick;
-                    remain_time = next_timeout - now;
-                }
+                    long next_timeout = Interlocked.Read(ref this.NextTimeout);
 
-                Dbg.Where($"remain_time = {remain_time}");
+                    long remain_time = next_timeout - FastTick64.Now;
 
-                if (remain_time < 0)
-                {
-                    break;
-                }
-                else
-                {
-                    await WebSocketHelper.WaitObjectsAsync(
-                        auto_events: new AsyncAutoResetEvent[] { ev },
-                        cancels: new CancellationToken[] { halt.Token },
-                        timeout: (int)remain_time);
-                }
-            }
+                    Dbg.Where($"remain_time = {remain_time}");
 
-            cts.TryCancelAsync().LaissezFaire();
-            if (this.watcher != null) this.watcher.Cancel();
-            if (this.event_auto != null) this.event_auto.Set();
-            if (this.event_manual != null) this.event_manual.Set();
-            if (this.callme != null)
-            {
-                new Task(() =>
-                {
-                    try
+                    if (remain_time < 0)
                     {
-                        this.callme();
+                        break;
                     }
-                    catch { }
-                }).Start();
+                    else
+                    {
+                        await WebSocketHelper.WaitObjectsAsync(
+                            auto_events: new AsyncAutoResetEvent[] { ev },
+                            cancels: new CancellationToken[] { halt.Token },
+                            timeout: (int)remain_time);
+                    }
+                }
+
+                cts.TryCancelAsync().LaissezFaire();
+                if (this.watcher != null) this.watcher.Cancel();
+                if (this.event_auto != null) this.event_auto.Set();
+                if (this.event_manual != null) this.event_manual.Set();
+                if (this.callme != null)
+                {
+                    new Task(() =>
+                    {
+                        try
+                        {
+                            this.callme();
+                        }
+                        catch { }
+                    }).Start();
+                }
             }
         }
 
@@ -4598,7 +4649,7 @@ namespace SoftEther.WebSocket.Helper
                 UdpBulkReader = new AsyncBulkReceiver<Datagram, int>(async x =>
                 {
                     SocketReceiveFromResult ret = await Sock.ReceiveFromSafeUdpErrorAsync(TmpRecvBuffer, SocketFlags.None);
-                    return new Datagram(TmpRecvBuffer.AsSpan().Slice(0, ret.ReceivedBytes).ToArray(), (IPEndPoint)ret.RemoteEndPoint);
+                    return new ValueOrClosed<Datagram>(new Datagram(TmpRecvBuffer.AsSpan().Slice(0, ret.ReceivedBytes).ToArray(), (IPEndPoint)ret.RemoteEndPoint));
                 });
 
                 RecvLoopTask = UDP_RecvLoop();
@@ -4610,7 +4661,7 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
-                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                await WebSocketHelper.DoAsyncWithTimeout(async (cancel) =>
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
@@ -4652,7 +4703,7 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
-                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                await WebSocketHelper.DoAsyncWithTimeout(async (cancel) =>
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
@@ -4707,7 +4758,7 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
-                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                await WebSocketHelper.DoAsyncWithTimeout(async (cancel) =>
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
@@ -4752,7 +4803,7 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
-                await WebSocketHelper.DoAsyncWithTimeout<int>(async (cancel) =>
+                await WebSocketHelper.DoAsyncWithTimeout(async (cancel) =>
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
@@ -4824,9 +4875,24 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public struct ValueOrClosed<T>
+    {
+        bool InternalIsOpen;
+        public T Value;
+
+        public bool IsOpen { get => InternalIsOpen; }
+        public bool IsClosed { get => !InternalIsOpen; }
+
+        public ValueOrClosed(T value)
+        {
+            InternalIsOpen = true;
+            Value = value;
+        }
+    }
+
     public class AsyncBulkReceiver<TUserReturnElement, TUserState>
     {
-        public delegate Task<TUserReturnElement> AsyncReceiveProcDelegate(TUserState state);
+        public delegate Task<ValueOrClosed<TUserReturnElement>> AsyncReceiveProcDelegate(TUserState state);
 
         public int DefaultMaxCount { get; } = 1024;
 
@@ -4838,7 +4904,7 @@ namespace SoftEther.WebSocket.Helper
             AsyncReceiveProc = async_receive_proc;
         }
 
-        Task<TUserReturnElement> pushed_user_task = null;
+        Task<ValueOrClosed<TUserReturnElement>> pushed_user_task = null;
 
         public async Task<TUserReturnElement[]> Recv(CancellationToken cancel, TUserState state = default(TUserState), int? max_count = null)
         {
@@ -4850,7 +4916,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 cancel.ThrowIfCancellationRequested();
 
-                Task<TUserReturnElement> user_task;
+                Task<ValueOrClosed<TUserReturnElement>> user_task;
                 if (pushed_user_task != null)
                 {
                     user_task = pushed_user_task;
@@ -4875,17 +4941,35 @@ namespace SoftEther.WebSocket.Helper
 
                         cancel.ThrowIfCancellationRequested();
 
-                        ret.Add(user_task.Result);
+                        if (user_task.Result.IsOpen)
+                        {
+                            ret.Add(user_task.Result.Value);
+                        }
+                        else
+                        {
+                            pushed_user_task = user_task;
+                            break;
+                        }
                     }
                 }
                 else
                 {
-                    ret.Add(user_task.Result);
+                    if (user_task.Result.IsOpen)
+                    {
+                        ret.Add(user_task.Result.Value);
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
                 if (ret.Count >= max_count) break;
             }
 
-            return ret.ToArray();
+            if (ret.Count >= 1)
+                return ret.ToArray();
+            else
+                return null; // Disconnected
         }
     }
 
@@ -5227,9 +5311,11 @@ namespace SoftEther.WebSocket.Helper
         Dictionary<long, string> List = new Dictionary<long, string>();
         long CurrentId = 0;
 
-        public Holder Enter([CallerMemberName] string caller = null) => new Holder(this, caller);
+        public Holder Enter([CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null)
+            => new Holder(this, $"{caller}() - {Path.GetFileName(filename)}:{line}");
 
-        public static Holder EnterShared([CallerMemberName] string caller = null) => new Holder(Shared, caller);
+        public static Holder EnterShared([CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null)
+            => new Holder(Shared, $"{caller}() - {Path.GetFileName(filename)}:{line}");
 
         public int Count
         {
@@ -5826,6 +5912,71 @@ namespace SoftEther.WebSocket.Helper
 
             return ret;
         }
+
+        public static IPAddress GetLocalIPForDestinationHost(IPAddress dest)
+        {
+            try
+            {
+                using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.IP))
+                {
+                    sock.Connect(dest, 65530);
+                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
+            {
+                sock.Connect(dest, 65531);
+                IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                return ep.Address;
+            }
+        }
+
+        public static async Task<IPAddress> GetLocalIPv4ForInternetAsync()
+        {
+            try
+            {
+                return GetLocalIPForDestinationHost(IPAddress.Parse("8.8.8.8"));
+            }
+            catch { }
+
+            try
+            {
+                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                {
+                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
+                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+                    await sock.ConnectAsync(addr, 443);
+                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            try
+            {
+                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                {
+                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
+                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+                    await sock.ConnectAsync(addr, 80);
+                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            try
+            {
+                return CurrentInfo.IPAddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork)
+                    .Where(x => IPAddress.IsLoopback(x) == false).Where(x => x != IPAddress.Any).First();
+            }
+            catch { }
+
+            return IPAddress.Any;
+        }
     }
 
     public enum IPVersion
@@ -6115,8 +6266,60 @@ namespace SoftEther.WebSocket.Helper
         public bool Disposed => disposed;
     }
 
-    public class FastBufferDisconnectedException : Exception { }
-    public class SocketDisconnectedException : Exception { }
+    public class DisconnectedException : Exception { }
+    public class FastBufferDisconnectedException : DisconnectedException { }
+    public class SocketDisconnectedException : DisconnectedException { }
+
+    public enum FastBufferCallbackEventType
+    {
+    }
+
+    public delegate void FastBufferEventCallback(IFastBufferState buffer, FastBufferCallbackEventType type, object user_state);
+
+    public class FastBufferEvent
+    {
+        public FastBufferEventCallback Proc { get; }
+        public object UserState { get; }
+
+        public FastBufferEvent(FastBufferEventCallback proc, object user_state)
+        {
+            this.Proc = proc;
+            this.UserState = user_state;
+        }
+
+        public void CallSafe(IFastBufferState buffer, FastBufferCallbackEventType type)
+        {
+            try
+            {
+                this.Proc(buffer, type, UserState);
+            }
+            catch { }
+        }
+    }
+
+    public struct FastBufferEventListenerList
+    {
+        FastReadList<FastBufferEvent> ListenerList;
+
+        public int Register(FastBufferEventCallback proc, object user_state = null)
+        {
+            if (proc == null) return 0;
+            return ListenerList.Add(new FastBufferEvent(proc, user_state));
+        }
+
+        public bool Unregister(int id)
+        {
+            return ListenerList.Delete(id);
+        }
+
+        public void Notify(IFastBufferState buffer, FastBufferCallbackEventType type)
+        {
+            var list = ListenerList.GetListFast();
+            if (list != null)
+                foreach (var e in list)
+                    e.CallSafe(buffer, type);
+        }
+    }
 
     public interface IFastBufferState
     {
@@ -6135,6 +6338,8 @@ namespace SoftEther.WebSocket.Helper
         bool IsEventsEnabled { get; }
         AsyncAutoResetEvent EventWriteReady { get; }
         AsyncAutoResetEvent EventReadReady { get; }
+
+        //int AddEventLis
 
         void CompleteRead();
         void CompleteWrite(bool check_disconnect = true);
@@ -7578,6 +7783,7 @@ namespace SoftEther.WebSocket.Helper
         {
             if (dispose_flag.IsFirstCall() && disposing)
             {
+                Disconnect();
                 CancelWatcher.DisposeSafe();
             }
         }
@@ -7616,32 +7822,62 @@ namespace SoftEther.WebSocket.Helper
             this.DatagramReader = datagram_read;
         }
 
-        Once attach_flag;
-        public void Attach()
+        public sealed class AttachHandle : IDisposable
         {
-            if (attach_flag.IsFirstCall() == false)
-                throw new ApplicationException("Bug! This FastPipeEnd is already attached.");
+            public FastPipeEnd PipeEnd { get; }
+            public object UserState { get; }
+            LeakChecker.Holder Leak;
+
+            internal AttachHandle(FastPipeEnd end, object user_state = null)
+            {
+                lock (end.AttachHandleLock)
+                {
+                    if (end.CurrentAttachHandle != null)
+                        throw new ApplicationException("The FastPipeEnd is already attached.");
+
+                    this.UserState = user_state;
+                    this.PipeEnd = end;
+                    this.PipeEnd.CurrentAttachHandle = this;
+
+                    Leak = LeakChecker.EnterShared();
+                }
+            }
+
+            Once dispose_flag;
+            public void Dispose()
+            {
+                if (dispose_flag.IsFirstCall())
+                {
+                    lock (PipeEnd.AttachHandleLock)
+                    {
+                        PipeEnd.CurrentAttachHandle = null;
+                    }
+
+                    Leak.Dispose();
+                }
+            }
         }
 
-        public void Detach()
-        {
-            attach_flag.Clear();
-        }
+        object AttachHandleLock = new object();
+        AttachHandle CurrentAttachHandle = null;
 
-        public FastPipeEndStream GetStream() => new FastPipeEndStream(this);
+        public AttachHandle Attach(object user_state = null) => new AttachHandle(this, user_state);
+
+        public FastPipeEndStream GetStream(bool auto_flush = true) => new FastPipeEndStream(this, auto_flush);
     }
 
     public class FastPipeEndStream : Stream, IDisposable
     {
         public bool AutoFlush { get; set; }
         public FastPipeEnd End { get; }
+        FastPipeEnd.AttachHandle AttachHandle;
 
         public FastPipeEndStream(FastPipeEnd end, bool auto_flush = true)
         {
             End = end;
             AutoFlush = auto_flush;
 
-            end.Attach();
+            AttachHandle = end.Attach();
         }
 
 
@@ -7714,6 +7950,11 @@ namespace SoftEther.WebSocket.Helper
             while (buffer.Length >= 1)
             {
                 int r = await ReceiveAsync(buffer, cancel);
+                if (r <= 0)
+                {
+                    End.StreamReader.CheckDisconnected();
+                    End.StreamReader.ExceptionQueue.Raise(new FastBufferDisconnectedException());
+                }
                 buffer.Walk(r);
             }
         }
@@ -7727,38 +7968,60 @@ namespace SoftEther.WebSocket.Helper
 
         public async Task<int> ReceiveAsync(Memory<byte> buffer, CancellationToken cancel = default(CancellationToken))
         {
-            LABEL_RETRY:
-            await WaitReadyToReceiveAsync(cancel, ReadTimeout);
+            try
+            {
+                LABEL_RETRY:
+                await WaitReadyToReceiveAsync(cancel, ReadTimeout);
 
-            int ret = 0;
+                int ret = 0;
 
-            lock (End.StreamReader.LockObj)
-                ret = End.StreamReader.DequeueContiguousSlow(buffer);
+                lock (End.StreamReader.LockObj)
+                    ret = End.StreamReader.DequeueContiguousSlow(buffer);
 
-            if (ret == 0) goto LABEL_RETRY;
+                if (ret == 0)
+                {
+                    await Task.Yield();
+                    goto LABEL_RETRY;
+                }
 
-            Debug.Assert(ret <= buffer.Length);
+                Debug.Assert(ret <= buffer.Length);
 
-            End.StreamReader.CompleteRead();
+                End.StreamReader.CompleteRead();
 
-            return ret;
+                return ret;
+            }
+            catch (DisconnectedException)
+            {
+                return 0;
+            }
         }
 
         public async Task<Memory<byte>> ReceiveAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
         {
-            LABEL_RETRY:
-            await WaitReadyToReceiveAsync(cancel, ReadTimeout);
+            try
+            {
+                LABEL_RETRY:
+                await WaitReadyToReceiveAsync(cancel, ReadTimeout);
 
-            Memory<byte> ret;
+                Memory<byte> ret;
 
-            lock (End.StreamReader.LockObj)
-                ret = End.StreamReader.DequeueContiguousSlow(max_size);
+                lock (End.StreamReader.LockObj)
+                    ret = End.StreamReader.DequeueContiguousSlow(max_size);
 
-            if (ret.Length == 0) goto LABEL_RETRY;
+                if (ret.Length == 0)
+                {
+                    await Task.Yield();
+                    goto LABEL_RETRY;
+                }
 
-            End.StreamReader.CompleteRead();
+                End.StreamReader.CompleteRead();
 
-            return ret;
+                return ret;
+            }
+            catch (DisconnectedException)
+            {
+                return Memory<byte>.Empty;
+            }
         }
 
         public int Receive(Memory<byte> buffer, CancellationToken cancel = default(CancellationToken))
@@ -7769,16 +8032,27 @@ namespace SoftEther.WebSocket.Helper
 
         public async Task<List<Memory<byte>>> FastReceiveAsync(CancellationToken cancel = default(CancellationToken))
         {
-            LABEL_RETRY:
-            await WaitReadyToReceiveAsync(cancel, ReadTimeout);
+            try
+            {
+                LABEL_RETRY:
+                await WaitReadyToReceiveAsync(cancel, ReadTimeout);
 
-            var ret = End.StreamReader.DequeueAllWithLock(out long total_read_size);
+                var ret = End.StreamReader.DequeueAllWithLock(out long total_read_size);
 
-            if (total_read_size == 0) goto LABEL_RETRY;
+                if (total_read_size == 0)
+                {
+                    await Task.Yield();
+                    goto LABEL_RETRY;
+                }
 
-            End.StreamReader.CompleteRead();
+                End.StreamReader.CompleteRead();
 
-            return ret;
+                return ret;
+            }
+            catch (DisconnectedException)
+            {
+                return new List<Memory<byte>>();
+            }
         }
 
         public async Task<List<Memory<byte>>> FastPeekAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
@@ -7788,11 +8062,17 @@ namespace SoftEther.WebSocket.Helper
             await WaitReadyToReceiveAsync(cancel, ReadTimeout);
             CheckDisconnect();
 
+            long total_read_size;
             FastBufferSegment<Memory<byte>>[] tmp;
             lock (End.StreamReader.LockObj)
             {
-                tmp = End.StreamReader.GetSegmentsFast(End.StreamReader.PinHead, max_size, out long total_read_size, true);
-                if (total_read_size == 0) goto LABEL_RETRY;
+                tmp = End.StreamReader.GetSegmentsFast(End.StreamReader.PinHead, max_size, out total_read_size, true);
+            }
+
+            if (total_read_size == 0)
+            {
+                await Task.Yield();
+                goto LABEL_RETRY;
             }
 
             List<Memory<byte>> ret = new List<Memory<byte>>();
@@ -7809,14 +8089,20 @@ namespace SoftEther.WebSocket.Helper
             await WaitReadyToReceiveAsync(cancel, ReadTimeout);
             CheckDisconnect();
 
+            Memory<byte> ret;
+
             lock (End.StreamReader.LockObj)
             {
-                var ret = End.StreamReader.GetContiguous(End.StreamReader.PinHead, max_size, true);
-
-                if (ret.Length == 0) goto LABEL_RETRY;
-
-                return ret;
+                 ret = End.StreamReader.GetContiguous(End.StreamReader.PinHead, max_size, true);
             }
+
+            if (ret.Length == 0)
+            {
+                await Task.Yield();
+                goto LABEL_RETRY;
+            }
+
+            return ret;
         }
 
         public async Task<Memory<byte>> PeekAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
@@ -7890,7 +8176,11 @@ namespace SoftEther.WebSocket.Helper
             await WaitReadyToReceiveFromAsync(cancel, ReadTimeout);
 
             var ret = End.DatagramReader.DequeueAllWithLock(out long total_read_size);
-            if (total_read_size == 0) goto LABEL_RETRY;
+            if (total_read_size == 0)
+            {
+                await Task.Yield();
+                goto LABEL_RETRY;
+            }
 
             End.DatagramReader.CompleteRead();
 
@@ -7904,12 +8194,20 @@ namespace SoftEther.WebSocket.Helper
 
             List<Datagram> data_list;
 
+            long total_read_size;
+
             lock (End.DatagramReader.LockObj)
             {
-                data_list = End.DatagramReader.Dequeue(1, out long total_read_size);
-                if (total_read_size == 0) goto LABEL_RETRY;
-                Debug.Assert(data_list.Count == 1);
+                data_list = End.DatagramReader.Dequeue(1, out total_read_size);
             }
+
+            if (total_read_size == 0)
+            {
+                await Task.Yield();
+                goto LABEL_RETRY;
+            }
+
+            Debug.Assert(data_list.Count == 1);
 
             End.DatagramReader.CompleteRead();
 
@@ -7951,16 +8249,6 @@ namespace SoftEther.WebSocket.Helper
         }
 
         public void Disconnect() => End.Disconnect();
-       
-        Once dispose_flag;
-        protected override void Dispose(bool disposing)
-        {
-            if (dispose_flag.IsFirstCall() && disposing)
-            {
-                End.Detach();
-            }
-            base.Dispose(disposing);
-        }
 
         public override bool CanRead => true;
         public override bool CanSeek => false;
@@ -7998,6 +8286,16 @@ namespace SoftEther.WebSocket.Helper
             => WriteAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
         public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
+
+        Once dispose_flag;
+        protected override void Dispose(bool disposing)
+        {
+            if (dispose_flag.IsFirstCall() && disposing)
+            {
+                AttachHandle.Dispose();
+            }
+            base.Dispose(disposing);
+        }
     }
 
     public class FastPipeNonblockStateHelper
@@ -8132,9 +8430,7 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
-                PipeEnd.Attach();
-
-                using (LeakChecker.EnterShared())
+                using (PipeEnd.Attach())
                 {
                     List<Task> tasks = new List<Task>();
 
@@ -8170,162 +8466,181 @@ namespace SoftEther.WebSocket.Helper
 
         async Task StreamReadFromPipeLoopAsync()
         {
-            try
+            using (LeakChecker.EnterShared())
             {
-                var reader = PipeEnd.StreamReader;
-                while (true)
+                try
                 {
-                    bool state_changed;
-                    do
+                    var reader = PipeEnd.StreamReader;
+                    while (true)
                     {
-                        state_changed = false;
-
-                        while (reader.IsReadyToRead)
+                        bool state_changed;
+                        do
                         {
-                            await StreamWriteToObject(reader, CancelWatcher.CancelToken);
-                            state_changed = true;
-                        }
-                    }
-                    while (state_changed);
+                            state_changed = false;
 
-                    await WebSocketHelper.WaitObjectsAsync(
-                        auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipeGlobalConfig.MaxPollingTimeout
-                        );
+                            CancelWatcher.CancelToken.ThrowIfCancellationRequested();
+
+                            while (reader.IsReadyToRead)
+                            {
+                                await StreamWriteToObject(reader, CancelWatcher.CancelToken);
+                                state_changed = true;
+                            }
+                        }
+                        while (state_changed);
+
+                        await WebSocketHelper.WaitObjectsAsync(
+                            auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
+                            cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            );
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                ExceptionQueue.Raise(ex);
-            }
-            finally
-            {
-                PipeEnd.Disconnect();
-                Disconnect();
+                catch (Exception ex)
+                {
+                    ExceptionQueue.Raise(ex);
+                }
+                finally
+                {
+                    PipeEnd.Disconnect();
+                    Disconnect();
+                }
             }
         }
 
         async Task StreamWriteToPipeLoopAsync()
         {
-            try
+            using (LeakChecker.EnterShared())
             {
-                var writer = PipeEnd.StreamWriter;
-                while (true)
+                try
                 {
-                    bool state_changed;
-                    do
+                    var writer = PipeEnd.StreamWriter;
+                    while (true)
                     {
-                        state_changed = false;
-
-                        if (writer.IsReadyToWrite)
+                        bool state_changed;
+                        do
                         {
-                            long last_tail = writer.PinTail;
-                            await StreamReadFromObject(writer, CancelWatcher.CancelToken);
-                            if (writer.PinTail != last_tail)
+                            state_changed = false;
+
+                            CancelWatcher.CancelToken.ThrowIfCancellationRequested();
+
+                            if (writer.IsReadyToWrite)
                             {
-                                state_changed = true;
+                                long last_tail = writer.PinTail;
+                                await StreamReadFromObject(writer, CancelWatcher.CancelToken);
+                                if (writer.PinTail != last_tail)
+                                {
+                                    state_changed = true;
+                                }
                             }
+
                         }
+                        while (state_changed);
 
+                        await WebSocketHelper.WaitObjectsAsync(
+                            auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
+                            cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            );
                     }
-                    while (state_changed);
-
-                    await WebSocketHelper.WaitObjectsAsync(
-                        auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipeGlobalConfig.MaxPollingTimeout
-                        );
                 }
-            }
-            catch (Exception ex)
-            {
-                ExceptionQueue.Raise(ex);
-            }
-            finally
-            {
-                PipeEnd.Disconnect();
-
+                catch (Exception ex)
+                {
+                    ExceptionQueue.Raise(ex);
+                }
+                finally
+                {
+                    PipeEnd.Disconnect();
+                }
             }
         }
 
         async Task DatagramReadFromPipeLoopAsync()
         {
-            try
+            using (LeakChecker.EnterShared())
             {
-                var reader = PipeEnd.DatagramReader;
-                while (true)
+                try
                 {
-                    bool state_changed;
-                    do
+                    var reader = PipeEnd.DatagramReader;
+                    while (true)
                     {
-                        state_changed = false;
-
-                        while (reader.IsReadyToRead)
+                        bool state_changed;
+                        do
                         {
-                            await DatagramWriteToObject(reader, CancelWatcher.CancelToken);
-                            state_changed = true;
-                        }
-                    }
-                    while (state_changed);
+                            state_changed = false;
 
-                    await WebSocketHelper.WaitObjectsAsync(
-                        auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipeGlobalConfig.MaxPollingTimeout
-                        );
+                            CancelWatcher.CancelToken.ThrowIfCancellationRequested();
+
+                            while (reader.IsReadyToRead)
+                            {
+                                await DatagramWriteToObject(reader, CancelWatcher.CancelToken);
+                                state_changed = true;
+                            }
+                        }
+                        while (state_changed);
+
+                        await WebSocketHelper.WaitObjectsAsync(
+                            auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
+                            cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            );
+                    }
                 }
-            }
-            catch (Exception ex)
-            {
-                ExceptionQueue.Raise(ex);
-            }
-            finally
-            {
-                PipeEnd.Disconnect();
-                Disconnect();
+                catch (Exception ex)
+                {
+                    ExceptionQueue.Raise(ex);
+                }
+                finally
+                {
+                    PipeEnd.Disconnect();
+                    Disconnect();
+                }
             }
         }
 
         async Task DatagramWriteToPipeLoopAsync()
         {
-            try
+            using (LeakChecker.EnterShared())
             {
-                var writer = PipeEnd.DatagramWriter;
-                while (true)
+                try
                 {
-                    bool state_changed;
-                    do
+                    var writer = PipeEnd.DatagramWriter;
+                    while (true)
                     {
-                        state_changed = false;
-
-                        if (writer.IsReadyToWrite)
+                        bool state_changed;
+                        do
                         {
-                            long last_tail = writer.PinTail;
-                            await DatagramReadFromObject(writer, CancelWatcher.CancelToken);
-                            if (writer.PinTail != last_tail)
+                            state_changed = false;
+
+                            CancelWatcher.CancelToken.ThrowIfCancellationRequested();
+
+                            if (writer.IsReadyToWrite)
                             {
-                                state_changed = true;
+                                long last_tail = writer.PinTail;
+                                await DatagramReadFromObject(writer, CancelWatcher.CancelToken);
+                                if (writer.PinTail != last_tail)
+                                {
+                                    state_changed = true;
+                                }
                             }
+
                         }
+                        while (state_changed);
 
+                        await WebSocketHelper.WaitObjectsAsync(
+                            auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
+                            cancels: new CancellationToken[] { CancelWatcher.CancelToken },
+                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            );
                     }
-                    while (state_changed);
-
-                    await WebSocketHelper.WaitObjectsAsync(
-                        auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
-                        cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                        timeout: FastPipeGlobalConfig.MaxPollingTimeout
-                        );
                 }
-            }
-            catch (Exception ex)
-            {
-                ExceptionQueue.Raise(ex);
-            }
-            finally
-            {
-                PipeEnd.Disconnect();
+                catch (Exception ex)
+                {
+                    ExceptionQueue.Raise(ex);
+                }
+                finally
+                {
+                    PipeEnd.Disconnect();
+                }
             }
         }
 
@@ -8397,7 +8712,7 @@ namespace SoftEther.WebSocket.Helper
                 send_array2.Add(mem.AsSegmentFast());
             }
 
-            await WebSocketHelper.DoAsyncWithTimeout<int>(
+            await WebSocketHelper.DoAsyncWithTimeout(
                 async c =>
                 {
                     await Socket.SendAsync(send_array2, SocketFlags.None);
@@ -8421,9 +8736,10 @@ namespace SoftEther.WebSocket.Helper
 
             Memory<byte> tmp = me.FastMemoryAllocatorForStream.Reserve(me.RecvTmpBufferSize);
             int r = await me.Socket.ReceiveAsync(tmp, SocketFlags.None);
-            if (r <= 0) throw new SocketDisconnectedException();
+            if (r < 0) throw new SocketDisconnectedException();
             me.FastMemoryAllocatorForStream.Commit(ref tmp, r);
-            return tmp;
+            if (r == 0) return new ValueOrClosed<Memory<byte>>();
+            return new ValueOrClosed<Memory<byte>>(tmp);
         });
 
         protected override async Task StreamReadFromObject(FastStreamFifo fifo, CancellationToken cancel)
@@ -8431,6 +8747,13 @@ namespace SoftEther.WebSocket.Helper
             if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
             Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
+
+            if (recv_list == null)
+            {
+                // disconnected
+                fifo.Disconnect();
+                return;
+            }
 
             fifo.EnqueueAllWithLock(recv_list);
 
@@ -8445,7 +8768,7 @@ namespace SoftEther.WebSocket.Helper
 
             send_list = fifo.DequeueAllWithLock(out _);
 
-            await WebSocketHelper.DoAsyncWithTimeout<int>(
+            await WebSocketHelper.DoAsyncWithTimeout(
                 async c =>
                 {
                     foreach (Datagram data in send_list)
@@ -8471,7 +8794,7 @@ namespace SoftEther.WebSocket.Helper
             me.FastMemoryAllocatorForDatagram.Commit(ref tmp, ret.ReceivedBytes);
 
             Datagram pkt = new Datagram(tmp, ret.RemoteEndPoint);
-            return pkt;
+            return new ValueOrClosed<Datagram>(pkt);
         });
 
         protected override async Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
@@ -8496,11 +8819,16 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastTcpPipe : FastPipe
+    public class FastTcpPipe : FastPipe, IDisposable
     {
         public Socket Socket { get; }
         public IPEndPoint LocalEndPoint { get; }
         public IPEndPoint RemoteEndPoint { get; }
+        public FastPipeEnd LocalPipeEnd { get => this.B; }
+        public const int DefaultConnectTimeout = 15 * 1000;
+
+        FastPipeEndSocketWrapper SocketWrapper;
+        Task SocketWrapperLoopTask;
 
         public FastTcpPipe(Socket socket, CancellationToken cancel = default(CancellationToken), long? threshold_length_stream = null)
             : base(cancel, threshold_length_stream)
@@ -8508,6 +8836,85 @@ namespace SoftEther.WebSocket.Helper
             Socket = socket;
             LocalEndPoint = (IPEndPoint)Socket.LocalEndPoint;
             RemoteEndPoint = (IPEndPoint)Socket.RemoteEndPoint;
+
+            SocketWrapper = new FastPipeEndSocketWrapper(this.A, this.Socket, cancel);
+            SocketWrapperLoopTask = SocketWrapper.StartLoopAsync();
+        }
+
+        public async Task WaitForLoopFinish()
+        {
+            try
+            {
+                await SocketWrapperLoopTask;
+            }
+            catch { }
+        }
+
+        public Stream GetStream(bool auto_flush = true) => LocalPipeEnd.GetStream(auto_flush);
+
+        public static async Task<FastTcpPipe> ConnectAsync(string host, int port, AddressFamily? address_family = null, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)
+        {
+            if (IPAddress.TryParse(host, out IPAddress ip))
+            {
+                if (address_family != null && ip.AddressFamily != address_family)
+                    throw new ArgumentException("ip.AddressFamily != address_family");
+            }
+            else
+            {
+                ip = await WebSocketHelper.DoAsyncWithTimeout(async c =>
+                {
+                    return (await Dns.GetHostAddressesAsync(host))
+                        .Where(x => x.AddressFamily == AddressFamily.InterNetwork || x.AddressFamily == AddressFamily.InterNetworkV6)
+                        .Where(x => address_family == null || x.AddressFamily == address_family).First();
+                },
+                timeout: connect_timeout,
+                cancel: cancel);
+            }
+
+            return await ConnectAsync(ip, port, cancel, connect_timeout);
+        }
+
+        public static Task<FastTcpPipe> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)
+            => ConnectAsync(new IPEndPoint(ip, port), cancel, connect_timeout);
+
+        public static async Task<FastTcpPipe> ConnectAsync(IPEndPoint endpoint, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)
+        {
+            if (!(endpoint.AddressFamily == AddressFamily.InterNetwork || endpoint.AddressFamily == AddressFamily.InterNetworkV6))
+                throw new ArgumentException("dest.AddressFamily");
+
+            Socket s = new Socket(endpoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+            try
+            {
+                await WebSocketHelper.DoAsyncWithTimeout(async (c) =>
+                {
+                    await s.ConnectAsync(endpoint);
+                    return 0;
+                },
+                cancel_proc: () =>
+                {
+                    s.DisposeSafe();
+                },
+                timeout: connect_timeout,
+                cancel: cancel);
+            }
+            catch
+            {
+                s.DisposeSafe();
+                throw;
+            }
+
+            FastTcpPipe pipe = new FastTcpPipe(s, cancel);
+            return pipe;
+        }
+
+        Once dispose_flag;
+        protected override void Dispose(bool disposing)
+        {
+            if (dispose_flag.IsFirstCall() && disposing)
+            {
+                Socket.DisposeSafe();
+            }
+            base.Dispose(disposing);
         }
     }
 
@@ -8533,15 +8940,13 @@ namespace SoftEther.WebSocket.Helper
 
         async Task ListenManagerAcceptProc(TcpListenManager manager, TcpListenManager.Listener listener, Socket socket)
         {
-            using (FastTcpPipe p = new FastTcpPipe(socket, CancelSource.Token, QueueThresholdLengthStream))
+            using (LeakChecker.EnterShared())
             {
-                using (var wrapper = new FastPipeEndSocketWrapper(p.A, p.Socket, CancelSource.Token))
+                using (FastTcpPipe p = new FastTcpPipe(socket, CancelSource.Token, QueueThresholdLengthStream))
                 {
-                    Task loop = wrapper.StartLoopAsync();
-
                     try
                     {
-                        await AcceptProc(this, p, p.B);
+                        await AcceptProc(this, p, p.LocalPipeEnd);
                     }
                     catch (Exception ex)
                     {
@@ -8549,8 +8954,9 @@ namespace SoftEther.WebSocket.Helper
                     }
                     finally
                     {
-                        p.B.Disconnect();
-                        await loop;
+                        p.CancelWatcher.Cancel();
+                        p.Disconnect();
+                        await p.WaitForLoopFinish();
                     }
                 }
             }

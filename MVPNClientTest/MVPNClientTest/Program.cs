@@ -29,7 +29,8 @@ namespace MVPNClientTest
 
             //TestStreamBuffer();
             //BenchStreamBuffer();
-            TestPipes();
+            //TestPipes();
+            PipeTest.TestMain();
             return;
 
             //SharedExceptionQueue q1 = new SharedExceptionQueue();
@@ -57,6 +58,7 @@ namespace MVPNClientTest
             //async_test1().Wait();
             //Thread.Sleep(-1);
         }
+
 
         static void TestPipes()
         {
@@ -108,9 +110,8 @@ namespace MVPNClientTest
                     {
                         while (true)
                         {
-                            byte[] tmp = new byte[1024];
-                            int r = await st.ReadAsync(tmp, 0, tmp.Length, CancellationToken.None);
-                            WriteLine(r);
+                            byte[] tmp = (await st.ReceiveAllAsync(1)).ToArray();
+                            await st.SendAsync(tmp);
                         }
                     }
                 }
@@ -950,7 +951,7 @@ namespace MVPNClientTest
 
                             byte[] ret = new byte[1];
                             int r = await ssl.ReadAsync(ret);
-                            return ret;
+                            return new ValueOrClosed<byte[]>(ret);
                             //byte[] ret = new byte[65536];
                             //int r = await ssl.ReadAsync(ret);
                             //return ret.AsSpan().Slice(0, r).ToArray();
@@ -1019,7 +1020,7 @@ namespace MVPNClientTest
                                 //if ((num % 3) == 0) await Task.Yield();
                                 //if (num >= 20) await Task.Delay(-1);
                                 //return new byte[65536];
-                                return await ssl.ReadAsyncWithTimeout(1, read_all: false, timeout: 3000);
+                                return new ValueOrClosed<byte[]>(await ssl.ReadAsyncWithTimeout(1, read_all: false, timeout: 3000));
 
                                 //byte[] ret = new byte[65536];
                                 //int r = await ssl.ReadAsync(ret);

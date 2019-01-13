@@ -100,7 +100,7 @@ namespace SoftEther.WebSocket
             StreamReader tmp_reader = new StreamReader(st);
             while (true)
             {
-                string line = await WebSocketHelper.DoAsyncWithTimeout<string>((proc_cancel) => tmp_reader.ReadLineAsync(),
+                string line = await WebSocketHelper.DoAsyncWithTimeout((proc_cancel) => tmp_reader.ReadLineAsync(),
                     timeout: this.TimeoutOpen,
                     cancel: this.Cancel);
                 if (line == "")
