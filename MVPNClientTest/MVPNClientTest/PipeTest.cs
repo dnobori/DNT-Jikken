@@ -37,19 +37,61 @@ namespace MVPNClientTest
     {
         public static void TestMain()
         {
-            Test_Pipe_TCP_Client().Wait();
-            LeakChecker.Shared.Print();
+            try
+            {
+//                Test_Pipe_TCP_Client().Wait();
+                Test_Pipe_SslStream_Client().Wait();
+            }
+            catch (Exception ex)
+            {
+                WriteLine("TestMain: " + ex);
+            }
+            finally
+            {
+                LeakChecker.Shared.Print();
+            }
+        }
+
+        static async Task Test_Pipe_SslStream_Client()
+        {
+            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync("www.google.com", 443))
+            {
+                using (FastPipeEndStream st = p.GetStream())
+                {
+                    using (SslStream ssl = new SslStream(st))
+                    {
+                        //st.AttachHandle.SetStreamReceiveTimeout(1000);
+                        await ssl.AuthenticateAsClientAsync("www.google.com");
+                        WriteLine("Connected.");
+                        StreamWriter w = new StreamWriter(ssl);
+                        w.AutoFlush = true;
+
+                        await w.WriteAsync(
+                            "GET / HTTP/1.1\r\n" +
+                            "HOST: www.google.com\r\n\r\n"
+                            );
+
+                        StreamReader r = new StreamReader(ssl);
+                        while (true)
+                        {
+                            string s = await r.ReadLineAsync();
+                            if (s == null) break;
+                            WriteLine(s);
+                        }
+
+                        //WriteLine(await r.ReadToEndAsync());
+                    }
+                }
+
+                await p.WaitForLoopFinish();
+            }
         }
 
         static async Task Test_Pipe_TCP_Client()
         {
             using (FastTcpPipe p = await FastTcpPipe.ConnectAsync("www.google.com", 80))
             {
-                p.LocalPipeEnd.StreamReader.EventListeners.Register((b, t, s) =>
-                {
-                    WriteLine(t.ToString());
-                });
-                using (Stream st = p.GetStream())
+                using (FastPipeEndStream st = p.GetStream())
                 {
                     WriteLine("Connected.");
                     StreamWriter w = new StreamWriter(st);
@@ -69,8 +111,6 @@ namespace MVPNClientTest
                     }
 
                     //WriteLine(await r.ReadToEndAsync());
-
-                    Dbg.Where();
                 }
 
                 await p.WaitForLoopFinish();

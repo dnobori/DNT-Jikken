@@ -4119,6 +4119,11 @@ namespace SoftEther.WebSocket.Helper
         public bool IsFirstCall() => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
         public bool IsSet => (this.flag != 0);
         public void Clear() => flag = 0;
+        public void ThrowDisposedExceptionIfSet()
+        {
+            if (IsSet)
+                throw new ObjectDisposedException("object");
+        }
     }
 
     public sealed class TimeoutDetector : IDisposable
@@ -4175,11 +4180,11 @@ namespace SoftEther.WebSocket.Helper
                 {
                     long next_timeout = Interlocked.Read(ref this.NextTimeout);
 
-                    long remain_time = next_timeout - FastTick64.Now;
+                    long now = FastTick64.Now;
 
-                    Dbg.Where($"remain_time = {remain_time}");
+                    long remain_time = next_timeout - now;
 
-                    if (remain_time < 0)
+                    if (remain_time <= 0)
                     {
                         break;
                     }
@@ -7692,7 +7697,7 @@ namespace SoftEther.WebSocket.Helper
         {
             LocalTimer timer = new LocalTimer();
 
-            timer.AddTimeout(FastPipeGlobalConfig.MaxPollingTimeout);
+            timer.AddTimeout(FastPipeGlobalConfig.PollingTimeout);
             long timeout_tick = timer.AddTimeout(timeout);
 
             while (writer.IsReadyToWrite == false)
@@ -7714,7 +7719,7 @@ namespace SoftEther.WebSocket.Helper
         {
             LocalTimer timer = new LocalTimer();
 
-            timer.AddTimeout(FastPipeGlobalConfig.MaxPollingTimeout);
+            timer.AddTimeout(FastPipeGlobalConfig.PollingTimeout);
             long timeout_tick = timer.AddTimeout(timeout);
 
             while (reader.IsReadyToRead == false)
@@ -7744,6 +7749,17 @@ namespace SoftEther.WebSocket.Helper
             MaxStreamBufferLength = 65536;
             MaxPollingTimeout = 4321;
             MaxDatagramQueueLength = 1024;
+        }
+
+        public static int PollingTimeout
+        {
+            get
+            {
+                int v = MaxPollingTimeout / 10;
+                if (v != 0)
+                    v = WebSocketHelper.RandSInt31() % v;
+                return MaxPollingTimeout - v;
+            }
         }
     }
 
@@ -7796,15 +7812,19 @@ namespace SoftEther.WebSocket.Helper
 
             CancelWatcher.CancelToken.Register(() =>
             {
-                ExceptionQueue.Add(new OperationCanceledException());
-                Disconnect();
+                Disconnect(new OperationCanceledException());
             });
         }
 
-        public void Disconnect()
+        public void Disconnect(Exception ex = null)
         {
             if (InternalDisconnectedFlag.IsFirstCall())
             {
+                if (ex != null)
+                {
+                    ExceptionQueue.Add(ex);
+                }
+
                 Action[] ev_list;
                 lock (OnDisconnected)
                     ev_list = OnDisconnected.ToArray();
@@ -7871,13 +7891,14 @@ namespace SoftEther.WebSocket.Helper
             this.DatagramReader = datagram_read;
         }
 
-        public sealed class AttachHandle : IDisposable
+        public sealed class FastPipeEndAttachHandle : IDisposable
         {
             public FastPipeEnd PipeEnd { get; }
             public object UserState { get; }
             LeakChecker.Holder Leak;
+            object LockObj = new object();
 
-            internal AttachHandle(FastPipeEnd end, object user_state = null)
+            public FastPipeEndAttachHandle(FastPipeEnd end, object user_state = null)
             {
                 lock (end.AttachHandleLock)
                 {
@@ -7892,15 +7913,88 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
+            int receive_timeout_proc_id = 0;
+            TimeoutDetector receive_timeout_detector = null;
+
+            public void SetStreamReceiveTimeout(int timeout = Timeout.Infinite)
+            {
+                lock (LockObj)
+                {
+                    if (timeout < 0 || timeout == int.MaxValue)
+                    {
+                        if (receive_timeout_proc_id != 0)
+                        {
+                            PipeEnd.StreamReader.EventListeners.Unregister(receive_timeout_proc_id);
+                            receive_timeout_proc_id = 0;
+                            receive_timeout_detector.DisposeSafe();
+                        }
+                    }
+                    else
+                    {
+                        receive_timeout_detector = new TimeoutDetector(timeout, callme: () =>
+                        {
+                            PipeEnd.Pipe.Disconnect(new TimeoutException("StreamReceiveTimeout"));
+                        });
+
+                        receive_timeout_proc_id = PipeEnd.StreamReader.EventListeners.Register((buffer, type, state) =>
+                        {
+                            if (type == FastBufferCallbackEventType.Written)
+                                receive_timeout_detector.Keep();
+                        });
+                    }
+                }
+            }
+
+            int send_timeout_proc_id = 0;
+            TimeoutDetector send_timeout_detector = null;
+
+            public void SetStreamSendTimeout(int timeout = Timeout.Infinite)
+            {
+                lock (LockObj)
+                {
+                    if (timeout < 0 || timeout == int.MaxValue)
+                    {
+                        if (send_timeout_proc_id != 0)
+                        {
+                            PipeEnd.StreamReader.EventListeners.Unregister(send_timeout_proc_id);
+                            send_timeout_proc_id = 0;
+                            send_timeout_detector.DisposeSafe();
+                        }
+                    }
+                    else
+                    {
+                        send_timeout_detector = new TimeoutDetector(timeout, callme: () =>
+                        {
+                            PipeEnd.Pipe.Disconnect(new TimeoutException("StreamSendTimeout"));
+                        });
+
+                        send_timeout_proc_id = PipeEnd.StreamReader.EventListeners.Register((buffer, type, state) =>
+                        {
+                            if (type == FastBufferCallbackEventType.Read)
+                                send_timeout_detector.Keep();
+                        });
+                    }
+                }
+            }
+
             Once dispose_flag;
             public void Dispose()
             {
                 if (dispose_flag.IsFirstCall())
                 {
+                    lock (LockObj)
+                    {
+                        SetStreamReceiveTimeout(Timeout.Infinite);
+                        SetStreamSendTimeout(Timeout.Infinite);
+                    }
+
                     lock (PipeEnd.AttachHandleLock)
                     {
                         PipeEnd.CurrentAttachHandle = null;
                     }
+
+                    receive_timeout_detector.DisposeSafe();
+                    send_timeout_detector.DisposeSafe();
 
                     Leak.Dispose();
                 }
@@ -7908,9 +8002,9 @@ namespace SoftEther.WebSocket.Helper
         }
 
         object AttachHandleLock = new object();
-        AttachHandle CurrentAttachHandle = null;
+        FastPipeEndAttachHandle CurrentAttachHandle = null;
 
-        public AttachHandle Attach(object user_state = null) => new AttachHandle(this, user_state);
+        public FastPipeEndAttachHandle Attach(object user_state = null) => new FastPipeEndAttachHandle(this, user_state);
 
         public FastPipeEndStream GetStream(bool auto_flush = true) => new FastPipeEndStream(this, auto_flush);
     }
@@ -7919,7 +8013,7 @@ namespace SoftEther.WebSocket.Helper
     {
         public bool AutoFlush { get; set; }
         public FastPipeEnd End { get; }
-        FastPipeEnd.AttachHandle AttachHandle;
+        public FastPipeEnd.FastPipeEndAttachHandle AttachHandle { get; }
 
         public FastPipeEndStream(FastPipeEnd end, bool auto_flush = true)
         {
@@ -8429,7 +8523,7 @@ namespace SoftEther.WebSocket.Helper
 
         public async Task<bool> WaitIfNothingChanged(int timeout = Timeout.Infinite, int salt = 0)
         {
-            timeout = WebSocketHelper.GetMinTimeout(timeout, FastPipeGlobalConfig.MaxPollingTimeout);
+            timeout = WebSocketHelper.GetMinTimeout(timeout, FastPipeGlobalConfig.PollingTimeout);
             if (timeout == 0) return false;
             if (IsStateChanged(salt)) return false;
 
@@ -8540,7 +8634,7 @@ namespace SoftEther.WebSocket.Helper
                         await WebSocketHelper.WaitObjectsAsync(
                             auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            timeout: FastPipeGlobalConfig.PollingTimeout
                             );
                     }
                 }
@@ -8588,7 +8682,7 @@ namespace SoftEther.WebSocket.Helper
                         await WebSocketHelper.WaitObjectsAsync(
                             auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            timeout: FastPipeGlobalConfig.PollingTimeout
                             );
                     }
                 }
@@ -8630,7 +8724,7 @@ namespace SoftEther.WebSocket.Helper
                         await WebSocketHelper.WaitObjectsAsync(
                             auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            timeout: FastPipeGlobalConfig.PollingTimeout
                             );
                     }
                 }
@@ -8678,7 +8772,7 @@ namespace SoftEther.WebSocket.Helper
                         await WebSocketHelper.WaitObjectsAsync(
                             auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
-                            timeout: FastPipeGlobalConfig.MaxPollingTimeout
+                            timeout: FastPipeGlobalConfig.PollingTimeout
                             );
                     }
                 }
@@ -8899,7 +8993,7 @@ namespace SoftEther.WebSocket.Helper
             catch { }
         }
 
-        public Stream GetStream(bool auto_flush = true) => LocalPipeEnd.GetStream(auto_flush);
+        public FastPipeEndStream GetStream(bool auto_flush = true) => LocalPipeEnd.GetStream(auto_flush);
 
         public static async Task<FastTcpPipe> ConnectAsync(string host, int port, AddressFamily? address_family = null, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)
         {
