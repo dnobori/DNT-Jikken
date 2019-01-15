@@ -20,6 +20,29 @@ using SoftEther.VpnClient;
 
 namespace MVPNClientTest
 {
+    class TestData : BackgroundStateData
+    {
+        public override BackgroundStateDataUpdatePolicy DataUpdatePolicy =>
+            new BackgroundStateDataUpdatePolicy(300, 6000, 2000);
+
+        public override bool Equals(BackgroundStateData other)
+        {
+            return true;
+        }
+
+        public override void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action callback)
+        {
+            new Task(async () =>
+            {
+                await Task.Delay(3000);
+                WriteLine("callback");
+                callback();
+            }).Start();
+        }
+
+        public string Test { get; } = DateTime.Now.ToString();
+    }
+
     class Program
     {
         static void Main(string[] args)
@@ -31,7 +54,17 @@ namespace MVPNClientTest
             //BenchStreamBuffer();
             //TestPipes();
 
-            PipeTest.TestMain();
+            //PipeTest.TestMain();
+
+            while (true)
+            {
+                var v = BackgroundState<HostNetInfo>.Current;
+                string str = "";
+                v.Data.IPAddressList.ForEach(x => str += x.ToString() + " ");
+                WriteLine("ver " + v.Version + "  " + str);
+                Console.ReadLine();
+            }
+
             return;
 
             //SharedExceptionQueue q1 = new SharedExceptionQueue();

@@ -2231,20 +2231,14 @@ namespace SoftEther.WebSocket.Helper
 
     public static class FastTick64
     {
-        public static long Now { get => GetTick64(); }
+        public static long Now { get => GetTick64() - Base; }
+        static readonly long Base = GetTick64() - 1;
 
         static volatile uint state = 0;
 
-        static uint GetTickCount()
-        {
-            uint ret = (uint)Environment.TickCount;
-            if (ret == 0) ret = 1;
-            return ret;
-        }
-
         static long GetTick64()
         {
-            uint value = GetTickCount();
+            uint value = (uint)Environment.TickCount;
             uint value_16bit = (value >> 16) & 0xFFFF;
 
             uint state_copy = state;
@@ -5760,15 +5754,17 @@ namespace SoftEther.WebSocket.Helper
         public void UpdateNow() => Now = FastTick64.Now;
         public void UpdateNow(long now_tick) => Now = now_tick;
 
-        public void AddTick(long tick)
+        public long AddTick(long tick)
         {
             if (Hash.Add(tick))
                 List.Add(tick);
+
+            return tick;
         }
 
         public long AddTimeout(int interval)
         {
-            if (interval < 0) return long.MaxValue;
+            if (interval == Timeout.Infinite) return long.MaxValue;
             interval = Math.Max(interval, 0);
             if (AutomaticUpdateNow) UpdateNow();
             long v = Now + interval;
@@ -6106,29 +6102,396 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class BackgroundStateData : IEquatable<BackgroundStateData>
+    public class HostNetInfo : BackgroundStateData
     {
-        static long GlobalVersionSeed = 0;
-        public long Version { get; }
+        public override BackgroundStateDataUpdatePolicy DataUpdatePolicy =>
+            new BackgroundStateDataUpdatePolicy(300, 6000, 2000);
 
-        public BackgroundStateData()
+        public string HostName;
+        public string DomainName;
+        public string FqdnHostName => HostName + (string.IsNullOrEmpty(DomainName) ? "" : "." + DomainName);
+        public bool IsIPv4Supported;
+        public bool IsIPv6Supported;
+        public List<IPAddress> IPAddressList = new List<IPAddress>();
+
+        public static bool IsUnix { get; } = (Environment.OSVersion.Platform != PlatformID.Win32NT);
+
+        static IPAddress[] GetLocalIPAddressBySocketApi() => Dns.GetHostAddresses(Dns.GetHostName());
+
+        class ByteComparer : IComparer<byte[]>
         {
-            Version = Interlocked.Increment(ref GlobalVersionSeed);
+            public int Compare(byte[] x, byte[] y) => x.AsSpan().SequenceCompareTo(y.AsSpan());
         }
 
-        public abstract bool Equals(BackgroundStateData other);
-    }
+        public HostNetInfo()
+        {
+            WriteLine("HostNetworkStatusData get");
+            IPGlobalProperties prop = IPGlobalProperties.GetIPGlobalProperties();
+            this.HostName = prop.HostName;
+            this.DomainName = prop.DomainName;
+            HashSet<IPAddress> hash = new HashSet<IPAddress>();
 
-    public class BackgroundState<TData>
-        where TData : BackgroundStateData
-    {
-        private BackgroundState() { }
+            if (IsUnix)
+            {
+                UnicastIPAddressInformationCollection info = prop.GetUnicastAddresses();
+                foreach (UnicastIPAddressInformation ip in info)
+                {
+                    if (ip.Address.AddressFamily == AddressFamily.InterNetwork || ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                        hash.Add(ip.Address);
+                }
+            }
+            else
+            {
+                try
+                {
+                    IPAddress[] info = GetLocalIPAddressBySocketApi();
+                    if (info.Length >= 1)
+                    {
+                        foreach (IPAddress ip in info)
+                        {
+                            if (ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
+                                hash.Add(ip);
+                        }
+                    }
+                }
+                catch { }
+            }
 
-        public static TData State
+            if (Socket.OSSupportsIPv4)
+            {
+                this.IsIPv4Supported = true;
+                hash.Add(IPAddress.Any);
+                hash.Add(IPAddress.Loopback);
+            }
+            if (Socket.OSSupportsIPv6)
+            {
+                this.IsIPv6Supported = true;
+                hash.Add(IPAddress.IPv6Any);
+                hash.Add(IPAddress.IPv6Loopback);
+            }
+
+            try
+            {
+                var cmp = new ByteComparer();
+                this.IPAddressList = hash.OrderBy(x => x.AddressFamily)
+                    .ThenBy(x => x.GetAddressBytes(), cmp)
+                    .ThenBy(x => (x.AddressFamily == AddressFamily.InterNetworkV6 ? x.ScopeId : 0))
+                    .ToList();
+            }
+            catch { }
+        }
+
+        public Memory<byte> IPAddressListBinary
         {
             get
             {
+                MemoryBuffer<byte> ret = new MemoryBuffer<byte>();
+                foreach (IPAddress addr in IPAddressList)
+                {
+                    ret.WriteSInt32((int)addr.AddressFamily);
+                    ret.Write(addr.GetAddressBytes());
+                    if (addr.AddressFamily == AddressFamily.InterNetworkV6)
+                        ret.WriteSInt64(addr.ScopeId);
+                }
+                return ret;
+            }
+        }
+
+        public override bool Equals(BackgroundStateData other_arg)
+        {
+            HostNetInfo other = other_arg as HostNetInfo;
+            if (string.Equals(this.HostName, other.HostName) == false) return false;
+            if (string.Equals(this.DomainName, other.DomainName) == false) return false;
+            if (this.IsIPv4Supported != other.IsIPv4Supported) return false;
+            if (this.IsIPv6Supported != other.IsIPv6Supported) return false;
+            if (this.IPAddressListBinary.Span.SequenceEqual(other.IPAddressListBinary.Span) == false) return false;
+            return true;
+        }
+
+        Action call_me_cache = null;
+
+        public override void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action call_me)
+        {
+            call_me_cache = call_me;
+
+            NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
+            NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
+        }
+
+        private void NetworkChange_NetworkAddressChanged(object sender, EventArgs e)
+        {
+            call_me_cache();
+
+            NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
+        }
+
+        private void NetworkChange_NetworkAvailabilityChanged(object sender, NetworkAvailabilityEventArgs e)
+        {
+            call_me_cache();
+
+            NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
+        }
+    }
+
+    public readonly struct BackgroundStateDataUpdatePolicy
+    {
+        public readonly int InitialPollingInterval;
+        public readonly int MaxPollingInterval;
+        public readonly int IdleTimeoutToFreeThreadInterval;
+
+        public const int DefaultInitialPollingInterval = 1 * 1000;
+        public const int DefaultMaxPollingInterval = 60 * 1000;
+        public const int DefaultIdleTimeoutToFreeThreadInterval = 180 * 1000;
+
+        public BackgroundStateDataUpdatePolicy(int initial_polling_interval = DefaultInitialPollingInterval,
+            int max_polling_interval = DefaultMaxPollingInterval,
+            int timeout_to_stop_thread = DefaultIdleTimeoutToFreeThreadInterval)
+        {
+            InitialPollingInterval = initial_polling_interval;
+            MaxPollingInterval = max_polling_interval;
+            IdleTimeoutToFreeThreadInterval = timeout_to_stop_thread;
+        }
+
+        public static BackgroundStateDataUpdatePolicy Default { get; }
+            = new BackgroundStateDataUpdatePolicy(1 * 1000, 60 * 1000, 30 * 1000);
+
+        public BackgroundStateDataUpdatePolicy SafeValue
+        {
+            get
+            {
+                return new BackgroundStateDataUpdatePolicy(
+                    Math.Max(this.InitialPollingInterval, 1 * 100),
+                    Math.Max(this.MaxPollingInterval, 1 * 500),
+                    Math.Max(Math.Max(this.IdleTimeoutToFreeThreadInterval, 1 * 500), this.MaxPollingInterval)
+                    );
+            }
+        }
+    }
+
+    public abstract class BackgroundStateData : IEquatable<BackgroundStateData>
+    {
+        public DateTimeOffset TimeStamp { get; } = DateTimeOffset.Now;
+        public long TickTimeStamp { get; } = FastTick64.Now;
+
+        public abstract BackgroundStateDataUpdatePolicy DataUpdatePolicy { get; }
+
+        public abstract bool Equals(BackgroundStateData other);
+
+        public abstract void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action call_me);
+    }
+
+    public static class BackgroundState<TData>
+        where TData : BackgroundStateData, new()
+    {
+        public struct CurrentData
+        {
+            public int Version;
+            public TData Data;
+        }
+
+        public static CurrentData Current
+        {
+            get
+            {
+                CurrentData d = new CurrentData();
+                d.Data = GetState();
+                d.Version = InternalVersion;
+                return d;
+            }
+        }
+
+        static volatile TData CacheData = null;
+
+        static volatile int NumRead = 0;
+
+        static volatile int InternalVersion = 0;
+
+        static bool CallbackIsRegistered = false;
+
+        static object LockObj = new object();
+        static Thread thread = null;
+        static AutoResetEvent thread_signal = new AutoResetEvent(false);
+        static bool callback_is_called = false;
+
+        public static FastEventListenerList<TData, int> EventListener { get; } = new FastEventListenerList<TData, int>();
+
+        static TData TryGetTData()
+        {
+            try
+            {
+                TData ret = new TData();
+
+                if (CallbackIsRegistered == false)
+                {
+                    try
+                    {
+                        ret.RegisterSystemStateChangeNotificationCallbackOnlyOnce(() =>
+                        {
+                            WriteLine("callme!!");
+                            callback_is_called = true;
+                            GetState();
+                            thread_signal.Set();
+                        });
+
+                        CallbackIsRegistered = true;
+                    }
+                    catch { }
+                }
+
+                return ret;
+            }
+            catch
+            {
                 return null;
+            }
+        }
+
+        static TData GetState()
+        {
+            NumRead++;
+
+            if (CacheData != null)
+            {
+                if (thread == null)
+                {
+                    EnsureStartThreadIfStopped(CacheData.DataUpdatePolicy);
+                }
+
+                return CacheData;
+            }
+            else
+            {
+                BackgroundStateDataUpdatePolicy update_policy = BackgroundStateDataUpdatePolicy.Default;
+                TData data = TryGetTData();
+                if (data != null)
+                {
+                    update_policy = data.DataUpdatePolicy;
+
+                    bool inc = false;
+                    if (CacheData == null)
+                    {
+                        inc = true;
+                    }
+                    else
+                    {
+                        if (CacheData.Equals(data) == false)
+                            inc = true;
+                    }
+                    CacheData = data;
+
+                    if (inc)
+                    {
+                        InternalVersion++;
+                        EventListener.Fire(CacheData, 0);
+                    }
+                }
+
+                EnsureStartThreadIfStopped(update_policy);
+
+                return CacheData;
+            }
+        }
+
+        static void EnsureStartThreadIfStopped(BackgroundStateDataUpdatePolicy update_policy)
+        {
+            lock (LockObj)
+            {
+                if (thread == null)
+                {
+                    thread = new Thread(MaintainThread);
+                    thread.IsBackground = true;
+                    thread.Priority = ThreadPriority.BelowNormal;
+                    thread.Name = $"MaintainThread for BackgroundState<{typeof(TData).ToString()}>";
+                    thread.Start(update_policy);
+                }
+            }
+        }
+
+        static int next_interval = 0;
+
+        static void MaintainThread(object param)
+        {
+            WriteLine("New thread");
+
+            BackgroundStateDataUpdatePolicy policy = (BackgroundStateDataUpdatePolicy)param;
+            policy = policy.SafeValue;
+
+            LocalTimer tm = new LocalTimer();
+
+            if (next_interval == 0)
+            {
+                next_interval = policy.InitialPollingInterval;
+            }
+
+            WriteLine($"next_interval = {next_interval}");
+
+            long next_getdata_tick = tm.AddTimeout(next_interval);
+
+            long next_idle_detect_tick = tm.AddTimeout(policy.IdleTimeoutToFreeThreadInterval);
+
+            int last_numread = NumRead;
+
+            while (true)
+            {
+                if (FastTick64.Now >= next_getdata_tick || callback_is_called)
+                {
+                    TData data = TryGetTData();
+
+                    next_interval = Math.Min(next_interval + policy.InitialPollingInterval, policy.MaxPollingInterval);
+                    bool inc = false;
+
+                    if (data != null)
+                    {
+                        if (data.Equals(CacheData) == false)
+                        {
+                            next_interval = policy.InitialPollingInterval;
+                            inc = true;
+                        }
+                        CacheData = data;
+                    }
+                    else
+                    {
+                        next_interval = policy.InitialPollingInterval;
+                    }
+
+                    if (callback_is_called)
+                    {
+                        next_interval = policy.InitialPollingInterval;
+                    }
+
+                    if (inc)
+                    {
+                        InternalVersion++;
+                        EventListener.Fire(CacheData, 0);
+                    }
+
+                    WriteLine($"next_interval = {next_interval}");
+                    next_getdata_tick = tm.AddTimeout(next_interval);
+
+                    callback_is_called = false;
+                }
+
+                if (FastTick64.Now >= next_idle_detect_tick)
+                {
+                    int numread = NumRead;
+                    if (last_numread != numread)
+                    {
+                        last_numread = numread;
+                        next_idle_detect_tick = tm.AddTimeout(policy.IdleTimeoutToFreeThreadInterval);
+                    }
+                    else
+                    {
+                        WriteLine("Thread stop for idle");
+                        thread = null;
+                        return;
+                    }
+                }
+
+                int i = tm.GetNextInterval();
+
+                i = Math.Max(i, 100);
+
+                thread_signal.WaitOne(i);
             }
         }
     }
@@ -6462,12 +6825,12 @@ namespace SoftEther.WebSocket.Helper
             return ListenerList.Delete(id);
         }
 
-        public void Fire(TCaller buffer, TEventType type)
+        public void Fire(TCaller caller, TEventType type)
         {
             var list = ListenerList.GetListFast();
             if (list != null)
                 foreach (var e in list)
-                    e.CallSafe(buffer, type);
+                    e.CallSafe(caller, type);
         }
     }
 

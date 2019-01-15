@@ -2218,20 +2218,14 @@ namespace cs_struct_bench1
 
     public static class FastTick64
     {
-        public static long Now { get => GetTick64(); }
+        public static long Now { get => GetTick64() - Base; }
+        static readonly long Base = GetTick64() - 1;
 
         static volatile uint state = 0;
 
-        static uint GetTickCount()
-        {
-            uint ret = (uint)Environment.TickCount;
-            if (ret == 0) ret = 1;
-            return ret;
-        }
-
         static long GetTick64()
         {
-            uint value = GetTickCount();
+            uint value = (uint)Environment.TickCount;
             uint value_16bit = (value >> 16) & 0xFFFF;
 
             uint state_copy = state;
