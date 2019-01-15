@@ -52,18 +52,18 @@ namespace MVPNClientTest
 
             //TestStreamBuffer();
             //BenchStreamBuffer();
-            //TestPipes();
+            TestPipes();
 
             //PipeTest.TestMain();
 
-            while (true)
-            {
-                var v = BackgroundState<HostNetInfo>.Current;
-                string str = "";
-                v.Data.IPAddressList.ForEach(x => str += x.ToString() + " ");
-                WriteLine("ver " + v.Version + "  " + str);
-                Console.ReadLine();
-            }
+            //while (true)
+            //{
+            //    var v = BackgroundState<HostNetInfo>.Current;
+            //    string str = "";
+            //    v.Data.IPAddressList.ForEach(x => str += x.ToString() + " ");
+            //    WriteLine("ver " + v.Version + "  " + str);
+            //    Console.ReadLine();
+            //}
 
             return;
 
@@ -155,7 +155,7 @@ namespace MVPNClientTest
                 }
             });
 
-            listener.ListenerManager.Add(1);
+            listener.ListenerManager.Add(135);
 
             Console.ReadLine();
 

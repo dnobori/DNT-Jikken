@@ -5817,291 +5817,6 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class HostNetworkInfo : IEquatable<HostNetworkInfo>
-    {
-        public int Version;
-        public long LastChangedTick;
-        public string HostName;
-        public string DomainName;
-        public string FqdnHostName => HostName + (string.IsNullOrEmpty(DomainName) ? "" : "." + DomainName);
-        public bool IsIPv4Supported;
-        public bool IsIPv6Supported;
-        public List<IPAddress> IPAddressList = new List<IPAddress>();
-
-        public static HostNetworkInfo CurrentInfo => HostNetworkInfoManager.CurrentInfo;
-
-        public bool Equals(HostNetworkInfo other)
-        {
-            if (string.Equals(this.HostName, other.HostName) == false) return false;
-            if (string.Equals(this.DomainName, other.DomainName) == false) return false;
-            if (this.IsIPv4Supported != other.IsIPv4Supported) return false;
-            if (this.IsIPv6Supported != other.IsIPv6Supported) return false;
-            if (this.IPAddressListBinary.Span.SequenceEqual(other.IPAddressListBinary.Span) == false) return false;
-            return true;
-        }
-
-        public Memory<byte> IPAddressListBinary
-        {
-            get
-            {
-                MemoryBuffer<byte> ret = new MemoryBuffer<byte>();
-                foreach (IPAddress addr in IPAddressList)
-                {
-                    ret.WriteSInt32((int)addr.AddressFamily);
-                    ret.Write(addr.GetAddressBytes());
-                    if (addr.AddressFamily == AddressFamily.InterNetworkV6)
-                        ret.WriteSInt64(addr.ScopeId);
-                }
-                return ret;
-            }
-        }
-    }
-
-    public static class HostNetworkInfoManager
-    {
-        public static HostNetworkInfo CurrentInfo { get; private set; }
-
-        static HostNetworkInfoManager()
-        {
-            try
-            {
-                CurrentInfo = GetCurrentSnapshotByNetInfoApiSlowAsync().Result;
-            }
-            catch
-            {
-                CurrentInfo = new HostNetworkInfo()
-                {
-                    HostName = "localhost",
-                    DomainName = "",
-                    IsIPv4Supported = true,
-                    IsIPv6Supported = true,
-                };
-                CurrentInfo.IPAddressList.Add(IPAddress.Any);
-                CurrentInfo.IPAddressList.Add(IPAddress.IPv6Any);
-            }
-
-            Thread t = new Thread(PollingThread);
-            t.Name = "HostNetworkInfoManager Polling Thread";
-            t.Priority = ThreadPriority.Lowest;
-            t.IsBackground = true;
-            t.Start();
-
-            NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
-            NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
-        }
-
-        private static void NetworkChange_NetworkAvailabilityChanged(object sender, NetworkAvailabilityEventArgs e) => PollingThreadSignal.Set();
-
-        private static void NetworkChange_NetworkAddressChanged(object sender, EventArgs e) => PollingThreadSignal.Set();
-
-        public static void Flush() => PollingThreadSignal.Set();
-
-        const long InitialPollingInterval = 987;
-        const long MaxPollingInterval = 60 * 1000 + 987;
-
-        static AutoResetEvent PollingThreadSignal = new AutoResetEvent(false);
-
-        public static bool IsUnix { get; } = (Environment.OSVersion.Platform != PlatformID.Win32NT);
-
-        static void PollingThread()
-        {
-            int num = 0;
-            while (true)
-            {
-                try
-                {
-                    HostNetworkInfo info = GetCurrentSnapshotByNetInfoApiSlowAsync().Result;
-
-                    if (Update(info))
-                    {
-                        num = 1;
-                    }
-                }
-                catch (Exception ex)
-                {
-                    Console.WriteLine(ex);
-                    num = 1;
-                }
-
-                long interval = Math.Min(InitialPollingInterval * num, MaxPollingInterval);
-                num++;
-
-                if (PollingThreadSignal.WaitOne((int)interval))
-                {
-                    num = 0;
-                }
-            }
-        }
-
-        static bool Update(HostNetworkInfo info)
-        {
-            if (CurrentInfo.Equals(info) == false)
-            {
-                info.Version = CurrentInfo.Version + 1;
-                info.LastChangedTick = FastTick64.Now;
-
-                CurrentInfo = info;
-
-                AsyncAutoResetEvent[] ev_list;
-                lock (EventList)
-                    ev_list = EventList.ToArray();
-
-                foreach (var ev in ev_list)
-                    ev.Set(true);
-
-                return true;
-            }
-            return false;
-        }
-
-        static HashSet<AsyncAutoResetEvent> EventList = new HashSet<AsyncAutoResetEvent>();
-
-        public static void RegisterNotificationEvent(AsyncAutoResetEvent ev)
-        {
-            lock (EventList)
-                EventList.Add(ev);
-        }
-
-        public static void UnregisterNotificationEvent(AsyncAutoResetEvent ev)
-        {
-            lock (EventList)
-                EventList.Remove(ev);
-        }
-
-        static IPAddress[] GetLocalIPAddressBySocketApi() => Dns.GetHostAddresses(Dns.GetHostName());
-
-        class ByteComparer : IComparer<byte[]>
-        {
-            public int Compare(byte[] x, byte[] y) => x.AsSpan().SequenceCompareTo(y.AsSpan());
-        }
-
-        public static async Task<HostNetworkInfo> GetCurrentSnapshotByNetInfoApiSlowAsync()
-        {
-            HostNetworkInfo ret = new HostNetworkInfo();
-            ret.LastChangedTick = FastTick64.Now;
-            IPGlobalProperties prop = IPGlobalProperties.GetIPGlobalProperties();
-            ret.HostName = prop.HostName;
-            ret.DomainName = prop.DomainName;
-            HashSet<IPAddress> hash = new HashSet<IPAddress>();
-
-            if (IsUnix)
-            {
-                UnicastIPAddressInformationCollection info = await prop.GetUnicastAddressesAsync();
-                foreach (UnicastIPAddressInformation ip in info)
-                {
-                    if (ip.Address.AddressFamily == AddressFamily.InterNetwork || ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
-                        hash.Add(ip.Address);
-                }
-            }
-            else
-            {
-                try
-                {
-                    IPAddress[] info = GetLocalIPAddressBySocketApi();
-                    if (info.Length >= 1)
-                    {
-                        foreach (IPAddress ip in info)
-                        {
-                            if (ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
-                                hash.Add(ip);
-                        }
-                    }
-                }
-                catch { }
-            }
-
-            if (Socket.OSSupportsIPv4)
-            {
-                ret.IsIPv4Supported = true;
-                hash.Add(IPAddress.Any);
-                hash.Add(IPAddress.Loopback);
-            }
-            if (Socket.OSSupportsIPv6)
-            {
-                ret.IsIPv6Supported = true;
-                hash.Add(IPAddress.IPv6Any);
-                hash.Add(IPAddress.IPv6Loopback);
-            }
-
-            try
-            {
-                var cmp = new ByteComparer();
-                ret.IPAddressList = hash.OrderBy(x => x.AddressFamily)
-                    .ThenBy(x => x.GetAddressBytes(), cmp)
-                    .ThenBy(x => (x.AddressFamily == AddressFamily.InterNetworkV6 ? x.ScopeId : 0))
-                    .ToList();
-            }
-            catch { }
-
-            return ret;
-        }
-
-        public static IPAddress GetLocalIPForDestinationHost(IPAddress dest)
-        {
-            try
-            {
-                using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.IP))
-                {
-                    sock.Connect(dest, 65530);
-                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
-                    return ep.Address;
-                }
-            }
-            catch { }
-
-            using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
-            {
-                sock.Connect(dest, 65531);
-                IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
-                return ep.Address;
-            }
-        }
-
-        public static async Task<IPAddress> GetLocalIPv4ForInternetAsync()
-        {
-            try
-            {
-                return GetLocalIPForDestinationHost(IPAddress.Parse("8.8.8.8"));
-            }
-            catch { }
-
-            try
-            {
-                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
-                {
-                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
-                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
-                    await sock.ConnectAsync(addr, 443);
-                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
-                    return ep.Address;
-                }
-            }
-            catch { }
-
-            try
-            {
-                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
-                {
-                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
-                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
-                    await sock.ConnectAsync(addr, 80);
-                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
-                    return ep.Address;
-                }
-            }
-            catch { }
-
-            try
-            {
-                return CurrentInfo.IPAddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork)
-                    .Where(x => IPAddress.IsLoopback(x) == false).Where(x => x != IPAddress.Any).First();
-            }
-            catch { }
-
-            return IPAddress.Any;
-        }
-    }
-
     public class HostNetInfo : BackgroundStateData
     {
         public override BackgroundStateDataUpdatePolicy DataUpdatePolicy =>
@@ -6231,6 +5946,72 @@ namespace SoftEther.WebSocket.Helper
 
             NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
         }
+
+        public static IPAddress GetLocalIPForDestinationHost(IPAddress dest)
+        {
+            try
+            {
+                using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.IP))
+                {
+                    sock.Connect(dest, 65530);
+                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
+            {
+                sock.Connect(dest, 65531);
+                IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                return ep.Address;
+            }
+        }
+
+        public static async Task<IPAddress> GetLocalIPv4ForInternetAsync()
+        {
+            try
+            {
+                return GetLocalIPForDestinationHost(IPAddress.Parse("8.8.8.8"));
+            }
+            catch { }
+
+            try
+            {
+                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                {
+                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
+                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+                    await sock.ConnectAsync(addr, 443);
+                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            try
+            {
+                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                {
+                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
+                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+                    await sock.ConnectAsync(addr, 80);
+                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            try
+            {
+                return BackgroundState<HostNetInfo>.Current.Data.IPAddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork)
+                    .Where(x => IPAddress.IsLoopback(x) == false).Where(x => x != IPAddress.Any).First();
+            }
+            catch { }
+
+            return IPAddress.Any;
+        }
+
     }
 
     public readonly struct BackgroundStateDataUpdatePolicy
@@ -6551,12 +6332,12 @@ namespace SoftEther.WebSocket.Helper
             async Task ListenLoop()
             {
                 AsyncAutoResetEvent network_changed_event = new AsyncAutoResetEvent();
-                HostNetworkInfoManager.RegisterNotificationEvent(network_changed_event);
+                int event_register_id = BackgroundState<HostNetInfo>.EventListener.RegisterAsyncEvent(network_changed_event);
 
                 Status = ListenStatus.Trying;
 
                 int num_retry = 0;
-                long last_network_info_ver = HostNetworkInfo.CurrentInfo.Version;
+                int last_network_info_ver = BackgroundState<HostNetInfo>.Current.Version;
 
                 try
                 {
@@ -6573,7 +6354,7 @@ namespace SoftEther.WebSocket.Helper
                             auto_events: new AsyncAutoResetEvent[] { network_changed_event } );
                         num_retry++;
 
-                        long network_info_ver = HostNetworkInfo.CurrentInfo.Version;
+                        int network_info_ver = BackgroundState<HostNetInfo>.Current.Version;
                         if (last_network_info_ver != network_info_ver)
                         {
                             last_network_info_ver = network_info_ver;
@@ -6626,7 +6407,7 @@ namespace SoftEther.WebSocket.Helper
                 }
                 finally
                 {
-                    HostNetworkInfoManager.UnregisterNotificationEvent(network_changed_event);
+                    BackgroundState<HostNetInfo>.EventListener.UnregisterAsyncEvent(event_register_id);
                     Status = ListenStatus.Stopped;
                 }
             }
@@ -6813,24 +6594,58 @@ namespace SoftEther.WebSocket.Helper
     public class FastEventListenerList<TCaller, TEventType>
     {
         FastReadList<FastEvent<TCaller, TEventType>> ListenerList;
+        FastReadList<AutoResetEvent> EventList;
+        FastReadList<AsyncAutoResetEvent> AsyncEventList;
 
-        public int Register(FastEventCallback<TCaller, TEventType> proc, object user_state = null)
+        public int RegisterCallback(FastEventCallback<TCaller, TEventType> proc, object user_state = null)
         {
             if (proc == null) return 0;
             return ListenerList.Add(new FastEvent<TCaller, TEventType>(proc, user_state));
         }
 
-        public bool Unregister(int id)
+        public bool UnregisterCallback(int id)
         {
             return ListenerList.Delete(id);
         }
 
+        public int RegisterEvent(AutoResetEvent ev)
+        {
+            if (ev == null) return 0;
+            return EventList.Add(ev);
+        }
+
+        public bool UnregisterEvent(int id)
+        {
+            return EventList.Delete(id);
+        }
+
+        public int RegisterAsyncEvent(AsyncAutoResetEvent ev)
+        {
+            if (ev == null) return 0;
+            return AsyncEventList.Add(ev);
+        }
+
+        public bool UnregisterAsyncEvent(int id)
+        {
+            return AsyncEventList.Delete(id);
+        }
+
         public void Fire(TCaller caller, TEventType type)
         {
-            var list = ListenerList.GetListFast();
-            if (list != null)
-                foreach (var e in list)
+            var listener_list = ListenerList.GetListFast();
+            if (listener_list != null)
+                foreach (var e in listener_list)
                     e.CallSafe(caller, type);
+
+            var event_list = EventList.GetListFast();
+            if (event_list != null)
+                foreach (var e in event_list)
+                    e.Set();
+
+            var async_event_list = AsyncEventList.GetListFast();
+            if (async_event_list != null)
+                foreach (var e in async_event_list)
+                    e.Set();
         }
     }
 
@@ -8436,7 +8251,7 @@ namespace SoftEther.WebSocket.Helper
                     {
                         if (receive_timeout_proc_id != 0)
                         {
-                            PipeEnd.StreamReader.EventListeners.Unregister(receive_timeout_proc_id);
+                            PipeEnd.StreamReader.EventListeners.UnregisterCallback(receive_timeout_proc_id);
                             receive_timeout_proc_id = 0;
                             receive_timeout_detector.DisposeSafe();
                         }
@@ -8448,7 +8263,7 @@ namespace SoftEther.WebSocket.Helper
                             PipeEnd.Pipe.Disconnect(new TimeoutException("StreamReceiveTimeout"));
                         });
 
-                        receive_timeout_proc_id = PipeEnd.StreamReader.EventListeners.Register((buffer, type, state) =>
+                        receive_timeout_proc_id = PipeEnd.StreamReader.EventListeners.RegisterCallback((buffer, type, state) =>
                         {
                             if (type == FastBufferCallbackEventType.Written)
                                 receive_timeout_detector.Keep();
@@ -8468,7 +8283,7 @@ namespace SoftEther.WebSocket.Helper
                     {
                         if (send_timeout_proc_id != 0)
                         {
-                            PipeEnd.StreamReader.EventListeners.Unregister(send_timeout_proc_id);
+                            PipeEnd.StreamReader.EventListeners.UnregisterCallback(send_timeout_proc_id);
                             send_timeout_proc_id = 0;
                             send_timeout_detector.DisposeSafe();
                         }
@@ -8480,7 +8295,7 @@ namespace SoftEther.WebSocket.Helper
                             PipeEnd.Pipe.Disconnect(new TimeoutException("StreamSendTimeout"));
                         });
 
-                        send_timeout_proc_id = PipeEnd.StreamReader.EventListeners.Register((buffer, type, state) =>
+                        send_timeout_proc_id = PipeEnd.StreamReader.EventListeners.RegisterCallback((buffer, type, state) =>
                         {
                             if (type == FastBufferCallbackEventType.Read)
                                 send_timeout_detector.Keep();
