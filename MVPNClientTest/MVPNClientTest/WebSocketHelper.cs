@@ -6106,6 +6106,33 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public abstract class BackgroundStateData : IEquatable<BackgroundStateData>
+    {
+        static long GlobalVersionSeed = 0;
+        public long Version { get; }
+
+        public BackgroundStateData()
+        {
+            Version = Interlocked.Increment(ref GlobalVersionSeed);
+        }
+
+        public abstract bool Equals(BackgroundStateData other);
+    }
+
+    public class BackgroundState<TData>
+        where TData : BackgroundStateData
+    {
+        private BackgroundState() { }
+
+        public static TData State
+        {
+            get
+            {
+                return null;
+            }
+        }
+    }
+
     public enum IPVersion
     {
         IPv4 = 0,
