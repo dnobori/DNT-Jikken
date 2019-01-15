@@ -1912,23 +1912,31 @@ namespace SoftEther.WebSocket.Helper
         public static long WalkReadSInt64(ref this ReadOnlyMemory<byte> memory) => memory.WalkRead(8).GetSInt64();
 
 
-        public static ArraySegment<T> AsSegment<T>(this Memory<T> memory)
+        static Action InternalFastThrowVitalException = new Action(() => { throw new ApplicationException("Vital Error"); });
+        public static void FastThrowVitalError()
+        {
+            InternalFastThrowVitalException();
+        }
+
+        public static ArraySegment<T> AsSegmentSlow<T>(this Memory<T> memory)
         {
             if (MemoryMarshal.TryGetArray(memory, out ArraySegment<T> seg) == false)
-                throw new ArgumentException("Memory<T> cannot be converted to ArraySegment<T>.");
+            {
+                FastThrowVitalError();
+            }
 
             return seg;
         }
 
-
-        public static ArraySegment<T> AsSegment<T>(this ReadOnlyMemory<T> memory)
+        public static ArraySegment<T> AsSegmentSlow<T>(this ReadOnlyMemory<T> memory)
         {
             if (MemoryMarshal.TryGetArray(memory, out ArraySegment<T> seg) == false)
-                throw new ArgumentException("Memory<T> cannot be converted to ArraySegment<T>.");
+            {
+                FastThrowVitalError();
+            }
 
             return seg;
         }
-
 
         public static T[] ReAlloc<T>(this T[] src, int new_size)
         {
@@ -1975,71 +1983,188 @@ namespace SoftEther.WebSocket.Helper
 
         public const int MemoryUsePoolThreshold = 1024;
 
-        public static byte[] FastAlloc(int minimum_size)
+        public static T[] FastAlloc<T>(int minimum_size)
         {
             if (minimum_size < MemoryUsePoolThreshold)
-                return new byte[minimum_size];
+                return new T[minimum_size];
             else
-                return ArrayPool<byte>.Shared.Rent(minimum_size);
+                return ArrayPool<T>.Shared.Rent(minimum_size);
         }
 
-        public static Memory<byte> FastAllocMemory(int size)
+        public static Memory<T> FastAllocMemory<T>(int size)
         {
             if (size < MemoryUsePoolThreshold)
-                return new byte[size];
+                return new T[size];
             else
-                return new Memory<byte>(FastAlloc(size)).Slice(0, size);
+                return new Memory<T>(FastAlloc<T>(size)).Slice(0, size);
         }
 
-        public static void FastFree(this byte[] a)
+        public static void FastFree<T>(this T[] a)
         {
             if (a.Length >= MemoryUsePoolThreshold)
-                ArrayPool<byte>.Shared.Return(a);
+                ArrayPool<T>.Shared.Return(a);
         }
 
-        public static void FastFree(this Memory<byte> memory) => memory.GetInternalArray().FastFree();
+        public static void FastFree<T>(this Memory<T> memory) => memory.GetInternalArray().FastFree();
 
-        static readonly int _memory_object_offset = Marshal.OffsetOf<Memory<byte>>("_object").ToInt32();
-        static readonly int _memory_index_offset = Marshal.OffsetOf<Memory<byte>>("_index").ToInt32();
-        static readonly int _memory_length_offset = Marshal.OffsetOf<Memory<byte>>("_length").ToInt32();
-        static readonly int _readonly_memory_object_offset = Marshal.OffsetOf<ReadOnlyMemory<byte>>("_object").ToInt32();
-        static readonly int _readonly_memory_index_offset = Marshal.OffsetOf<ReadOnlyMemory<byte>>("_index").ToInt32();
-        static readonly int _readonly_memory_length_offset = Marshal.OffsetOf<ReadOnlyMemory<byte>>("_length").ToInt32();
 
-        public static byte[] GetInternalArray(this Memory<byte> memory)
+        static readonly long _memory_object_offset;
+        static readonly long _memory_index_offset;
+        static readonly long _memory_length_offset;
+        static readonly bool _use_fast = false;
+
+        static unsafe MemoryHelper()
+        {
+            try
+            {
+                _memory_object_offset = Marshal.OffsetOf<Memory<byte>>("_object").ToInt64();
+                _memory_index_offset = Marshal.OffsetOf<Memory<byte>>("_index").ToInt64();
+                _memory_length_offset = Marshal.OffsetOf<Memory<byte>>("_length").ToInt64();
+
+                if (_memory_object_offset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_object").ToInt64() ||
+                    _memory_index_offset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_index").ToInt64() ||
+                    _memory_length_offset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_length").ToInt64())
+                {
+                    throw new Exception();
+                }
+
+                _use_fast = true;
+            }
+            catch
+            {
+                Random r = new Random();
+                bool ok = true;
+
+                for (int i = 0; i < 32; i++)
+                {
+                    int a = r.Next(96) + 32;
+                    int b = r.Next(a / 2);
+                    int c = r.Next(a / 2);
+                    if (ValidateMemoryStructureLayoutForSecurity(a, b, c) == false ||
+                        ValidateReadOnlyMemoryStructureLayoutForSecurity(a, b, c) == false)
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+
+                if (ok)
+                {
+                    _memory_object_offset = 0;
+                    _memory_index_offset = sizeof(void*);
+                    _memory_length_offset = _memory_index_offset + sizeof(int);
+
+                    _use_fast = true;
+                }
+            }
+        }
+
+        unsafe struct DummyValueType
+        {
+            public fixed char fixedBuffer[96];
+        }
+
+        static unsafe bool ValidateMemoryStructureLayoutForSecurity(int a, int b, int c)
+        {
+            try
+            {
+                DummyValueType[] obj = new DummyValueType[a];
+                Memory<DummyValueType> mem = new Memory<DummyValueType>(obj, b, c);
+
+                void* mem_ptr = Unsafe.AsPointer(ref mem);
+
+                byte* p = (byte*)mem_ptr;
+                DummyValueType[] array = Unsafe.Read<DummyValueType[]>(p);
+                if (array == obj)
+                {
+                    p += sizeof(void*);
+                    if (Unsafe.Read<int>(p) == b)
+                    {
+                        p += sizeof(int);
+                        if (Unsafe.Read<int>(p) == c)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+        static unsafe bool ValidateReadOnlyMemoryStructureLayoutForSecurity(int a, int b, int c)
+        {
+            try
+            {
+                DummyValueType[] obj = new DummyValueType[a];
+                ReadOnlyMemory<DummyValueType> mem = new ReadOnlyMemory<DummyValueType>(obj, b, c);
+
+                void* mem_ptr = Unsafe.AsPointer(ref mem);
+
+                byte* p = (byte*)mem_ptr;
+                DummyValueType[] array = Unsafe.Read<DummyValueType[]>(p);
+                if (array == obj)
+                {
+                    p += sizeof(void*);
+                    if (Unsafe.Read<int>(p) == b)
+                    {
+                        p += sizeof(int);
+                        if (Unsafe.Read<int>(p) == c)
+                        {
+                            return true;
+                        }
+                    }
+                }
+                return false;
+            }
+            catch
+            {
+                return false;
+            }
+        }
+
+
+        public static T[] GetInternalArray<T>(this Memory<T> memory)
         {
             unsafe
             {
                 byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
                 ptr += _memory_object_offset;
-                byte[] o = Unsafe.Read<byte[]>(ptr);
+                T[] o = Unsafe.Read<T[]>(ptr);
                 return o;
             }
         }
-        public static int GetInternalArrayLength(this Memory<byte> memory) => GetInternalArray(memory).Length;
+        public static int GetInternalArrayLength<T>(this Memory<T> memory) => GetInternalArray(memory).Length;
 
-        public static ArraySegment<byte> AsSegmentFast(this Memory<byte> memory)
+        public static ArraySegment<T> AsSegment<T>(this Memory<T> memory)
         {
+            if (_use_fast == false) return AsSegmentSlow(memory);
+
             unsafe
             {
                 byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
-                return new ArraySegment<byte>(
-                    Unsafe.Read<byte[]>(ptr + _memory_object_offset),
-                    Unsafe.Read<int>(ptr + _memory_index_offset),
-                    Unsafe.Read<int>(ptr + _memory_length_offset)
+                return new ArraySegment<T>(
+                    Unsafe.Read<T[]>(ptr + _memory_object_offset),
+                    *((int*)(ptr + _memory_index_offset)),
+                    *((int*)(ptr + _memory_length_offset))
                     );
             }
         }
 
-        public static ArraySegment<byte> AsSegmentFast(this ReadOnlyMemory<byte> memory)
+        public static ArraySegment<T> AsSegment<T>(this ReadOnlyMemory<T> memory)
         {
+            if (_use_fast == false) return AsSegmentSlow(memory);
+
             unsafe
             {
                 byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
-                return new ArraySegment<byte>(
-                    Unsafe.Read<byte[]>(ptr + _readonly_memory_object_offset),
-                    Unsafe.Read<int>(ptr + _readonly_memory_index_offset),
-                    Unsafe.Read<int>(ptr + _readonly_memory_length_offset)
+                return new ArraySegment<T>(
+                    Unsafe.Read<T[]>(ptr + _memory_object_offset),
+                    *((int*)(ptr + _memory_index_offset)),
+                    *((int*)(ptr + _memory_length_offset))
                     );
             }
         }
@@ -2107,7 +2232,6 @@ namespace SoftEther.WebSocket.Helper
     public static class FastTick64
     {
         public static long Now { get => GetTick64(); }
-        public static int NowSeconds32 { get => GetSeconds32(); }
 
         static volatile uint state = 0;
 
@@ -2139,8 +2263,6 @@ namespace SoftEther.WebSocket.Helper
 
             return (long)value + 0x100000000L * (long)rotate_16bit;
         }
-
-        static int GetSeconds32() => (int)(GetTick64() / 1000L);
     }
 
     public static class FastHashHelper
@@ -3089,7 +3211,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
         public static Task<SocketReceiveFromResult> ReceiveFromSafeUdpErrorAsync(this Socket socket, Memory<byte> buffer, SocketFlags socketFlags)
-            => ReceiveFromSafeUdpErrorAsync(socket, buffer.AsSegmentFast(), socketFlags);
+            => ReceiveFromSafeUdpErrorAsync(socket, buffer.AsSegment(), socketFlags);
 
         public static async Task<int> SendToSafeUdpErrorAsync(this Socket socket, ArraySegment<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP)
         {
@@ -3110,7 +3232,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
         public static Task<int> SendToSafeUdpErrorAsync(this Socket socket, Memory<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP)
-            => SendToSafeUdpErrorAsync(socket, buffer.AsSegmentFast(), socketFlags, remoteEP);
+            => SendToSafeUdpErrorAsync(socket, buffer.AsSegment(), socketFlags, remoteEP);
 
         public static async Task ConnectAsync(this TcpClient tc, string host, int port,
             int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
@@ -3863,11 +3985,11 @@ namespace SoftEther.WebSocket.Helper
 
         static bool crypto_aead_chacha20poly1305_ietf_decrypt_detached(Memory<byte> m, ReadOnlyMemory<byte> c, ReadOnlyMemory<byte> mac, ReadOnlyMemory<byte> ad, ReadOnlyMemory<byte> npub, ReadOnlyMemory<byte> k)
         {
-            var kk = k.AsSegmentFast();
-            var nn = npub.AsSegmentFast();
-            var cc = c.AsSegmentFast();
-            var aa = ad.AsSegmentFast();
-            var mm = m.AsSegmentFast();
+            var kk = k.AsSegment();
+            var nn = npub.AsSegment();
+            var cc = c.AsSegment();
+            var aa = ad.AsSegment();
+            var mm = m.AsSegment();
 
             byte[] block0 = new byte[64];
 
@@ -3909,11 +4031,11 @@ namespace SoftEther.WebSocket.Helper
 
         static void crypto_aead_chacha20poly1305_ietf_encrypt_detached(Memory<byte> c, ReadOnlyMemory<byte> mac, ReadOnlyMemory<byte> m, ReadOnlyMemory<byte> ad, ReadOnlyMemory<byte> npub, ReadOnlyMemory<byte> k)
         {
-            var kk = k.AsSegmentFast();
-            var nn = npub.AsSegmentFast();
-            var cc = c.AsSegmentFast();
-            var aa = ad.AsSegmentFast();
-            var mm = m.AsSegmentFast();
+            var kk = k.AsSegment();
+            var nn = npub.AsSegment();
+            var cc = c.AsSegment();
+            var aa = ad.AsSegment();
+            var mm = m.AsSegment();
 
             byte[] block0 = new byte[64];
 
@@ -3942,7 +4064,7 @@ namespace SoftEther.WebSocket.Helper
             if (IsBigEndian) Array.Reverse(mlen);
             state.BlockUpdate(mlen, 0, mlen.Length);
 
-            var macmac = mac.AsSegmentFast();
+            var macmac = mac.AsSegment();
             state.DoFinal(macmac.Array, macmac.Offset);
         }
 
@@ -4833,7 +4955,7 @@ namespace SoftEther.WebSocket.Helper
                                 auto_events: new AsyncAutoResetEvent[] { EventSendNow });
                         }
 
-                        int r = await Sock.SendToSafeUdpErrorAsync(pkt.Data.AsSegmentFast(), SocketFlags.None, pkt.IPEndPoint);
+                        int r = await Sock.SendToSafeUdpErrorAsync(pkt.Data.AsSegment(), SocketFlags.None, pkt.IPEndPoint);
                         if (r <= 0) break;
 
                         EventSendReady.Set();
@@ -8852,7 +8974,7 @@ namespace SoftEther.WebSocket.Helper
             List<ArraySegment<byte>> send_array2 = new List<ArraySegment<byte>>();
             foreach (Memory<byte> mem in send_array)
             {
-                send_array2.Add(mem.AsSegmentFast());
+                send_array2.Add(mem.AsSegment());
             }
 
             await WebSocketHelper.DoAsyncWithTimeout(
@@ -8917,7 +9039,7 @@ namespace SoftEther.WebSocket.Helper
                     foreach (Datagram data in send_list)
                     {
                         cancel.ThrowIfCancellationRequested();
-                        await Socket.SendToSafeUdpErrorAsync(data.Data.AsSegmentFast(), SocketFlags.None, data.EndPoint);
+                        await Socket.SendToSafeUdpErrorAsync(data.Data.AsSegment(), SocketFlags.None, data.EndPoint);
                     }
                     return 0;
                 },

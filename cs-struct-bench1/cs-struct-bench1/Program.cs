@@ -302,6 +302,23 @@ namespace cs_struct_bench1
         }
     }
 
+
+    class ClassTypeInitTest
+    {
+        static ClassTypeInitTest()
+        {
+            Limbo.SInt++;
+            TestValue = (int)Limbo.SInt;
+        }
+
+        public static volatile int TestValue = 123;
+    }
+
+    class GenericClassTest<T>
+    {
+        public static volatile int TestValue = 123;
+    }
+
     class Program
     {
         static Semaphore s = new Semaphore(1, 1);
@@ -342,6 +359,11 @@ namespace cs_struct_bench1
 
 
         static volatile int vol1 = 1, vol2 = 2, vol3 = 3;
+
+        static void Test1()
+        {
+            ClassTypeInitTest.TestValue++;
+        }
 
         static void Main(string[] args)
         {
@@ -429,6 +451,35 @@ namespace cs_struct_bench1
 
             var q = new MicroBenchmarkQueue()
 
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("Type init test", 100000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        Test1();
+                    }
+                }
+                ), true, 190111)
+
+                .Add(new MicroBenchmark<Memory<byte>>("Access to GenericClassTest<T> public static field", 100000, (state, iterations) =>
+                {
+                    int ret = 0;
+                    GenericClassTest<sbyte>.TestValue++;
+                    GenericClassTest<Decimal>.TestValue++;
+                    GenericClassTest<double>.TestValue++;
+                    GenericClassTest<string>.TestValue++;
+                    GenericClassTest<float>.TestValue++;
+                    GenericClassTest<int>.TestValue++;
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        GenericClassTest<int>.TestValue++;
+                    }
+                    ret = GenericClassTest<int>.TestValue;
+
+                    Limbo.SInt = ret;
+                }
+                ), true, 190111)
 
                 .Add(new MicroBenchmark<Memory<byte>>("boxing", 100000, (state, iterations) =>
                 {
@@ -589,11 +640,11 @@ namespace cs_struct_bench1
                     Memory<byte> m = new byte[10];
                     for (int i = 0; i < iterations; i++)
                     {
-                        var seg = m.AsSegmentFast();
+                        var seg = m.AsSegment();
                         Limbo.SInt += seg.Count;
                     }
                 }
-                ), true, 190108)
+                ), true, 190115)
 
                 .Add(new MicroBenchmark<Memory<byte>>("MemoryMarshal.TryGetArray", 100000, (state, iterations) =>
                 {
@@ -603,7 +654,7 @@ namespace cs_struct_bench1
                         MemoryMarshal.TryGetArray(a, out ArraySegment<byte> seg);
                     }
                 }
-                ), true, 190108)
+                ), true, 190115)
 
                 .Add(new MicroBenchmark<Memory<byte>>("get memory length", 100000, (state, iterations) =>
                 {
@@ -628,7 +679,7 @@ namespace cs_struct_bench1
                 {
                     for (int i = 0; i < iterations; i++)
                     {
-                        byte[] data = MemoryHelper.FastAlloc(pool_test_size);
+                        byte[] data = MemoryHelper.FastAlloc<byte>(pool_test_size);
                         MemoryHelper.FastFree(data);
                     }
                 }
@@ -638,7 +689,7 @@ namespace cs_struct_bench1
                 {
                     for (int i = 0; i < iterations; i++)
                     {
-                        byte[] data = MemoryHelper.FastAlloc(pool_test_size);
+                        byte[] data = MemoryHelper.FastAlloc<byte>(pool_test_size);
                     }
                 }
                 ), true, 190107)
@@ -647,7 +698,7 @@ namespace cs_struct_bench1
                 {
                     for (int i = 0; i < iterations; i++)
                     {
-                        Memory<byte> data = MemoryHelper.FastAllocMemory(pool_test_size);
+                        Memory<byte> data = MemoryHelper.FastAllocMemory<byte>(pool_test_size);
                         MemoryHelper.FastFree(data);
                     }
                 }
@@ -657,7 +708,7 @@ namespace cs_struct_bench1
                 {
                     for (int i = 0; i < iterations; i++)
                     {
-                        Memory<byte> data = MemoryHelper.FastAllocMemory(pool_test_size);
+                        Memory<byte> data = MemoryHelper.FastAllocMemory<byte>(pool_test_size);
                     }
                 }
                 ), true, 190107)

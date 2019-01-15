@@ -60,7 +60,7 @@ namespace MVPNClientTest
                 {
                     using (SslStream ssl = new SslStream(st))
                     {
-                        //st.AttachHandle.SetStreamReceiveTimeout(1000);
+                        st.AttachHandle.SetStreamReceiveTimeout(1000);
                         await ssl.AuthenticateAsClientAsync("www.google.com");
                         WriteLine("Connected.");
                         StreamWriter w = new StreamWriter(ssl);

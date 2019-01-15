@@ -30,6 +30,7 @@ namespace MVPNClientTest
             //TestStreamBuffer();
             //BenchStreamBuffer();
             //TestPipes();
+
             PipeTest.TestMain();
             return;
 
