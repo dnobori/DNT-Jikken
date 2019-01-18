@@ -26,6 +26,7 @@ using System.Buffers.Binary;
 using System.Collections;
 using System.Net.NetworkInformation;
 using System.Security.Cryptography;
+using System.Runtime.ExceptionServices;
 
 #pragma warning disable CS0162
 
@@ -330,7 +331,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public ref struct MemoryBuffer<T>
+    public ref struct FastMemoryBuffer<T>
     {
         Memory<T> InternalBuffer;
         Span<T> InternalSpan;
@@ -345,7 +346,7 @@ namespace SoftEther.WebSocket.Helper
         public Span<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
         public Span<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
 
-        public MemoryBuffer(Memory<T> base_memory)
+        public FastMemoryBuffer(Memory<T> base_memory)
         {
             InternalBuffer = base_memory;
             CurrentPosition = 0;
@@ -353,42 +354,42 @@ namespace SoftEther.WebSocket.Helper
             InternalSpan = InternalBuffer.Span;
         }
 
-        public static implicit operator MemoryBuffer<T>(Memory<T> memory) => new MemoryBuffer<T>(memory);
-        public static implicit operator MemoryBuffer<T>(T[] array) => new MemoryBuffer<T>(array.AsMemory());
-        public static implicit operator Memory<T>(MemoryBuffer<T> buf) => buf.Memory;
-        public static implicit operator Span<T>(MemoryBuffer<T> buf) => buf.Span;
-        public static implicit operator ReadOnlyMemory<T>(MemoryBuffer<T> buf) => buf.Memory;
-        public static implicit operator ReadOnlySpan<T>(MemoryBuffer<T> buf) => buf.Span;
-        public static implicit operator ReadOnlyMemoryBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnly();
-        public static implicit operator SpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsSpanBuffer();
-        public static implicit operator ReadOnlySpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+        public static implicit operator FastMemoryBuffer<T>(Memory<T> memory) => new FastMemoryBuffer<T>(memory);
+        public static implicit operator FastMemoryBuffer<T>(T[] array) => new FastMemoryBuffer<T>(array.AsMemory());
+        public static implicit operator Memory<T>(FastMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator Span<T>(FastMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemory<T>(FastMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(FastMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator FastReadOnlyMemoryBuffer<T>(FastMemoryBuffer<T> buf) => buf.AsReadOnly();
+        public static implicit operator SpanBuffer<T>(FastMemoryBuffer<T> buf) => buf.AsSpanBuffer();
+        public static implicit operator ReadOnlySpanBuffer<T>(FastMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
 
-        public MemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
-        public MemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
-        public MemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
-        public MemoryBuffer<T> Slice(int start, int length)
+        public FastMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public FastMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public FastMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public FastMemoryBuffer<T> Slice(int start, int length)
         {
             if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
             if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
             if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
             if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
-            MemoryBuffer<T> ret = new MemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            FastMemoryBuffer<T> ret = new FastMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
             ret.Length = length;
             ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
             return ret;
         }
 
-        public MemoryBuffer<T> Clone()
+        public FastMemoryBuffer<T> Clone()
         {
-            MemoryBuffer<T> ret = new MemoryBuffer<T>(InternalSpan.ToArray());
+            FastMemoryBuffer<T> ret = new FastMemoryBuffer<T>(InternalSpan.ToArray());
             ret.Length = Length;
             ret.CurrentPosition = CurrentPosition;
             return ret;
         }
 
-        public ReadOnlyMemoryBuffer<T> AsReadOnly()
+        public FastReadOnlyMemoryBuffer<T> AsReadOnly()
         {
-            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(Memory);
+            FastReadOnlyMemoryBuffer<T> ret = new FastReadOnlyMemoryBuffer<T>(Memory);
             ret.Seek(CurrentPosition, SeekOrigin.Begin);
             return ret;
         }
@@ -567,7 +568,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public ref struct ReadOnlyMemoryBuffer<T>
+    public ref struct FastReadOnlyMemoryBuffer<T>
     {
         ReadOnlyMemory<T> InternalBuffer;
         ReadOnlySpan<T> InternalSpan;
@@ -582,7 +583,7 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
         public ReadOnlySpan<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
 
-        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
+        public FastReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
         {
             InternalBuffer = base_memory;
             CurrentPosition = 0;
@@ -590,38 +591,38 @@ namespace SoftEther.WebSocket.Helper
             InternalSpan = InternalBuffer.Span;
         }
 
-        public static implicit operator ReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
-        public static implicit operator ReadOnlyMemoryBuffer<T>(T[] array) => new ReadOnlyMemoryBuffer<T>(array.AsMemory());
-        public static implicit operator ReadOnlyMemory<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Memory;
-        public static implicit operator ReadOnlySpan<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Span;
-        public static implicit operator ReadOnlySpanBuffer<T>(ReadOnlyMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+        public static implicit operator FastReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new FastReadOnlyMemoryBuffer<T>(memory);
+        public static implicit operator FastReadOnlyMemoryBuffer<T>(T[] array) => new FastReadOnlyMemoryBuffer<T>(array.AsMemory());
+        public static implicit operator ReadOnlyMemory<T>(FastReadOnlyMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(FastReadOnlyMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlySpanBuffer<T>(FastReadOnlyMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
 
-        public ReadOnlyMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
-        public ReadOnlyMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
-        public ReadOnlyMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
-        public ReadOnlyMemoryBuffer<T> Slice(int start, int length)
+        public FastReadOnlyMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public FastReadOnlyMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public FastReadOnlyMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public FastReadOnlyMemoryBuffer<T> Slice(int start, int length)
         {
             if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
             if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
             if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
             if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
-            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            FastReadOnlyMemoryBuffer<T> ret = new FastReadOnlyMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
             ret.Length = length;
             ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
             return ret;
         }
 
-        public ReadOnlyMemoryBuffer<T> Clone()
+        public FastReadOnlyMemoryBuffer<T> Clone()
         {
-            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(InternalSpan.ToArray());
+            FastReadOnlyMemoryBuffer<T> ret = new FastReadOnlyMemoryBuffer<T>(InternalSpan.ToArray());
             ret.Length = Length;
             ret.CurrentPosition = CurrentPosition;
             return ret;
         }
 
-        public MemoryBuffer<T> CloneAsWritable()
+        public FastMemoryBuffer<T> CloneAsWritable()
         {
-            MemoryBuffer<T> ret = new MemoryBuffer<T>(Span.ToArray());
+            FastMemoryBuffer<T> ret = new FastMemoryBuffer<T>(Span.ToArray());
             ret.Seek(CurrentPosition, SeekOrigin.Begin);
             return ret;
         }
@@ -751,6 +752,426 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+
+    public class MemoryBuffer<T>
+    {
+        Memory<T> InternalBuffer;
+        public int CurrentPosition { get; private set; }
+        public int Length { get; private set; }
+
+        public Memory<T> Memory { get => InternalBuffer.Slice(0, Length); }
+        public Memory<T> MemoryBefore { get => Memory.Slice(0, CurrentPosition); }
+        public Memory<T> MemoryAfter { get => Memory.Slice(CurrentPosition); }
+
+        public Span<T> Span { get => InternalBuffer.Slice(0, Length).Span; }
+        public Span<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
+        public Span<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
+
+        public MemoryBuffer() : this(Memory<T>.Empty) { }
+
+        public MemoryBuffer(Memory<T> base_memory)
+        {
+            InternalBuffer = base_memory;
+            CurrentPosition = 0;
+            Length = base_memory.Length;
+        }
+
+        public static implicit operator MemoryBuffer<T>(Memory<T> memory) => new MemoryBuffer<T>(memory);
+        public static implicit operator MemoryBuffer<T>(T[] array) => new MemoryBuffer<T>(array.AsMemory());
+        public static implicit operator Memory<T>(MemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator Span<T>(MemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemory<T>(MemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(MemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemoryBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnly();
+        public static implicit operator SpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsSpanBuffer();
+        public static implicit operator ReadOnlySpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+
+        public MemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public MemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public MemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public MemoryBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public MemoryBuffer<T> Clone()
+        {
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(InternalBuffer.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public ReadOnlyMemoryBuffer<T> AsReadOnly()
+        {
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(Memory);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public SpanBuffer<T> AsSpanBuffer()
+        {
+            SpanBuffer<T> ret = new SpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public Span<T> Walk(int size, bool no_move = false)
+        {
+            int new_size = checked(CurrentPosition + size);
+            if (InternalBuffer.Length < new_size)
+            {
+                EnsureInternalBufferReserved(new_size);
+            }
+            var ret = InternalBuffer.Span.Slice(CurrentPosition, size);
+            Length = Math.Max(new_size, Length);
+            if (no_move == false) CurrentPosition += size;
+            return ret;
+        }
+
+        public void Write(T[] data, int offset = 0, int? length = null) => Write(data.AsSpan(offset, length ?? data.Length - offset));
+        public void Write(Memory<T> data) => Write(data.Span);
+        public void Write(ReadOnlyMemory<T> data) => Write(data.Span);
+
+        public void Write(Span<T> data)
+        {
+            var span = Walk(data.Length);
+            data.CopyTo(span);
+        }
+
+        public void Write(ReadOnlySpan<T> data)
+        {
+            var span = Walk(data.Length);
+            data.CopyTo(span);
+        }
+
+        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            Span<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public void Seek(int offset, SeekOrigin mode)
+        {
+            int new_position = 0;
+            if (mode == SeekOrigin.Current)
+                new_position = checked(CurrentPosition + offset);
+            else if (mode == SeekOrigin.End)
+                new_position = checked(Length + offset);
+            else
+                new_position = offset;
+
+            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+
+            CurrentPosition = new_position;
+        }
+
+        public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
+
+        public void SeekToEnd() => Seek(0, SeekOrigin.End);
+
+        public int Read(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
+        public int Read(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public void EnsureInternalBufferReserved(int new_size)
+        {
+            if (InternalBuffer.Length >= new_size) return;
+
+            int new_internal_size = InternalBuffer.Length;
+            while (new_internal_size < new_size)
+                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
+
+            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
+        }
+
+        public void Clear()
+        {
+            InternalBuffer = new Memory<T>();
+            CurrentPosition = 0;
+            Length = 0;
+        }
+    }
+
+    public class ReadOnlyMemoryBuffer<T>
+    {
+        ReadOnlyMemory<T> InternalBuffer;
+        public int CurrentPosition { get; private set; }
+        public int Length { get; private set; }
+
+        public ReadOnlyMemory<T> Memory { get => InternalBuffer.Slice(0, Length); }
+        public ReadOnlyMemory<T> MemoryBefore { get => Memory.Slice(0, CurrentPosition); }
+        public ReadOnlyMemory<T> MemoryAfter { get => Memory.Slice(CurrentPosition); }
+
+        public ReadOnlySpan<T> Span { get => InternalBuffer.Slice(0, Length).Span; }
+        public ReadOnlySpan<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
+        public ReadOnlySpan<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
+
+        public ReadOnlyMemoryBuffer() : this(ReadOnlyMemory<T>.Empty) { }
+
+        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
+        {
+            InternalBuffer = base_memory;
+            CurrentPosition = 0;
+            Length = base_memory.Length;
+        }
+
+        public static implicit operator ReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
+        public static implicit operator ReadOnlyMemoryBuffer<T>(T[] array) => new ReadOnlyMemoryBuffer<T>(array.AsMemory());
+        public static implicit operator ReadOnlyMemory<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlySpanBuffer<T>(ReadOnlyMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+
+        public ReadOnlyMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public ReadOnlyMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public ReadOnlyMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public ReadOnlyMemoryBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public ReadOnlyMemoryBuffer<T> Clone()
+        {
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(InternalBuffer.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public MemoryBuffer<T> CloneAsWritable()
+        {
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(Span.ToArray());
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public void Seek(int offset, SeekOrigin mode)
+        {
+            int new_position = 0;
+            if (mode == SeekOrigin.Current)
+                new_position = checked(CurrentPosition + offset);
+            else if (mode == SeekOrigin.End)
+                new_position = checked(Length + offset);
+            else
+                new_position = offset;
+
+            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+
+            CurrentPosition = new_position;
+        }
+
+        public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
+
+        public void SeekToEnd() => Seek(0, SeekOrigin.End);
+
+        public int Read(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
+        public int Read(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = ReadAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public void Clear()
+        {
+            InternalBuffer = new ReadOnlyMemory<T>();
+            CurrentPosition = 0;
+            Length = 0;
+        }
+    }
+
+
     public static class SpanMemoryBufferHelper
     {
         public static SpanBuffer<T> AsSpanBuffer<T>(this Span<T> span) => new SpanBuffer<T>(span);
@@ -825,71 +1246,140 @@ namespace SoftEther.WebSocket.Helper
 
 
 
+        public static FastMemoryBuffer<T> AsFastMemoryBuffer<T>(this Memory<T> memory) => new FastMemoryBuffer<T>(memory);
+        public static FastMemoryBuffer<T> AsFastMemoryBuffer<T>(this T[] data, int offset, int size) => new FastMemoryBuffer<T>(data.AsMemory(offset, size));
+
+        public static void WriteBool8(this ref FastMemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
+        public static void WriteUInt8(this ref FastMemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
+        public static void WriteUInt16(this ref FastMemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
+        public static void WriteUInt32(this ref FastMemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
+        public static void WriteUInt64(this ref FastMemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
+        public static void WriteSInt8(this ref FastMemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
+        public static void WriteSInt16(this ref FastMemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
+        public static void WriteSInt32(this ref FastMemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
+        public static void WriteSInt64(this ref FastMemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
+
+        public static void SetBool8(this ref FastMemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
+        public static void SetUInt8(this ref FastMemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
+        public static void SetUInt16(this ref FastMemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
+        public static void SetUInt32(this ref FastMemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
+        public static void SetUInt64(this ref FastMemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
+        public static void SetSInt8(this ref FastMemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
+        public static void SetSInt16(this ref FastMemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
+        public static void SetSInt32(this ref FastMemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
+        public static void SetSInt64(this ref FastMemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
+
+        public static bool ReadBool8(ref this FastMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(ref this FastMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this FastMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this FastMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this FastMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this FastMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this FastMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this FastMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this FastMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static bool PeekBool8(ref this FastMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(ref this FastMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this FastMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this FastMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this FastMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this FastMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this FastMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this FastMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this FastMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+
+        public static FastReadOnlyMemoryBuffer<T> AsFastReadOnlyMemoryBuffer<T>(this ReadOnlyMemory<T> memory) => new FastReadOnlyMemoryBuffer<T>(memory);
+        public static FastReadOnlyMemoryBuffer<T> AsFastReadOnlyMemoryBuffer<T>(this T[] data, int offset, int size) => new FastReadOnlyMemoryBuffer<T>(data.AsReadOnlyMemory(offset, size));
+
+        public static bool ReadBool8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static bool PeekBool8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+
+
+
+
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this Memory<T> memory) => new MemoryBuffer<T>(memory);
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this T[] data, int offset, int size) => new MemoryBuffer<T>(data.AsMemory(offset, size));
 
-        public static void WriteBool8(this ref MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
-        public static void WriteUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
-        public static void WriteUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
-        public static void WriteUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
-        public static void WriteUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
-        public static void WriteSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
-        public static void WriteSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
-        public static void WriteSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
-        public static void WriteSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
+        public static void WriteBool8(this MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
+        public static void WriteUInt8(this MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
+        public static void WriteUInt16(this MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
+        public static void WriteUInt32(this MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
+        public static void WriteUInt64(this MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
+        public static void WriteSInt8(this MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
+        public static void WriteSInt16(this MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
+        public static void WriteSInt32(this MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
+        public static void WriteSInt64(this MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
 
-        public static void SetBool8(this ref MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
-        public static void SetUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
-        public static void SetUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
-        public static void SetUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
-        public static void SetUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
-        public static void SetSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
-        public static void SetSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
-        public static void SetSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
-        public static void SetSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
+        public static void SetBool8(this MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
+        public static void SetUInt8(this MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
+        public static void SetUInt16(this MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
+        public static void SetUInt32(this MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
+        public static void SetUInt64(this MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
+        public static void SetSInt8(this MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
+        public static void SetSInt16(this MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
+        public static void SetSInt32(this MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
+        public static void SetSInt64(this MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
 
-        public static bool ReadBool8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
-        public static byte ReadUInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
-        public static ushort ReadUInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
-        public static uint ReadUInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
-        public static ulong ReadUInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
-        public static sbyte ReadSInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
-        public static short ReadSInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
-        public static int ReadSInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
-        public static long ReadSInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+        public static bool ReadBool8(this MemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(this MemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(this MemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(this MemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
-        public static bool PeekBool8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
-        public static byte PeekUInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
-        public static ushort PeekUInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
-        public static uint PeekUInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
-        public static ulong PeekUInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
-        public static sbyte PeekSInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
-        public static short PeekSInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
-        public static int PeekSInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
-        public static long PeekSInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+        public static bool PeekBool8(this MemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(this MemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(this MemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(this MemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(this MemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(this MemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
 
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this T[] data, int offset, int size) => new ReadOnlyMemoryBuffer<T>(data.AsReadOnlyMemory(offset, size));
 
-        public static bool ReadBool8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
-        public static byte ReadUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
-        public static ushort ReadUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
-        public static uint ReadUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
-        public static ulong ReadUInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
-        public static sbyte ReadSInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
-        public static short ReadSInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
-        public static int ReadSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
-        public static long ReadSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+        public static bool ReadBool8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
-        public static bool PeekBool8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
-        public static byte PeekUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
-        public static ushort PeekUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
-        public static uint PeekUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
-        public static ulong PeekUInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
-        public static sbyte PeekSInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
-        public static short PeekSInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
-        public static int PeekSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
-        public static long PeekSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+        public static bool PeekBool8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
     }
 
     static class MemoryHelper
@@ -2480,7 +2970,7 @@ namespace SoftEther.WebSocket.Helper
         {
             this.Value = value;
         }
-        public int Value;
+        public volatile int Value;
         public void Set(int value) => this.Value = value;
         public int Get() => this.Value;
         public override string ToString() => this.Value.ToString();
@@ -2502,7 +2992,7 @@ namespace SoftEther.WebSocket.Helper
         {
             this.Value = value;
         }
-        public bool Value;
+        public volatile bool Value;
         public void Set(bool value) => this.Value = value;
         public bool Get() => this.Value;
         public override string ToString() => this.Value.ToString();
@@ -3083,6 +3573,16 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    [Flags]
+    public enum ExceptionThrowWhen
+    {
+        None = 0,
+        TaskException = 1,
+        CancelException = 2,
+        TimeoutException = 4,
+        All = 0x7FFFFFFF,
+    }
+
     public static class WebSocketHelper
     {
         public static bool IsLittleEndian { get; }
@@ -3142,6 +3642,8 @@ namespace SoftEther.WebSocket.Helper
 
             Console.WriteLine(str);
         }
+
+        public static T[] ToSingleArray<T>(this T t) => new T[] { t };
 
         static WebSocketHelper()
         {
@@ -3889,14 +4391,42 @@ namespace SoftEther.WebSocket.Helper
             return x.Deserialize(ms);
         }
 
-        public static async Task WaitObjectsAsync(Task[] tasks = null, CancellationToken[] cancels = null, AsyncAutoResetEvent[] auto_events = null,
-            AsyncManualResetEvent[] manual_events = null, int timeout = Timeout.Infinite)
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        public static bool Bit<T>(this T value, T flag) where T: Enum
+            => value.HasFlag(flag);
+
+        public static async Task WaitObjectsAsync(Task[] tasks = null, CancellationToken[] cancels = null, AsyncAutoResetEvent[] events = null,
+            AsyncManualResetEvent[] manual_events = null, int timeout = Timeout.Infinite,
+            ExceptionThrowWhen exceptions = ExceptionThrowWhen.None)
         {
             if (tasks == null) tasks = new Task[0];
             if (cancels == null) cancels = new CancellationToken[0];
-            if (auto_events == null) auto_events = new AsyncAutoResetEvent[0];
+            if (events == null) events = new AsyncAutoResetEvent[0];
             if (manual_events == null) manual_events = new AsyncManualResetEvent[0];
-            if (timeout == 0) return;
+            if (timeout == 0)
+            {
+                if (exceptions.Bit(ExceptionThrowWhen.TimeoutException))
+                    throw new TimeoutException();
+                return;
+            }
+
+            if (exceptions.Bit(ExceptionThrowWhen.TaskException))
+            {
+                foreach (Task t in tasks)
+                {
+                    if (t != null)
+                    {
+                        if (t.IsFaulted) t.Exception.ReThrow();
+                        if (t.IsCanceled) throw new TaskCanceledException();
+                    }
+                }
+            }
+
+            if (exceptions.Bit(ExceptionThrowWhen.CancelException))
+            {
+                foreach (CancellationToken c in cancels)
+                    c.ThrowIfCancellationRequested();
+            }
 
             List<Task> task_list = new List<Task>();
             List<CancellationTokenRegistration> reg_list = new List<CancellationTokenRegistration>();
@@ -3916,7 +4446,7 @@ namespace SoftEther.WebSocket.Helper
                 reg_list.Add(reg);
             }
 
-            foreach (AsyncAutoResetEvent ev in auto_events)
+            foreach (AsyncAutoResetEvent ev in events)
             {
                 if (ev != null)
                 {
@@ -3935,14 +4465,19 @@ namespace SoftEther.WebSocket.Helper
 
             CancellationTokenSource delay_cancel = new CancellationTokenSource();
 
+            Task timeout_task = null;
+            bool timed_out = false;
+
             if (timeout >= 1)
             {
-                task_list.Add(Task.Delay(timeout, delay_cancel.Token));
+                timeout_task = Task.Delay(timeout, delay_cancel.Token);
+                task_list.Add(timeout_task);
             }
 
             try
             {
-                await Task.WhenAny(task_list.ToArray());
+                Task r = await Task.WhenAny(task_list.ToArray());
+                if (r == timeout_task) timed_out = true;
             }
             catch { }
             finally
@@ -3960,6 +4495,28 @@ namespace SoftEther.WebSocket.Helper
                     delay_cancel.Cancel();
                     delay_cancel.Dispose();
                 }
+
+                if (exceptions.Bit(ExceptionThrowWhen.TimeoutException))
+                    if (timed_out)
+                        throw new TimeoutException();
+
+                if (exceptions.Bit(ExceptionThrowWhen.TaskException))
+                {
+                    foreach (Task t in tasks)
+                    {
+                        if (t != null)
+                        {
+                            if (t.IsFaulted) t.Exception.ReThrow();
+                            if (t.IsCanceled) throw new TaskCanceledException();
+                        }
+                    }
+                }
+
+                if (exceptions.Bit(ExceptionThrowWhen.CancelException))
+                {
+                    foreach (CancellationToken c in cancels)
+                        c.ThrowIfCancellationRequested();
+                }
             }
         }
 
@@ -3969,6 +4526,12 @@ namespace SoftEther.WebSocket.Helper
             var aex = ex as AggregateException;
             if (aex != null) return aex.Flatten().InnerExceptions[0];
             return ex;
+        }
+
+        public static void ReThrow(this Exception ex)
+        {
+            if (ex == null) throw ex;
+            ExceptionDispatchInfo.Capture(ex.GetSingleException()).Throw();
         }
 
         public const int AeadChaCha20Poly1305MacSize = 16;
@@ -4179,6 +4742,72 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public sealed class WhenAll : IDisposable
+    {
+        public Task WaitMe { get; }
+        public bool AllOk { get; private set; } = false;
+        public bool HasError { get => !AllOk; }
+
+        CancellationTokenSource CancelSource = new CancellationTokenSource();
+
+        public WhenAll(IEnumerable<Task> tasks, bool throw_exception = false) : this(throw_exception, tasks.ToArray()) { }
+
+        public WhenAll(Task t, bool throw_exception = false) : this(throw_exception, t.ToSingleArray()) { }
+
+        public WhenAll(bool throw_exception = false, params Task[] tasks)
+        {
+            this.WaitMe = WaitMain(tasks, throw_exception);
+        }
+
+        async Task WaitMain(Task[] tasks, bool throw_exception)
+        {
+            Task cancel_task = WebSocketHelper.WhenCanceled(CancelSource.Token, out CancellationTokenRegistration reg);
+            using (reg)
+            {
+                bool all_ok = true;
+                foreach (Task t in tasks)
+                {
+                    if (t != null)
+                    {
+                        try
+                        {
+                            await Task.WhenAny(t, cancel_task);
+                        }
+                        catch { }
+
+                        if (throw_exception)
+                        {
+                            if (t.IsFaulted)
+                                t.Exception.ReThrow();
+                            if (t.IsCanceled)
+                                throw new TaskCanceledException();
+                        }
+
+                        if (t.IsCompletedSuccessfully == false)
+                            all_ok = false;
+
+                        if (CancelSource.Token.IsCancellationRequested)
+                        {
+                            all_ok = false;
+                            return;
+                        }
+                    }
+                }
+
+                AllOk = all_ok;
+            }
+        }
+
+        Once dispose_flag;
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall())
+            {
+                CancelSource.Cancel();
+            }
+        }
+    }
+
     public struct FastReadList<T>
     {
         static object GlobalWriteLock = new object();
@@ -4307,7 +4936,7 @@ namespace SoftEther.WebSocket.Helper
                     else
                     {
                         await WebSocketHelper.WaitObjectsAsync(
-                            auto_events: new AsyncAutoResetEvent[] { ev },
+                            events: new AsyncAutoResetEvent[] { ev },
                             cancels: new CancellationToken[] { halt.Token },
                             timeout: (int)remain_time);
                     }
@@ -4389,7 +5018,7 @@ namespace SoftEther.WebSocket.Helper
 
                     await WebSocketHelper.WaitObjectsAsync(
                         cancels: cancels.ToArray(),
-                        auto_events: new AsyncAutoResetEvent[] { ev });
+                        events: new AsyncAutoResetEvent[] { ev });
 
                     bool canceled = false;
 
@@ -4583,6 +5212,8 @@ namespace SoftEther.WebSocket.Helper
         {
             if (softly)
             {
+                if (is_set) return;
+
                 Task.Factory.StartNew(() => Set());
                 return;
             }
@@ -4898,7 +5529,7 @@ namespace SoftEther.WebSocket.Helper
                             }
 
                             await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
-                                auto_events: new AsyncAutoResetEvent[] { EventSendNow });
+                                events: new AsyncAutoResetEvent[] { EventSendNow });
                         }
 
                         int r = await Sock.SendAsync(send_data, SocketFlags.None, cancel);
@@ -4946,7 +5577,7 @@ namespace SoftEther.WebSocket.Helper
                             }
 
                             await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
-                                auto_events: new AsyncAutoResetEvent[] { EventSendNow });
+                                events: new AsyncAutoResetEvent[] { EventSendNow });
                         }
 
                         int r = await Sock.SendToSafeUdpErrorAsync(pkt.Data.AsSegment(), SocketFlags.None, pkt.IPEndPoint);
@@ -5097,14 +5728,20 @@ namespace SoftEther.WebSocket.Helper
     public class SharedExceptionQueue
     {
         public const int MaxItems = 128;
-        SharedQueue<Exception> Queue = new SharedQueue<Exception>(MaxItems);
+        SharedQueue<Exception> Queue = new SharedQueue<Exception>(MaxItems, true);
+        public AsyncManualResetEvent WhenExceptionRaised { get; } = new AsyncManualResetEvent();
+
+        HashSet<Task> WatchedTasks = new HashSet<Task>();
 
         public void Raise(Exception ex) => Add(ex, true);
 
-        public void Add(Exception ex, bool raise_first_exception = false)
+        public void Add(Exception ex, bool raise_first_exception = false, bool do_not_check_watched_tasks = false)
         {
             if (ex == null)
                 ex = new Exception("null exception");
+
+            if (do_not_check_watched_tasks == false)
+                CheckWatchedTasks();
 
             lock (SharedQueue<Exception>.GlobalLock)
             {
@@ -5119,19 +5756,84 @@ namespace SoftEther.WebSocket.Helper
                 {
                     Queue.Enqueue(ex);
                 }
+                WhenExceptionRaised.Set(true);
                 if (raise_first_exception)
-                    throw Queue.ItemsReadOnly[0];
+                    Queue.ItemsReadOnly[0].ReThrow();
             }
         }
 
         public void Encounter(SharedExceptionQueue other) => this.Queue.Encounter(other.Queue);
 
-        public Exception[] GetExceptions() => this.Queue.ItemsReadOnly;
+        public Exception[] GetExceptions()
+        {
+            CheckWatchedTasks();
+            return this.Queue.ItemsReadOnly;
+        }
         public Exception[] Exceptions => GetExceptions();
         public Exception FirstException => Exceptions.FirstOrDefault();
 
+        public void ThrowFirstExceptionIfExists()
+        {
+            lock (SharedQueue<Exception>.GlobalLock)
+            {
+                if (HasError)
+                    FirstException.ReThrow();
+            }
+        }
+
         public bool HasError => Exceptions.Length != 0;
         public bool IsOk => !HasError;
+
+        public bool RegisterWatchedTask(Task t)
+        {
+            if (t.IsCompleted)
+            {
+                if (t.IsFaulted)
+                    Add(t.Exception);
+                else if (t.IsCanceled)
+                    Add(new TaskCanceledException());
+
+                return true;
+            }
+
+            lock (SharedQueue<Exception>.GlobalLock)
+            {
+                t.ContinueWith(x =>
+                {
+                    CheckWatchedTasks();
+                });
+                return WatchedTasks.Add(t);
+            }
+        }
+
+        public bool UnregisterWatchedTask(Task t)
+        {
+            lock (SharedQueue<Exception>.GlobalLock)
+                return WatchedTasks.Remove(t);
+        }
+
+        void CheckWatchedTasks()
+        {
+            lock (SharedQueue<Exception>.GlobalLock)
+            {
+                List<Task> o = new List<Task>();
+                foreach (Task t in WatchedTasks)
+                {
+                    if (t.IsCompleted)
+                    {
+                        if (t.IsFaulted)
+                            Add(t.Exception, do_not_check_watched_tasks: true);
+                        else if (t.IsCanceled)
+                            Add(new TaskCanceledException(), do_not_check_watched_tasks: true);
+
+                        o.Add(t);
+                    }
+                }
+
+                foreach (Task t in o)
+                    WatchedTasks.Remove(t);
+            }
+        }
     }
 
     public class SharedQueue<T>
@@ -5151,11 +5853,12 @@ namespace SoftEther.WebSocket.Helper
                 MaxItems = max_items;
             }
 
-            public void Enqueue(T item)
+            public void Enqueue(T item, bool distinct = false)
             {
                 lock (List)
                 {
                     if (List.Count > MaxItems) return;
+                    if (distinct && List.ContainsValue(item)) return;
                     long ts = Interlocked.Increment(ref global_timestamp);
                     List.Add(ts, item);
                 }
@@ -5231,8 +5934,11 @@ namespace SoftEther.WebSocket.Helper
 
         public static readonly object GlobalLock = new object();
 
-        public SharedQueue(int max_items = 0)
+        public bool Distinct { get; }
+
+        public SharedQueue(int max_items = 0, bool distinct = false)
         {
+            Distinct = distinct;
             First = new QueueBody(max_items);
         }
 
@@ -5253,7 +5959,7 @@ namespace SoftEther.WebSocket.Helper
         public void Enqueue(T value)
         {
             lock (GlobalLock)
-                this.First.GetLast().Enqueue(value);
+                this.First.GetLast().Enqueue(value, Distinct);
         }
 
         public T Dequeue()
@@ -5840,7 +6546,6 @@ namespace SoftEther.WebSocket.Helper
 
         public HostNetInfo()
         {
-            WriteLine("HostNetworkStatusData get");
             IPGlobalProperties prop = IPGlobalProperties.GetIPGlobalProperties();
             this.HostName = prop.HostName;
             this.DomainName = prop.DomainName;
@@ -5900,7 +6605,7 @@ namespace SoftEther.WebSocket.Helper
         {
             get
             {
-                MemoryBuffer<byte> ret = new MemoryBuffer<byte>();
+                FastMemoryBuffer<byte> ret = new FastMemoryBuffer<byte>();
                 foreach (IPAddress addr in IPAddressList)
                 {
                     ret.WriteSInt32((int)addr.AddressFamily);
@@ -6108,7 +6813,6 @@ namespace SoftEther.WebSocket.Helper
                     {
                         ret.RegisterSystemStateChangeNotificationCallbackOnlyOnce(() =>
                         {
-                            WriteLine("callme!!");
                             callback_is_called = true;
                             GetState();
                             thread_signal.Set();
@@ -6192,8 +6896,6 @@ namespace SoftEther.WebSocket.Helper
 
         static void MaintainThread(object param)
         {
-            WriteLine("New thread");
-
             BackgroundStateDataUpdatePolicy policy = (BackgroundStateDataUpdatePolicy)param;
             policy = policy.SafeValue;
 
@@ -6203,8 +6905,6 @@ namespace SoftEther.WebSocket.Helper
             {
                 next_interval = policy.InitialPollingInterval;
             }
-
-            WriteLine($"next_interval = {next_interval}");
 
             long next_getdata_tick = tm.AddTimeout(next_interval);
 
@@ -6246,7 +6946,6 @@ namespace SoftEther.WebSocket.Helper
                         EventListener.Fire(CacheData, 0);
                     }
 
-                    WriteLine($"next_interval = {next_interval}");
                     next_getdata_tick = tm.AddTimeout(next_interval);
 
                     callback_is_called = false;
@@ -6262,7 +6961,6 @@ namespace SoftEther.WebSocket.Helper
                     }
                     else
                     {
-                        WriteLine("Thread stop for idle");
                         thread = null;
                         return;
                     }
@@ -6351,7 +7049,7 @@ namespace SoftEther.WebSocket.Helper
                             sleep_delay = WebSocketHelper.RandSInt31() % sleep_delay;
                         await WebSocketHelper.WaitObjectsAsync(timeout: sleep_delay,
                             cancels: new CancellationToken[] { InternalSelfCancelToken },
-                            auto_events: new AsyncAutoResetEvent[] { network_changed_event } );
+                            events: new AsyncAutoResetEvent[] { network_changed_event } );
                         num_retry++;
 
                         int network_info_ver = BackgroundState<HostNetInfo>.Current.Version;
@@ -8034,7 +8732,7 @@ namespace SoftEther.WebSocket.Helper
 
                 await WebSocketHelper.WaitObjectsAsync(
                     cancels: new CancellationToken[] { cancel },
-                    auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
+                    events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                     timeout: timer.GetNextInterval()
                     );
             }
@@ -8056,7 +8754,7 @@ namespace SoftEther.WebSocket.Helper
 
                 await WebSocketHelper.WaitObjectsAsync(
                     cancels: new CancellationToken[] { cancel },
-                    auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
+                    events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                     timeout: timer.GetNextInterval()
                     );
             }
@@ -8067,7 +8765,7 @@ namespace SoftEther.WebSocket.Helper
 
     public static class FastPipeGlobalConfig
     {
-        public static int MaxStreamBufferLength = int.MaxValue;
+        public static int MaxStreamBufferLength = 4 * 65536;
         public static int MaxDatagramQueueLength = 65536;
         public static int MaxPollingTimeout = 256;
 
@@ -8429,9 +9127,9 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public async Task<Memory<byte>> ReceiveAllAsync(int max_size, CancellationToken cancel = default(CancellationToken))
+        public async Task<Memory<byte>> ReceiveAllAsync(int size, CancellationToken cancel = default(CancellationToken))
         {
-            Memory<byte> buffer = new byte[max_size];
+            Memory<byte> buffer = new byte[size];
             await ReceiveAllAsync(buffer, cancel);
             return buffer;
         }
@@ -8500,7 +9198,7 @@ namespace SoftEther.WebSocket.Helper
         public Memory<byte> Receive(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
             => ReceiveAsync(max_size, cancel).Result;
 
-        public async Task<List<Memory<byte>>> FastReceiveAsync(CancellationToken cancel = default(CancellationToken))
+        public async Task<List<Memory<byte>>> FastReceiveAsync(CancellationToken cancel = default(CancellationToken), RefInt total_recv_size = null)
         {
             try
             {
@@ -8508,6 +9206,9 @@ namespace SoftEther.WebSocket.Helper
                 await WaitReadyToReceiveAsync(cancel, ReadTimeout);
 
                 var ret = End.StreamReader.DequeueAllWithLock(out long total_read_size);
+
+                if (total_recv_size != null)
+                    total_recv_size.Set((int)total_read_size);
 
                 if (total_read_size == 0)
                 {
@@ -8525,7 +9226,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public async Task<List<Memory<byte>>> FastPeekAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
+        public async Task<List<Memory<byte>>> FastPeekAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken), RefInt total_recv_size = null)
         {
             LABEL_RETRY:
             CheckDisconnect();
@@ -8538,6 +9239,9 @@ namespace SoftEther.WebSocket.Helper
             {
                 tmp = End.StreamReader.GetSegmentsFast(End.StreamReader.PinHead, max_size, out total_read_size, true);
             }
+
+            if (total_recv_size != null)
+                total_recv_size.Set((int)total_read_size);
 
             if (total_read_size == 0)
             {
@@ -8856,7 +9560,7 @@ namespace SoftEther.WebSocket.Helper
 
             await WebSocketHelper.WaitObjectsAsync(
                 cancels: WaitCancelList.ToArray(),
-                auto_events: WaitEventList.ToArray(),
+                events: WaitEventList.ToArray(),
                 timeout: timeout);
 
             return true;
@@ -8959,7 +9663,7 @@ namespace SoftEther.WebSocket.Helper
                         while (state_changed);
 
                         await WebSocketHelper.WaitObjectsAsync(
-                            auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
+                            events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
                             timeout: FastPipeGlobalConfig.PollingTimeout
                             );
@@ -9007,7 +9711,7 @@ namespace SoftEther.WebSocket.Helper
                         while (state_changed);
 
                         await WebSocketHelper.WaitObjectsAsync(
-                            auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
+                            events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
                             timeout: FastPipeGlobalConfig.PollingTimeout
                             );
@@ -9049,7 +9753,7 @@ namespace SoftEther.WebSocket.Helper
                         while (state_changed);
 
                         await WebSocketHelper.WaitObjectsAsync(
-                            auto_events: new AsyncAutoResetEvent[] { reader.EventReadReady },
+                            events: new AsyncAutoResetEvent[] { reader.EventReadReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
                             timeout: FastPipeGlobalConfig.PollingTimeout
                             );
@@ -9097,7 +9801,7 @@ namespace SoftEther.WebSocket.Helper
                         while (state_changed);
 
                         await WebSocketHelper.WaitObjectsAsync(
-                            auto_events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
+                            events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
                             cancels: new CancellationToken[] { CancelWatcher.CancelToken },
                             timeout: FastPipeGlobalConfig.PollingTimeout
                             );
@@ -9311,10 +10015,13 @@ namespace SoftEther.WebSocket.Helper
             SocketWrapperLoopTask = SocketWrapper.StartLoopAsync();
         }
 
-        public async Task WaitForLoopFinish()
+        public async Task WaitForLoopFinish(bool disconnet = false)
         {
             try
             {
+                if (disconnet)
+                    Disconnect();
+
                 await SocketWrapperLoopTask;
             }
             catch { }
@@ -9322,7 +10029,12 @@ namespace SoftEther.WebSocket.Helper
 
         public FastPipeEndStream GetStream(bool auto_flush = true) => LocalPipeEnd.GetStream(auto_flush);
 
-        public static async Task<FastTcpPipe> ConnectAsync(string host, int port, AddressFamily? address_family = null, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)
+        public static async Task<FastTcpPipe> ConnectAsync(string host, int port, AddressFamily? address_family = null, CancellationToken cancel = default(CancellationToken), int timeout = DefaultConnectTimeout)
+        {
+            return await ConnectAsync(await GetIPFromHostName(host, address_family, cancel, timeout), port, cancel, timeout);
+        }
+
+        public static async Task<IPAddress> GetIPFromHostName(string host, AddressFamily? address_family = null, CancellationToken cancel = default(CancellationToken), int timeout = DefaultConnectTimeout)
         {
             if (IPAddress.TryParse(host, out IPAddress ip))
             {
@@ -9337,11 +10049,11 @@ namespace SoftEther.WebSocket.Helper
                         .Where(x => x.AddressFamily == AddressFamily.InterNetwork || x.AddressFamily == AddressFamily.InterNetworkV6)
                         .Where(x => address_family == null || x.AddressFamily == address_family).First();
                 },
-                timeout: connect_timeout,
+                timeout: timeout,
                 cancel: cancel);
             }
 
-            return await ConnectAsync(ip, port, cancel, connect_timeout);
+            return ip;
         }
 
         public static Task<FastTcpPipe> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)

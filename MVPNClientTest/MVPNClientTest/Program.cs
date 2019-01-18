@@ -20,31 +20,26 @@ using SoftEther.VpnClient;
 
 namespace MVPNClientTest
 {
-    class TestData : BackgroundStateData
-    {
-        public override BackgroundStateDataUpdatePolicy DataUpdatePolicy =>
-            new BackgroundStateDataUpdatePolicy(300, 6000, 2000);
-
-        public override bool Equals(BackgroundStateData other)
-        {
-            return true;
-        }
-
-        public override void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action callback)
-        {
-            new Task(async () =>
-            {
-                await Task.Delay(3000);
-                WriteLine("callback");
-                callback();
-            }).Start();
-        }
-
-        public string Test { get; } = DateTime.Now.ToString();
-    }
 
     class Program
     {
+        static async Task Task1()
+        {
+            await Task.Yield();
+            await Task.Delay(12345678);
+        }
+
+        static async Task Task0()
+        {
+            Task t = Task1();
+            while (true)
+            {
+                using (var wait = new WhenAll(t))
+                {
+                }
+            }
+        }
+
         static void Main(string[] args)
         {
             //pipe_socket_udp_proc().Wait();
@@ -52,9 +47,9 @@ namespace MVPNClientTest
 
             //TestStreamBuffer();
             //BenchStreamBuffer();
-            TestPipes();
+            //TestPipes();
 
-            //PipeTest.TestMain();
+            PipeTest.TestMain();
 
             //while (true)
             //{
@@ -772,7 +767,7 @@ namespace MVPNClientTest
 
                     await WebSocketHelper.WaitObjectsAsync(
                         cancels: new CancellationToken[] { b.CancelToken },
-                        auto_events: new AsyncAutoResetEvent[] { b.EventRecvReady, b.EventSendReady },
+                        events: new AsyncAutoResetEvent[] { b.EventRecvReady, b.EventSendReady },
                         timeout: (int)(next_send - now));
                     Dbg.Where();
                 }

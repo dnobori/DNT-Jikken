@@ -484,7 +484,7 @@ namespace SoftEther.VpnClient
 
                     await WebSocketHelper.WaitObjectsAsync(
                         cancels: new CancellationToken[] { this.CancelWatcher.CancelToken },
-                        auto_events: new AsyncAutoResetEvent[] { UdpAccel.EventRecvReady },
+                        events: new AsyncAutoResetEvent[] { UdpAccel.EventRecvReady },
                         timeout: 256);
                 }
             }
@@ -571,7 +571,7 @@ namespace SoftEther.VpnClient
 
                 await WebSocketHelper.WaitObjectsAsync(
                     cancels: new CancellationToken[] { this.CancelWatcher.CancelToken },
-                    auto_events: new AsyncAutoResetEvent[] { SockSendEvent });
+                    events: new AsyncAutoResetEvent[] { SockSendEvent });
             }
         }
 

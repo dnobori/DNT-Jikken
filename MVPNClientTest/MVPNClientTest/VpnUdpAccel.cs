@@ -304,7 +304,7 @@ namespace SoftEther.VpnClient
             }
         }
 
-        Datagram UdpAccelProcessRecvPacket(MemoryBuffer<byte> buf, IPEndPoint src)
+        Datagram UdpAccelProcessRecvPacket(FastMemoryBuffer<byte> buf, IPEndPoint src)
         {
             Datagram ret;
 
@@ -405,7 +405,7 @@ namespace SoftEther.VpnClient
         {
             if (max_size == 0) max_size = MaxUdpPacketSize;
 
-            MemoryBuffer<byte> buf = new MemoryBuffer<byte>();
+            FastMemoryBuffer<byte> buf = new FastMemoryBuffer<byte>();
 
             // IV
             if (PlainTextMode == false)

@@ -317,7 +317,7 @@ namespace cs_struct_bench1
         }
     }
 
-    public ref struct MemoryBuffer<T>
+    public ref struct FastMemoryBuffer<T>
     {
         Memory<T> InternalBuffer;
         Span<T> InternalSpan;
@@ -332,7 +332,7 @@ namespace cs_struct_bench1
         public Span<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
         public Span<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
 
-        public MemoryBuffer(Memory<T> base_memory)
+        public FastMemoryBuffer(Memory<T> base_memory)
         {
             InternalBuffer = base_memory;
             CurrentPosition = 0;
@@ -340,42 +340,42 @@ namespace cs_struct_bench1
             InternalSpan = InternalBuffer.Span;
         }
 
-        public static implicit operator MemoryBuffer<T>(Memory<T> memory) => new MemoryBuffer<T>(memory);
-        public static implicit operator MemoryBuffer<T>(T[] array) => new MemoryBuffer<T>(array.AsMemory());
-        public static implicit operator Memory<T>(MemoryBuffer<T> buf) => buf.Memory;
-        public static implicit operator Span<T>(MemoryBuffer<T> buf) => buf.Span;
-        public static implicit operator ReadOnlyMemory<T>(MemoryBuffer<T> buf) => buf.Memory;
-        public static implicit operator ReadOnlySpan<T>(MemoryBuffer<T> buf) => buf.Span;
-        public static implicit operator ReadOnlyMemoryBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnly();
-        public static implicit operator SpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsSpanBuffer();
-        public static implicit operator ReadOnlySpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+        public static implicit operator FastMemoryBuffer<T>(Memory<T> memory) => new FastMemoryBuffer<T>(memory);
+        public static implicit operator FastMemoryBuffer<T>(T[] array) => new FastMemoryBuffer<T>(array.AsMemory());
+        public static implicit operator Memory<T>(FastMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator Span<T>(FastMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemory<T>(FastMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(FastMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator FastReadOnlyMemoryBuffer<T>(FastMemoryBuffer<T> buf) => buf.AsReadOnly();
+        public static implicit operator SpanBuffer<T>(FastMemoryBuffer<T> buf) => buf.AsSpanBuffer();
+        public static implicit operator ReadOnlySpanBuffer<T>(FastMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
 
-        public MemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
-        public MemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
-        public MemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
-        public MemoryBuffer<T> Slice(int start, int length)
+        public FastMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public FastMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public FastMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public FastMemoryBuffer<T> Slice(int start, int length)
         {
             if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
             if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
             if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
             if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
-            MemoryBuffer<T> ret = new MemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            FastMemoryBuffer<T> ret = new FastMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
             ret.Length = length;
             ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
             return ret;
         }
 
-        public MemoryBuffer<T> Clone()
+        public FastMemoryBuffer<T> Clone()
         {
-            MemoryBuffer<T> ret = new MemoryBuffer<T>(InternalSpan.ToArray());
+            FastMemoryBuffer<T> ret = new FastMemoryBuffer<T>(InternalSpan.ToArray());
             ret.Length = Length;
             ret.CurrentPosition = CurrentPosition;
             return ret;
         }
 
-        public ReadOnlyMemoryBuffer<T> AsReadOnly()
+        public FastReadOnlyMemoryBuffer<T> AsReadOnly()
         {
-            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(Memory);
+            FastReadOnlyMemoryBuffer<T> ret = new FastReadOnlyMemoryBuffer<T>(Memory);
             ret.Seek(CurrentPosition, SeekOrigin.Begin);
             return ret;
         }
@@ -554,7 +554,7 @@ namespace cs_struct_bench1
         }
     }
 
-    public ref struct ReadOnlyMemoryBuffer<T>
+    public ref struct FastReadOnlyMemoryBuffer<T>
     {
         ReadOnlyMemory<T> InternalBuffer;
         ReadOnlySpan<T> InternalSpan;
@@ -569,7 +569,7 @@ namespace cs_struct_bench1
         public ReadOnlySpan<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
         public ReadOnlySpan<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
 
-        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
+        public FastReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
         {
             InternalBuffer = base_memory;
             CurrentPosition = 0;
@@ -577,38 +577,38 @@ namespace cs_struct_bench1
             InternalSpan = InternalBuffer.Span;
         }
 
-        public static implicit operator ReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
-        public static implicit operator ReadOnlyMemoryBuffer<T>(T[] array) => new ReadOnlyMemoryBuffer<T>(array.AsMemory());
-        public static implicit operator ReadOnlyMemory<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Memory;
-        public static implicit operator ReadOnlySpan<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Span;
-        public static implicit operator ReadOnlySpanBuffer<T>(ReadOnlyMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+        public static implicit operator FastReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new FastReadOnlyMemoryBuffer<T>(memory);
+        public static implicit operator FastReadOnlyMemoryBuffer<T>(T[] array) => new FastReadOnlyMemoryBuffer<T>(array.AsMemory());
+        public static implicit operator ReadOnlyMemory<T>(FastReadOnlyMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(FastReadOnlyMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlySpanBuffer<T>(FastReadOnlyMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
 
-        public ReadOnlyMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
-        public ReadOnlyMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
-        public ReadOnlyMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
-        public ReadOnlyMemoryBuffer<T> Slice(int start, int length)
+        public FastReadOnlyMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public FastReadOnlyMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public FastReadOnlyMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public FastReadOnlyMemoryBuffer<T> Slice(int start, int length)
         {
             if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
             if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
             if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
             if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
-            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            FastReadOnlyMemoryBuffer<T> ret = new FastReadOnlyMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
             ret.Length = length;
             ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
             return ret;
         }
 
-        public ReadOnlyMemoryBuffer<T> Clone()
+        public FastReadOnlyMemoryBuffer<T> Clone()
         {
-            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(InternalSpan.ToArray());
+            FastReadOnlyMemoryBuffer<T> ret = new FastReadOnlyMemoryBuffer<T>(InternalSpan.ToArray());
             ret.Length = Length;
             ret.CurrentPosition = CurrentPosition;
             return ret;
         }
 
-        public MemoryBuffer<T> CloneAsWritable()
+        public FastMemoryBuffer<T> CloneAsWritable()
         {
-            MemoryBuffer<T> ret = new MemoryBuffer<T>(Span.ToArray());
+            FastMemoryBuffer<T> ret = new FastMemoryBuffer<T>(Span.ToArray());
             ret.Seek(CurrentPosition, SeekOrigin.Begin);
             return ret;
         }
@@ -738,6 +738,426 @@ namespace cs_struct_bench1
         }
     }
 
+
+    public class MemoryBuffer<T>
+    {
+        Memory<T> InternalBuffer;
+        public int CurrentPosition { get; private set; }
+        public int Length { get; private set; }
+
+        public Memory<T> Memory { get => InternalBuffer.Slice(0, Length); }
+        public Memory<T> MemoryBefore { get => Memory.Slice(0, CurrentPosition); }
+        public Memory<T> MemoryAfter { get => Memory.Slice(CurrentPosition); }
+
+        public Span<T> Span { get => InternalBuffer.Slice(0, Length).Span; }
+        public Span<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
+        public Span<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
+
+        public MemoryBuffer() : this(Memory<T>.Empty) { }
+
+        public MemoryBuffer(Memory<T> base_memory)
+        {
+            InternalBuffer = base_memory;
+            CurrentPosition = 0;
+            Length = base_memory.Length;
+        }
+
+        public static implicit operator MemoryBuffer<T>(Memory<T> memory) => new MemoryBuffer<T>(memory);
+        public static implicit operator MemoryBuffer<T>(T[] array) => new MemoryBuffer<T>(array.AsMemory());
+        public static implicit operator Memory<T>(MemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator Span<T>(MemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemory<T>(MemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(MemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlyMemoryBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnly();
+        public static implicit operator SpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsSpanBuffer();
+        public static implicit operator ReadOnlySpanBuffer<T>(MemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+
+        public MemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public MemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public MemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public MemoryBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public MemoryBuffer<T> Clone()
+        {
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(InternalBuffer.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public ReadOnlyMemoryBuffer<T> AsReadOnly()
+        {
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(Memory);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public SpanBuffer<T> AsSpanBuffer()
+        {
+            SpanBuffer<T> ret = new SpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public Span<T> Walk(int size, bool no_move = false)
+        {
+            int new_size = checked(CurrentPosition + size);
+            if (InternalBuffer.Length < new_size)
+            {
+                EnsureInternalBufferReserved(new_size);
+            }
+            var ret = InternalBuffer.Span.Slice(CurrentPosition, size);
+            Length = Math.Max(new_size, Length);
+            if (no_move == false) CurrentPosition += size;
+            return ret;
+        }
+
+        public void Write(T[] data, int offset = 0, int? length = null) => Write(data.AsSpan(offset, length ?? data.Length - offset));
+        public void Write(Memory<T> data) => Write(data.Span);
+        public void Write(ReadOnlyMemory<T> data) => Write(data.Span);
+
+        public void Write(Span<T> data)
+        {
+            var span = Walk(data.Length);
+            data.CopyTo(span);
+        }
+
+        public void Write(ReadOnlySpan<T> data)
+        {
+            var span = Walk(data.Length);
+            data.CopyTo(span);
+        }
+
+        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            Span<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public void Seek(int offset, SeekOrigin mode)
+        {
+            int new_position = 0;
+            if (mode == SeekOrigin.Current)
+                new_position = checked(CurrentPosition + offset);
+            else if (mode == SeekOrigin.End)
+                new_position = checked(Length + offset);
+            else
+                new_position = offset;
+
+            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+
+            CurrentPosition = new_position;
+        }
+
+        public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
+
+        public void SeekToEnd() => Seek(0, SeekOrigin.End);
+
+        public int Read(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
+        public int Read(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public void EnsureInternalBufferReserved(int new_size)
+        {
+            if (InternalBuffer.Length >= new_size) return;
+
+            int new_internal_size = InternalBuffer.Length;
+            while (new_internal_size < new_size)
+                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
+
+            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
+        }
+
+        public void Clear()
+        {
+            InternalBuffer = new Memory<T>();
+            CurrentPosition = 0;
+            Length = 0;
+        }
+    }
+
+    public class ReadOnlyMemoryBuffer<T>
+    {
+        ReadOnlyMemory<T> InternalBuffer;
+        public int CurrentPosition { get; private set; }
+        public int Length { get; private set; }
+
+        public ReadOnlyMemory<T> Memory { get => InternalBuffer.Slice(0, Length); }
+        public ReadOnlyMemory<T> MemoryBefore { get => Memory.Slice(0, CurrentPosition); }
+        public ReadOnlyMemory<T> MemoryAfter { get => Memory.Slice(CurrentPosition); }
+
+        public ReadOnlySpan<T> Span { get => InternalBuffer.Slice(0, Length).Span; }
+        public ReadOnlySpan<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
+        public ReadOnlySpan<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
+
+        public ReadOnlyMemoryBuffer() : this(ReadOnlyMemory<T>.Empty) { }
+
+        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
+        {
+            InternalBuffer = base_memory;
+            CurrentPosition = 0;
+            Length = base_memory.Length;
+        }
+
+        public static implicit operator ReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
+        public static implicit operator ReadOnlyMemoryBuffer<T>(T[] array) => new ReadOnlyMemoryBuffer<T>(array.AsMemory());
+        public static implicit operator ReadOnlyMemory<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Memory;
+        public static implicit operator ReadOnlySpan<T>(ReadOnlyMemoryBuffer<T> buf) => buf.Span;
+        public static implicit operator ReadOnlySpanBuffer<T>(ReadOnlyMemoryBuffer<T> buf) => buf.AsReadOnlySpanBuffer();
+
+        public ReadOnlyMemoryBuffer<T> SliceAfter() => Slice(CurrentPosition);
+        public ReadOnlyMemoryBuffer<T> SliceBefore() => Slice(0, CurrentPosition);
+        public ReadOnlyMemoryBuffer<T> Slice(int start) => Slice(start, this.Length - start);
+        public ReadOnlyMemoryBuffer<T> Slice(int start, int length)
+        {
+            if (start < 0) throw new ArgumentOutOfRangeException("start < 0");
+            if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
+            if (start > Length) throw new ArgumentOutOfRangeException("start > Size");
+            if (checked(start + length) > Length) throw new ArgumentOutOfRangeException("length > Size");
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(this.InternalBuffer.Slice(start, length));
+            ret.Length = length;
+            ret.CurrentPosition = Math.Max(checked(CurrentPosition - start), 0);
+            return ret;
+        }
+
+        public ReadOnlyMemoryBuffer<T> Clone()
+        {
+            ReadOnlyMemoryBuffer<T> ret = new ReadOnlyMemoryBuffer<T>(InternalBuffer.ToArray());
+            ret.Length = Length;
+            ret.CurrentPosition = CurrentPosition;
+            return ret;
+        }
+
+        public MemoryBuffer<T> CloneAsWritable()
+        {
+            MemoryBuffer<T> ret = new MemoryBuffer<T>(Span.ToArray());
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpanBuffer<T> AsReadOnlySpanBuffer()
+        {
+            ReadOnlySpanBuffer<T> ret = new ReadOnlySpanBuffer<T>(Span);
+            ret.Seek(CurrentPosition, SeekOrigin.Begin);
+            return ret;
+        }
+
+        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            CurrentPosition += size_read;
+            return ret;
+        }
+
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        {
+            int size_read = size;
+            if (checked(CurrentPosition + size) > Length)
+            {
+                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                size_read = Length - CurrentPosition;
+            }
+
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            return ret;
+        }
+
+        public void Seek(int offset, SeekOrigin mode)
+        {
+            int new_position = 0;
+            if (mode == SeekOrigin.Current)
+                new_position = checked(CurrentPosition + offset);
+            else if (mode == SeekOrigin.End)
+                new_position = checked(Length + offset);
+            else
+                new_position = offset;
+
+            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
+            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+
+            CurrentPosition = new_position;
+        }
+
+        public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
+
+        public void SeekToEnd() => Seek(0, SeekOrigin.End);
+
+        public int Read(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Read(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Span<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = Peek(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
+        public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
+
+        public int Read(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = ReadAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public int Peek(Memory<T> dest, int size)
+        {
+            if (dest.Length < size) throw new ArgumentException("dest.Length < size");
+            var span = PeekAsMemory(size);
+            span.CopyTo(dest);
+            return span.Length;
+        }
+
+        public void Clear()
+        {
+            InternalBuffer = new ReadOnlyMemory<T>();
+            CurrentPosition = 0;
+            Length = 0;
+        }
+    }
+
+
     public static class SpanMemoryBufferHelper
     {
         public static SpanBuffer<T> AsSpanBuffer<T>(this Span<T> span) => new SpanBuffer<T>(span);
@@ -812,71 +1232,140 @@ namespace cs_struct_bench1
 
 
 
+        public static FastMemoryBuffer<T> AsFastMemoryBuffer<T>(this Memory<T> memory) => new FastMemoryBuffer<T>(memory);
+        public static FastMemoryBuffer<T> AsFastMemoryBuffer<T>(this T[] data, int offset, int size) => new FastMemoryBuffer<T>(data.AsMemory(offset, size));
+
+        public static void WriteBool8(this ref FastMemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
+        public static void WriteUInt8(this ref FastMemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
+        public static void WriteUInt16(this ref FastMemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
+        public static void WriteUInt32(this ref FastMemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
+        public static void WriteUInt64(this ref FastMemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
+        public static void WriteSInt8(this ref FastMemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
+        public static void WriteSInt16(this ref FastMemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
+        public static void WriteSInt32(this ref FastMemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
+        public static void WriteSInt64(this ref FastMemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
+
+        public static void SetBool8(this ref FastMemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
+        public static void SetUInt8(this ref FastMemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
+        public static void SetUInt16(this ref FastMemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
+        public static void SetUInt32(this ref FastMemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
+        public static void SetUInt64(this ref FastMemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
+        public static void SetSInt8(this ref FastMemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
+        public static void SetSInt16(this ref FastMemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
+        public static void SetSInt32(this ref FastMemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
+        public static void SetSInt64(this ref FastMemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
+
+        public static bool ReadBool8(ref this FastMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(ref this FastMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this FastMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this FastMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this FastMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this FastMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this FastMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this FastMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this FastMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static bool PeekBool8(ref this FastMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(ref this FastMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this FastMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this FastMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this FastMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this FastMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this FastMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this FastMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this FastMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+
+        public static FastReadOnlyMemoryBuffer<T> AsFastReadOnlyMemoryBuffer<T>(this ReadOnlyMemory<T> memory) => new FastReadOnlyMemoryBuffer<T>(memory);
+        public static FastReadOnlyMemoryBuffer<T> AsFastReadOnlyMemoryBuffer<T>(this T[] data, int offset, int size) => new FastReadOnlyMemoryBuffer<T>(data.AsReadOnlyMemory(offset, size));
+
+        public static bool ReadBool8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+
+        public static bool PeekBool8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(ref this FastReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+
+
+
+
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this Memory<T> memory) => new MemoryBuffer<T>(memory);
         public static MemoryBuffer<T> AsMemoryBuffer<T>(this T[] data, int offset, int size) => new MemoryBuffer<T>(data.AsMemory(offset, size));
 
-        public static void WriteBool8(this ref MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
-        public static void WriteUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
-        public static void WriteUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
-        public static void WriteUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
-        public static void WriteUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
-        public static void WriteSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
-        public static void WriteSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
-        public static void WriteSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
-        public static void WriteSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
+        public static void WriteBool8(this MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, false));
+        public static void WriteUInt8(this MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, false));
+        public static void WriteUInt16(this MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, false));
+        public static void WriteUInt32(this MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, false));
+        public static void WriteUInt64(this MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, false));
+        public static void WriteSInt8(this MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, false));
+        public static void WriteSInt16(this MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, false));
+        public static void WriteSInt32(this MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, false));
+        public static void WriteSInt64(this MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, false));
 
-        public static void SetBool8(this ref MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
-        public static void SetUInt8(this ref MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
-        public static void SetUInt16(this ref MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
-        public static void SetUInt32(this ref MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
-        public static void SetUInt64(this ref MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
-        public static void SetSInt8(this ref MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
-        public static void SetSInt16(this ref MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
-        public static void SetSInt32(this ref MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
-        public static void SetSInt64(this ref MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
+        public static void SetBool8(this MemoryBuffer<byte> buf, bool value) => value.SetBool8(buf.Walk(1, true));
+        public static void SetUInt8(this MemoryBuffer<byte> buf, byte value) => value.SetUInt8(buf.Walk(1, true));
+        public static void SetUInt16(this MemoryBuffer<byte> buf, ushort value) => value.SetUInt16(buf.Walk(2, true));
+        public static void SetUInt32(this MemoryBuffer<byte> buf, uint value) => value.SetUInt32(buf.Walk(4, true));
+        public static void SetUInt64(this MemoryBuffer<byte> buf, ulong value) => value.SetUInt64(buf.Walk(8, true));
+        public static void SetSInt8(this MemoryBuffer<byte> buf, sbyte value) => value.SetSInt8(buf.Walk(1, true));
+        public static void SetSInt16(this MemoryBuffer<byte> buf, short value) => value.SetSInt16(buf.Walk(2, true));
+        public static void SetSInt32(this MemoryBuffer<byte> buf, int value) => value.SetSInt32(buf.Walk(4, true));
+        public static void SetSInt64(this MemoryBuffer<byte> buf, long value) => value.SetSInt64(buf.Walk(8, true));
 
-        public static bool ReadBool8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
-        public static byte ReadUInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
-        public static ushort ReadUInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
-        public static uint ReadUInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
-        public static ulong ReadUInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
-        public static sbyte ReadSInt8(ref this MemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
-        public static short ReadSInt16(ref this MemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
-        public static int ReadSInt32(ref this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
-        public static long ReadSInt64(ref this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+        public static bool ReadBool8(this MemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(this MemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(this MemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(this MemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(this MemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(this MemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(this MemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(this MemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(this MemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
-        public static bool PeekBool8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
-        public static byte PeekUInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
-        public static ushort PeekUInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
-        public static uint PeekUInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
-        public static ulong PeekUInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
-        public static sbyte PeekSInt8(ref this MemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
-        public static short PeekSInt16(ref this MemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
-        public static int PeekSInt32(ref this MemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
-        public static long PeekSInt64(ref this MemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+        public static bool PeekBool8(this MemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(this MemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(this MemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(this MemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(this MemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(this MemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(this MemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(this MemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(this MemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
 
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
         public static ReadOnlyMemoryBuffer<T> AsReadOnlyMemoryBuffer<T>(this T[] data, int offset, int size) => new ReadOnlyMemoryBuffer<T>(data.AsReadOnlyMemory(offset, size));
 
-        public static bool ReadBool8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
-        public static byte ReadUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
-        public static ushort ReadUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
-        public static uint ReadUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
-        public static ulong ReadUInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
-        public static sbyte ReadSInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
-        public static short ReadSInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
-        public static int ReadSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
-        public static long ReadSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
+        public static bool ReadBool8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetBool8();
+        public static byte ReadUInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetUInt8();
+        public static ushort ReadUInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetUInt16();
+        public static uint ReadUInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetUInt32();
+        public static ulong ReadUInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetUInt64();
+        public static sbyte ReadSInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(1).GetSInt8();
+        public static short ReadSInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(2).GetSInt16();
+        public static int ReadSInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(4).GetSInt32();
+        public static long ReadSInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Read(8).GetSInt64();
 
-        public static bool PeekBool8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
-        public static byte PeekUInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
-        public static ushort PeekUInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
-        public static uint PeekUInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
-        public static ulong PeekUInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
-        public static sbyte PeekSInt8(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
-        public static short PeekSInt16(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
-        public static int PeekSInt32(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
-        public static long PeekSInt64(ref this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
+        public static bool PeekBool8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetBool8();
+        public static byte PeekUInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetUInt8();
+        public static ushort PeekUInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetUInt16();
+        public static uint PeekUInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetUInt32();
+        public static ulong PeekUInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetUInt64();
+        public static sbyte PeekSInt8(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(1).GetSInt8();
+        public static short PeekSInt16(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(2).GetSInt16();
+        public static int PeekSInt32(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(4).GetSInt32();
+        public static long PeekSInt64(this ReadOnlyMemoryBuffer<byte> buf) => buf.Peek(8).GetSInt64();
     }
 
     static class MemoryHelper
