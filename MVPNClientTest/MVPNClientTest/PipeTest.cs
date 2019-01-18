@@ -53,7 +53,10 @@ namespace MVPNClientTest
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
                 //Test_Pipe_SslStream_Client(cancel.Token).Wait();
-                Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
+
+                //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
+
+                Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 20000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
 
                 //WebSocketHelper.WaitObjectsAsync
                 //t = Test_Pipe_SslStream_Client();
@@ -80,15 +83,13 @@ namespace MVPNClientTest
             [Flags]
             public enum ModeFlag
             {
-                Send,
-                Recv,
+                Upload,
+                Download,
                 Both,
             }
 
             public class Result
             {
-                public bool Raw;                   // Whether raw data
-                public bool Double;                // Whether it is doubled
                 public long NumBytesUpload;      // Uploaded size
                 public long NumBytesDownload;    // Downloaded size
                 public long NumBytesTotal;       // Total size
@@ -99,6 +100,8 @@ namespace MVPNClientTest
             }
 
             bool IsServerMode;
+            Memory<byte> SendData;
+
             IPAddress Ip;
             int Port;
             int NumConnection;
@@ -110,6 +113,7 @@ namespace MVPNClientTest
             AsyncManualResetEvent ClientStartEvent;
 
             int ConnectTimeout = 3000;
+            int CommTimeout = 5000;
 
             public SpeedTest(IPAddress ip, int port, int num_connection, int timespan, ModeFlag mode, CancellationToken cancel)
             {
@@ -118,13 +122,26 @@ namespace MVPNClientTest
                 this.Port = port;
                 this.Cancel = cancel;
                 this.NumConnection = Math.Max(num_connection, 1);
-                this.TimeSpan = Math.Max(timespan, 3000);
+                this.TimeSpan = Math.Max(timespan, 1000);
                 this.Mode = mode;
                 if (Mode == ModeFlag.Both)
                 {
                     this.NumConnection = Math.Max(NumConnection, 2);
                 }
                 this.ClientStartEvent = new AsyncManualResetEvent();
+                InitSendData();
+            }
+
+            void InitSendData()
+            {
+                int size = 16000000;
+                byte[] data = WebSocketHelper.Rand(size);
+                for (int i = 0; i < data.Length; i++)
+                {
+                    if (data[i] == (byte)'!')
+                        data[i] = (byte)'*';
+                }
+                SendData = data;
             }
 
             Once ClientOnce;
@@ -137,7 +154,7 @@ namespace MVPNClientTest
                 ExceptionQueue = new SharedExceptionQueue();
                 SessionId = WebSocketHelper.RandUInt64();
 
-                List<Task<long>> tasks = new List<Task<long>>();
+                List<Task<Result>> tasks = new List<Task<Result>>();
                 List<AsyncManualResetEvent> ready_events = new List<AsyncManualResetEvent>();
 
                 using (CancelWatcher cw = new CancelWatcher(this.Cancel))
@@ -145,9 +162,9 @@ namespace MVPNClientTest
                     for (int i = 0; i < NumConnection; i++)
                     {
                         Direction dir;
-                        if (Mode == ModeFlag.Recv)
+                        if (Mode == ModeFlag.Download)
                             dir = Direction.Recv;
-                        else if (Mode == ModeFlag.Send)
+                        else if (Mode == ModeFlag.Upload)
                             dir = Direction.Send;
                         else
                             dir = ((i % 2) == 0) ? Direction.Recv : Direction.Send;
@@ -184,6 +201,24 @@ namespace MVPNClientTest
 
                             await when_all_completed.WaitMe;
                         }
+
+                        Result ret = new Result();
+
+                        ret.Span = TimeSpan;
+
+                        foreach (var r in tasks.Select(x => x.Result))
+                        {
+                            ret.NumBytesDownload += r.NumBytesDownload;
+                            ret.NumBytesUpload += r.NumBytesUpload;
+                        }
+
+                        ret.NumBytesTotal = ret.NumBytesUpload + ret.NumBytesDownload;
+
+                        ret.BpsUpload = (long)((double)ret.NumBytesUpload * 1000.0 * 8.0 / (double)ret.Span * 1514.0 / 1460.0);
+                        ret.BpsDownload = (long)((double)ret.NumBytesDownload * 1000.0 * 8.0 / (double)ret.Span * 1514.0 / 1460.0);
+                        ret.BpsTotal = ret.BpsUpload + ret.BpsDownload;
+
+                        return ret;
                     }
                     catch (Exception ex)
                     {
@@ -208,15 +243,18 @@ namespace MVPNClientTest
                 return null;
             }
 
-            async Task<long> ClientSingleConnectionAsync(Direction dir, AsyncManualResetEvent fire_me_when_ready, CancellationToken cancel)
+            async Task<Result> ClientSingleConnectionAsync(Direction dir, AsyncManualResetEvent fire_me_when_ready, CancellationToken cancel)
             {
-                long ret = 0;
+                Result ret = new Result();
                 using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(Ip, Port, cancel, ConnectTimeout))
                 {
                     try
                     {
                         using (FastPipeEndStream st = p.GetStream())
                         {
+                            st.AttachHandle.SetStreamReceiveTimeout(CommTimeout);
+                            st.AttachHandle.SetStreamSendTimeout(CommTimeout);
+
                             try
                             {
                                 var hello = await st.ReceiveAllAsync(16);
@@ -262,20 +300,37 @@ namespace MVPNClientTest
                                         await WebSocketHelper.WaitObjectsAsync(
                                             tasks: st.FastReceiveAsync(total_recv_size: total_recv_size).ToSingleArray(),
                                             timeout: (int)(tick_end - now),
-                                            exceptions: ExceptionWhen.All);
+                                            exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);
 
-                                        //await st.FastReceiveAsync(total_recv_size: total_recv_size);
-
-                                        ret += total_recv_size;
+                                        ret.NumBytesDownload += total_recv_size;
                                     }
-
-                                    Dbg.Where();
-                                    return ret;
                                 }
                                 else
                                 {
-                                    throw new NotImplementedException();
+                                    st.AttachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
+
+                                    while (true)
+                                    {
+                                        long now = FastTick64.Now;
+
+                                        if (now >= tick_end)
+                                            break;
+
+                                        //await st.FastSendAsync(SendData, flush: true);
+
+                                        await WebSocketHelper.WaitObjectsAsync(
+                                            tasks: st.FastSendAsync(SendData, flush: true).ToSingleArray(),
+                                            timeout: (int)(tick_end - now),
+                                            exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);
+
+                                        ret.NumBytesDownload += SendData.Length;
+                                    }
                                 }
+
+                                st.Disconnect();
+
+                                Dbg.Where();
+                                return ret;
                             }
                             catch (Exception ex)
                             {
@@ -300,6 +355,9 @@ namespace MVPNClientTest
             SpeedTest test = new SpeedTest(target_ip, server_port, num_connection, timespan, mode, cancel);
 
             var result = await test.RunClientAsync();
+
+            Console.WriteLine("--- Result ---");
+            Console.WriteLine(WebSocketHelper.ObjectToJson(result));
         }
 
         static async Task Test_Pipe_SslStream_Client(CancellationToken cancel)

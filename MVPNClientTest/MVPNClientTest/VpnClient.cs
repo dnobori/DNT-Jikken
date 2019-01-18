@@ -630,9 +630,10 @@ namespace SoftEther.VpnClient
             try
             {
                 this.TimeoutDetector = new TimeoutDetector(Info.DisconnectTimeout,
-                    callme: () =>
+                    callback: (x) =>
                     {
                         set_disconnect_reason(new ApplicationException("VPN transport communication timed out."));
+                        return false;
                     });
 
                 Task sock_recv_task = sessionSockRecvLoopAsync();
