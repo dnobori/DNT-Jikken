@@ -262,7 +262,9 @@ namespace MVPNClientTest
                                         await WebSocketHelper.WaitObjectsAsync(
                                             tasks: st.FastReceiveAsync(total_recv_size: total_recv_size).ToSingleArray(),
                                             timeout: (int)(tick_end - now),
-                                            exceptions: ExceptionThrowWhen.All);
+                                            exceptions: ExceptionWhen.All);
+
+                                        //await st.FastReceiveAsync(total_recv_size: total_recv_size);
 
                                         ret += total_recv_size;
                                     }

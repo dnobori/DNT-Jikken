@@ -3574,7 +3574,7 @@ namespace SoftEther.WebSocket.Helper
     }
 
     [Flags]
-    public enum ExceptionThrowWhen
+    public enum ExceptionWhen
     {
         None = 0,
         TaskException = 1,
@@ -4397,7 +4397,7 @@ namespace SoftEther.WebSocket.Helper
 
         public static async Task WaitObjectsAsync(Task[] tasks = null, CancellationToken[] cancels = null, AsyncAutoResetEvent[] events = null,
             AsyncManualResetEvent[] manual_events = null, int timeout = Timeout.Infinite,
-            ExceptionThrowWhen exceptions = ExceptionThrowWhen.None)
+            ExceptionWhen exceptions = ExceptionWhen.None)
         {
             if (tasks == null) tasks = new Task[0];
             if (cancels == null) cancels = new CancellationToken[0];
@@ -4405,12 +4405,12 @@ namespace SoftEther.WebSocket.Helper
             if (manual_events == null) manual_events = new AsyncManualResetEvent[0];
             if (timeout == 0)
             {
-                if (exceptions.Bit(ExceptionThrowWhen.TimeoutException))
+                if (exceptions.Bit(ExceptionWhen.TimeoutException))
                     throw new TimeoutException();
                 return;
             }
 
-            if (exceptions.Bit(ExceptionThrowWhen.TaskException))
+            if (exceptions.Bit(ExceptionWhen.TaskException))
             {
                 foreach (Task t in tasks)
                 {
@@ -4422,7 +4422,7 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            if (exceptions.Bit(ExceptionThrowWhen.CancelException))
+            if (exceptions.Bit(ExceptionWhen.CancelException))
             {
                 foreach (CancellationToken c in cancels)
                     c.ThrowIfCancellationRequested();
@@ -4496,11 +4496,11 @@ namespace SoftEther.WebSocket.Helper
                     delay_cancel.Dispose();
                 }
 
-                if (exceptions.Bit(ExceptionThrowWhen.TimeoutException))
+                if (exceptions.Bit(ExceptionWhen.TimeoutException))
                     if (timed_out)
                         throw new TimeoutException();
 
-                if (exceptions.Bit(ExceptionThrowWhen.TaskException))
+                if (exceptions.Bit(ExceptionWhen.TaskException))
                 {
                     foreach (Task t in tasks)
                     {
@@ -4512,7 +4512,7 @@ namespace SoftEther.WebSocket.Helper
                     }
                 }
 
-                if (exceptions.Bit(ExceptionThrowWhen.CancelException))
+                if (exceptions.Bit(ExceptionWhen.CancelException))
                 {
                     foreach (CancellationToken c in cancels)
                         c.ThrowIfCancellationRequested();
