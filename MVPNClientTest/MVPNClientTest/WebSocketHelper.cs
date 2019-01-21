@@ -3567,7 +3567,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 long now = DateTime.Now.Ticks;
                 long diff = now - last_tick;
-                WriteLine($"{Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (string.IsNullOrEmpty(msg) == false ? (": " + msg) : ""));
+                WriteLine($"{FastTick64.Now}  {Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (string.IsNullOrEmpty(msg) == false ? (": " + msg) : ""));
                 return now;
             }
         }
@@ -4018,7 +4018,7 @@ namespace SoftEther.WebSocket.Helper
 
         public static void TryCloseNonBlock(this Stream stream)
         {
-            new Task(() =>
+            Task.Run(() =>
             {
                 try
                 {
@@ -4027,7 +4027,7 @@ namespace SoftEther.WebSocket.Helper
                 catch
                 {
                 }
-            }).Start();
+            });
         }
 
         public static Task WhenCanceled(CancellationToken cancel, out CancellationTokenRegistration registration)
@@ -4276,7 +4276,7 @@ namespace SoftEther.WebSocket.Helper
 
         public static void LaissezFaire(this Task task)
         {
-            new Task(async () =>
+            Task.Run(async () =>
             {
                 try
                 {
@@ -4286,7 +4286,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     Console.WriteLine("LaissezFaire: " + ex.ToString());
                 }
-            }).Start();
+            });
         }
 
         public static IAsyncResult AsApm<T>(this Task<T> task,
@@ -4389,6 +4389,13 @@ namespace SoftEther.WebSocket.Helper
             XmlSerializer x = new XmlSerializer(t);
 
             return x.Deserialize(ms);
+        }
+
+        public static void ThrowIfErrorOrCanceled(this Task task)
+        {
+            if (task == null) return;
+            if (task.IsFaulted) task.Exception.ReThrow();
+            if (task.IsCanceled) throw new TaskCanceledException();
         }
 
         [MethodImpl(MethodImplOptions.AggressiveInlining)]
@@ -4753,6 +4760,18 @@ namespace SoftEther.WebSocket.Helper
         public WhenAll(IEnumerable<Task> tasks, bool throw_exception = false) : this(throw_exception, tasks.ToArray()) { }
 
         public WhenAll(Task t, bool throw_exception = false) : this(throw_exception, t.ToSingleArray()) { }
+
+        public static Task Await(IEnumerable<Task> tasks, bool throw_exception = false)
+            => Await(throw_exception, tasks.ToArray());
+
+        public static Task Await(Task t, bool throw_exception = false)
+            => Await(throw_exception, t.ToSingleArray());
+
+        public static async Task Await(bool throw_exception = false, params Task[] tasks)
+        {
+            using (var w = new WhenAll(throw_exception, tasks))
+                await w.WaitMe;
+        }
 
         public WhenAll(bool throw_exception = false, params Task[] tasks)
         {
@@ -5753,23 +5772,37 @@ namespace SoftEther.WebSocket.Helper
             if (do_not_check_watched_tasks == false)
                 CheckWatchedTasks();
 
-            lock (SharedQueue<Exception>.GlobalLock)
+            Exception throwing_exception = null;
+
+            AggregateException aex = ex as AggregateException;
+
+            if (aex != null)
             {
-                AggregateException aex = ex as AggregateException;
-                if (aex != null)
+                var exp = aex.Flatten().InnerExceptions;
+
+                lock (SharedQueue<Exception>.GlobalLock)
                 {
-                    var exp = aex.Flatten().InnerExceptions;
                     foreach (var expi in exp)
                         Queue.Enqueue(expi);
+
+                    if (raise_first_exception)
+                        throwing_exception = Queue.ItemsReadOnly[0];
                 }
-                else
+            }
+            else
+            {
+                lock (SharedQueue<Exception>.GlobalLock)
                 {
                     Queue.Enqueue(ex);
+                    if (raise_first_exception)
+                        throwing_exception = Queue.ItemsReadOnly[0];
                 }
-                WhenExceptionRaised.Set(true);
-                if (raise_first_exception)
-                    Queue.ItemsReadOnly[0].ReThrow();
             }
+
+            WhenExceptionRaised.Set(true);
+
+            if (throwing_exception != null)
+                throwing_exception.ReThrow();
         }
 
         public void Encounter(SharedExceptionQueue other) => this.Queue.Encounter(other.Queue);
@@ -5784,11 +5817,15 @@ namespace SoftEther.WebSocket.Helper
 
         public void ThrowFirstExceptionIfExists()
         {
+            Exception ex = null;
             lock (SharedQueue<Exception>.GlobalLock)
             {
                 if (HasError)
-                    FirstException.ReThrow();
+                    ex = FirstException;
             }
+
+            if (ex != null)
+                ex.ReThrow();
         }
 
         public bool HasError => Exceptions.Length != 0;
@@ -5806,14 +5843,19 @@ namespace SoftEther.WebSocket.Helper
                 return true;
             }
 
+            bool ret;
+
             lock (SharedQueue<Exception>.GlobalLock)
             {
-                t.ContinueWith(x =>
-                {
-                    CheckWatchedTasks();
-                });
-                return WatchedTasks.Add(t);
+                ret = WatchedTasks.Add(t);
             }
+
+            t.ContinueWith(x =>
+            {
+                CheckWatchedTasks();
+            });
+
+            return ret;
         }
 
         public bool UnregisterWatchedTask(Task t)
@@ -5824,17 +5866,20 @@ namespace SoftEther.WebSocket.Helper
 
         void CheckWatchedTasks()
         {
+            List<Task> o = new List<Task>();
+
+            List<Exception> exp_list = new List<Exception>();
+
             lock (SharedQueue<Exception>.GlobalLock)
             {
-                List<Task> o = new List<Task>();
                 foreach (Task t in WatchedTasks)
                 {
                     if (t.IsCompleted)
                     {
                         if (t.IsFaulted)
-                            Add(t.Exception, do_not_check_watched_tasks: true);
+                            exp_list.Add(t.Exception);
                         else if (t.IsCanceled)
-                            Add(new TaskCanceledException(), do_not_check_watched_tasks: true);
+                            exp_list.Add(new TaskCanceledException());
 
                         o.Add(t);
                     }
@@ -5843,6 +5888,9 @@ namespace SoftEther.WebSocket.Helper
                 foreach (Task t in o)
                     WatchedTasks.Remove(t);
             }
+
+            foreach (Exception ex in exp_list)
+                Add(ex, do_not_check_watched_tasks: true);
         }
     }
 
@@ -5903,6 +5951,7 @@ namespace SoftEther.WebSocket.Helper
                     {
                         Debug.Assert(q1.List != null);
                         Debug.Assert(q2.List != null);
+
                         QueueBody q3 = new QueueBody(Math.Max(q1.MaxItems, q2.MaxItems));
                         foreach (long ts in q1.List.Keys)
                             q3.List.Add(ts, q1.List[ts]);
@@ -7646,8 +7695,6 @@ namespace SoftEther.WebSocket.Helper
             EventListeners.Fire(this, FastBufferCallbackEventType.Init);
         }
 
-        bool LastReadyToWrite = false;
-
         public void CheckDisconnected()
         {
             if (IsDisconnected) ExceptionQueue.Raise(new FastBufferDisconnectedException());
@@ -7672,23 +7719,27 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        long LastHeadPin = long.MinValue;
+
         public void CompleteRead()
         {
             if (IsEventsEnabled)
             {
                 bool set_flag = false;
+
                 lock (LockObj)
                 {
-                    bool current = IsReadyToWrite;
-                    if (current != LastReadyToWrite)
+                    long current = PinHead;
+                    if (LastHeadPin != current)
                     {
-                        LastReadyToWrite = current;
-                        if (current)
-                        {
+                        LastHeadPin = current;
+                        if (IsReadyToWrite)
                             set_flag = true;
-                        }
                     }
+                    if (IsDisconnected)
+                        set_flag = true;
                 }
+
                 if (set_flag)
                 {
                     EventWriteReady.Set();
@@ -7711,12 +7762,15 @@ namespace SoftEther.WebSocket.Helper
                         LastTailPin = current;
                         set_flag = true;
                     }
+                    if (IsDisconnected)
+                        set_flag = true;
                 }
                 if (set_flag)
                 {
                     EventReadReady.Set();
                 }
             }
+
             if (check_disconnect)
                 CheckDisconnected();
         }
@@ -8578,7 +8632,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        bool LastReadyToWrite = false;
+        long LastHeadPin = long.MinValue;
 
         public void CompleteRead()
         {
@@ -8588,13 +8642,15 @@ namespace SoftEther.WebSocket.Helper
 
                 lock (LockObj)
                 {
-                    bool current = IsReadyToWrite;
-                    if (current != LastReadyToWrite)
+                    long current = PinHead;
+                    if (LastHeadPin != current)
                     {
-                        LastReadyToWrite = current;
-                        if (current)
+                        LastHeadPin = current;
+                        if (IsReadyToWrite)
                             set_flag = true;
                     }
+                    if (IsDisconnected)
+                        set_flag = true;
                 }
 
                 if (set_flag)
@@ -8831,7 +8887,7 @@ namespace SoftEther.WebSocket.Helper
     {
         public static int MaxStreamBufferLength = 4 * 65536;
         public static int MaxDatagramQueueLength = 65536;
-        public static int MaxPollingTimeout = 256;
+        public static int MaxPollingTimeout = 256 * 1000;
 
         public static void ApplyHeavyLoadServerConfig()
         {
@@ -8867,6 +8923,8 @@ namespace SoftEther.WebSocket.Helper
         public FastPipeEnd B { get; }
 
         public List<Action> OnDisconnected { get; } = new List<Action>();
+
+        public AsyncManualResetEvent OnDisconnectedEvent { get; } = new AsyncManualResetEvent();
 
         Once InternalDisconnectedFlag;
         public bool IsDisconnected { get => InternalDisconnectedFlag.IsSet; }
@@ -8932,6 +8990,8 @@ namespace SoftEther.WebSocket.Helper
 
                 DatagramAtoB.Disconnect();
                 DatagramBtoA.Disconnect();
+
+                OnDisconnectedEvent.Set(true);
             }
         }
 
@@ -9066,6 +9126,7 @@ namespace SoftEther.WebSocket.Helper
 
                         send_timeout_proc_id = PipeEnd.StreamWriter.EventListeners.RegisterCallback((buffer, type, state) =>
                         {
+                            //WriteLine($"{type}  {buffer.Length}  {buffer.IsReadyToWrite}");
                             if (type == FastBufferCallbackEventType.Read || type == FastBufferCallbackEventType.EmptyToNonEmpty)
                                 send_timeout_detector.Keep();
                         });
@@ -9937,7 +9998,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     UseDontLingerOption = false;
                 }
-                //Socket.NoDelay = true;
+                Socket.NoDelay = true;
             }
             Socket.ReceiveTimeout = Socket.SendTimeout = Timeout.Infinite;
             this.AddOnDisconnected(() => Socket.DisposeSafe());
@@ -9945,11 +10006,12 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task StreamWriteToObject(FastStreamFifo fifo, CancellationToken cancel)
         {
-            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
+            if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
             List<Memory<byte>> send_array;
 
             send_array = fifo.DequeueAllWithLock(out long _);
+            fifo.CompleteRead();
 
             List<ArraySegment<byte>> send_array2 = new List<ArraySegment<byte>>();
             foreach (Memory<byte> mem in send_array)
@@ -9964,8 +10026,6 @@ namespace SoftEther.WebSocket.Helper
                     return 0;
                 },
                 cancel: cancel);
-
-            fifo.CompleteRead();
         }
 
         FastMemoryAllocator<byte> FastMemoryAllocatorForStream = new FastMemoryAllocator<byte>();
@@ -9989,7 +10049,7 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task StreamReadFromObject(FastStreamFifo fifo, CancellationToken cancel)
         {
-            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
+            if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
             Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
 
@@ -10007,11 +10067,12 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task DatagramWriteToObject(FastDatagramFifo fifo, CancellationToken cancel)
         {
-            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Datagram) == false) throw new NotSupportedException();
+            if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Datagram) == false) throw new NotSupportedException();
 
             List<Datagram> send_list;
 
             send_list = fifo.DequeueAllWithLock(out _);
+            fifo.CompleteRead();
 
             await WebSocketHelper.DoAsyncWithTimeout(
                 async c =>
@@ -10024,8 +10085,6 @@ namespace SoftEther.WebSocket.Helper
                     return 0;
                 },
                 cancel: cancel);
-
-            fifo.CompleteRead();
         }
 
         FastMemoryAllocator<byte> FastMemoryAllocatorForDatagram = new FastMemoryAllocator<byte>();
@@ -10044,7 +10103,7 @@ namespace SoftEther.WebSocket.Helper
 
         protected override async Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
         {
-            if (SupportedDataTypes.HasFlag(PipeSupportedDataTypes.Datagram) == false) throw new NotSupportedException();
+            if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Datagram) == false) throw new NotSupportedException();
 
             Datagram[] pkts = await DatagramBulkReceiver.Recv(cancel, this);
 

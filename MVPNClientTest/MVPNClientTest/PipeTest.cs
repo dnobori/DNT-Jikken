@@ -56,7 +56,7 @@ namespace MVPNClientTest
 
                 //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
 
-                Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 20000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
+                Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 128, 15000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
 
                 //WebSocketHelper.WaitObjectsAsync
                 //t = Test_Pipe_SslStream_Client();
@@ -134,7 +134,7 @@ namespace MVPNClientTest
 
             void InitSendData()
             {
-                int size = 16000000;
+                int size = 65536;
                 byte[] data = WebSocketHelper.Rand(size);
                 for (int i = 0; i < data.Length; i++)
                 {
@@ -283,9 +283,7 @@ namespace MVPNClientTest
                                 send_data.WriteUInt64(SessionId);
                                 send_data.WriteSInt64(TimeSpan);
 
-                                Dbg.Where();
                                 await st.SendAsync(send_data);
-                                Dbg.Where();
 
                                 if (dir == Direction.Recv)
                                 {
@@ -316,15 +314,41 @@ namespace MVPNClientTest
                                         if (now >= tick_end)
                                             break;
 
-                                        //await st.FastSendAsync(SendData, flush: true);
-
-                                        await WebSocketHelper.WaitObjectsAsync(
+                                        /*await WebSocketHelper.WaitObjectsAsync(
                                             tasks: st.FastSendAsync(SendData, flush: true).ToSingleArray(),
                                             timeout: (int)(tick_end - now),
-                                            exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);
+                                            exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);*/
 
-                                        ret.NumBytesDownload += SendData.Length;
+                                        await st.FastSendAsync(SendData, flush: true);
                                     }
+
+                                    Task recv_result = Task.Run(async () =>
+                                    {
+                                        var recv_memory = await st.ReceiveAllAsync(8);
+
+                                        MemoryBuffer<byte> recv_memory_buf = recv_memory;
+                                        ret.NumBytesUpload = recv_memory_buf.ReadSInt64();
+
+                                        st.Disconnect();
+                                    });
+
+                                    Task send_surprise = Task.Run(async () =>
+                                    {
+                                        byte[] surprise = new byte[260];
+                                        surprise.AsSpan().Fill((byte)'!');
+                                        while (true)
+                                        {
+                                            await st.SendAsync(surprise);
+
+                                            await WebSocketHelper.WaitObjectsAsync(
+                                                manual_events: p.OnDisconnectedEvent.ToSingleArray(),
+                                                timeout: 200);
+                                        }
+                                    });
+
+                                    await WhenAll.Await(false, recv_result, send_surprise);
+
+                                    await recv_result;
                                 }
 
                                 st.Disconnect();
@@ -334,7 +358,7 @@ namespace MVPNClientTest
                             }
                             catch (Exception ex)
                             {
-                                Dbg.Where();
+                                Dbg.Where(ex.Message);
                                 ExceptionQueue.Add(ex);
                                 throw;
                             }
