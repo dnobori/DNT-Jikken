@@ -9126,7 +9126,7 @@ namespace SoftEther.WebSocket.Helper
 
                         send_timeout_proc_id = PipeEnd.StreamWriter.EventListeners.RegisterCallback((buffer, type, state) =>
                         {
-                            //WriteLine($"{type}  {buffer.Length}  {buffer.IsReadyToWrite}");
+//                            WriteLine($"{type}  {buffer.Length}  {buffer.IsReadyToWrite}");
                             if (type == FastBufferCallbackEventType.Read || type == FastBufferCallbackEventType.EmptyToNonEmpty)
                                 send_timeout_detector.Keep();
                         });
