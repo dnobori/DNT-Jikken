@@ -42,6 +42,7 @@ namespace MVPNClientTest
 
         static void Main(string[] args)
         {
+            //TestStreamBuffer(); return;
             //pipe_socket_udp_proc().Wait();
             //return;
 
@@ -465,7 +466,10 @@ namespace MVPNClientTest
 
         static void TestStreamBuffer()
         {
-            TestFifo();
+            //TestFifo();
+
+
+
 
             FastStreamBuffer<byte> new_test_stream_buf()
             {
@@ -485,6 +489,13 @@ namespace MVPNClientTest
                 return buf;
             }
 
+            {
+                var buf = new_test_stream_buf();
+
+                var x = buf.DequeueAll(out _);
+
+                var y = MemoryHelper.SplitMemoryArray(x, 1);
+            }
 
             {
                 var buf = new_test_datagram_buf();

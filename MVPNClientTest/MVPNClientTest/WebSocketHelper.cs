@@ -2658,6 +2658,94 @@ namespace SoftEther.WebSocket.Helper
                     );
             }
         }
+
+        public static List<List<Memory<T>>> SplitMemoryArray<T>(IEnumerable<Memory<T>> src, int element_max_size)
+        {
+            element_max_size = Math.Max(1, element_max_size);
+
+            int current_size = 0;
+            List<List<Memory<T>>> ret = new List<List<Memory<T>>>();
+            List<Memory<T>> current_list = new List<Memory<T>>();
+
+            foreach (Memory<T> m_src in src)
+            {
+                Memory<T> m = m_src;
+
+                LABEL_START:
+
+                if (m.Length >= 1)
+                {
+                    int over_size = (current_size + m.Length) - element_max_size;
+                    if (over_size >= 0)
+                    {
+                        Memory<T> m_add = m.Slice(0, m.Length - over_size);
+
+                        current_list.Add(m_add);
+                        ret.Add(current_list);
+                        current_list = new List<Memory<T>>();
+                        current_size = 0;
+
+                        m = m.Slice(m_add.Length);
+
+                        goto LABEL_START;
+                    }
+                    else
+                    {
+                        current_list.Add(m);
+                        current_size += m.Length;
+                    }
+                }
+            }
+
+            if (current_list.Count >= 1)
+                ret.Add(current_list);
+
+            return ret;
+        }
+
+        public static List<List<ArraySegment<T>>> SplitMemoryArrayToArraySegment<T>(IEnumerable<Memory<T>> src, int element_max_size)
+        {
+            element_max_size = Math.Max(1, element_max_size);
+
+            int current_size = 0;
+            List<List<ArraySegment<T>>> ret = new List<List<ArraySegment<T>>>();
+            List<ArraySegment<T>> current_list = new List<ArraySegment<T>>();
+
+            foreach (Memory<T> m_src in src)
+            {
+                Memory<T> m = m_src;
+
+                LABEL_START:
+
+                if (m.Length >= 1)
+                {
+                    int over_size = (current_size + m.Length) - element_max_size;
+                    if (over_size >= 0)
+                    {
+                        Memory<T> m_add = m.Slice(0, m.Length - over_size);
+
+                        current_list.Add(m_add.AsSegment());
+                        ret.Add(current_list);
+                        current_list = new List<ArraySegment<T>>();
+                        current_size = 0;
+
+                        m = m.Slice(m_add.Length);
+
+                        goto LABEL_START;
+                    }
+                    else
+                    {
+                        current_list.Add(m.AsSegment());
+                        current_size += m.Length;
+                    }
+                }
+            }
+
+            if (current_list.Count >= 1)
+                ret.Add(current_list);
+
+            return ret;
+        }
     }
 
     public sealed class FastMemoryAllocator<T>
@@ -5128,6 +5216,8 @@ namespace SoftEther.WebSocket.Helper
         List<AsyncManualResetEvent> event_queue = new List<AsyncManualResetEvent>();
         bool is_set = false;
 
+        public AsyncCallbackList CallbackList { get; } = new AsyncCallbackList();
+
         public Task WaitOneAsync(out Action cancel)
         {
             lock (lockobj)
@@ -5192,6 +5282,153 @@ namespace SoftEther.WebSocket.Helper
             {
                 ev.Set(softly);
             }
+
+            CallbackList.Invoke();
+        }
+    }
+
+    public sealed class DelayAction : IDisposable
+    {
+        public Action<object> Action { get; }
+        public object UserState { get; }
+        public int Timeout { get; }
+
+        Task MainTask;
+
+        public bool IsCompleted = false;
+        public bool IsCompletedSuccessfully = false;
+        public bool IsCanceled = false;
+
+        public Exception Exception { get; private set; } = null;
+
+        CancellationTokenSource CancelSource = new CancellationTokenSource();
+
+        public DelayAction(int timeout, Action<object> action, object user_state = null)
+        {
+            if (timeout < 0 || timeout == int.MaxValue) timeout = System.Threading.Timeout.Infinite;
+
+            this.Timeout = timeout;
+            this.Action = action;
+            this.UserState = user_state;
+
+            this.MainTask = MainTaskProc();
+        }
+
+        void InternalInvokeAction()
+        {
+            try
+            {
+                this.Action(this.UserState);
+
+                IsCompleted = true;
+                IsCompletedSuccessfully = true;
+            }
+            catch (Exception ex)
+            {
+                IsCompleted = true;
+                IsCompletedSuccessfully = false;
+
+                Exception = ex;
+            }
+        }
+
+        async Task MainTaskProc()
+        {
+            using (LeakChecker.EnterShared())
+            {
+                try
+                {
+                    await WebSocketHelper.WaitObjectsAsync(timeout: this.Timeout,
+                        cancels: CancelSource.Token.ToSingleArray(),
+                        exceptions: ExceptionWhen.CancelException);
+
+                    InternalInvokeAction();
+                }
+                catch
+                {
+                    IsCompleted = true;
+                    IsCanceled = true;
+                    IsCompletedSuccessfully = false;
+                }
+            }
+        }
+
+        public void Cancel() => Dispose();
+
+        Once dispose_flag;
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall() == false)
+                return;
+
+            CancelSource.Cancel();
+
+            if (MainTask != null)
+            {
+                MainTask.TryWait();
+            }
+        }
+    }
+
+    public class AsyncCallbackList
+    {
+        List<(Action<object> action, object state)> HardCallbackList = new List<(Action<object> action, object state)>();
+        List<(Action<object> action, object state)> SoftCallbackList = new List<(Action<object> action, object state)>();
+
+        public void AddHardCallback(Action<object> action, object state = null)
+        {
+            lock (HardCallbackList)
+                HardCallbackList.Add((action, state));
+        }
+
+        public void AddSoftCallback(Action<object> action, object state = null)
+        {
+            lock (SoftCallbackList)
+                SoftCallbackList.Add((action, state));
+        }
+
+        public void Invoke()
+        {
+            (Action<object> action, object state)[] array_copy;
+
+            if (HardCallbackList.Count >= 1)
+            {
+                lock (HardCallbackList)
+                {
+                    array_copy = HardCallbackList.ToArray();
+                }
+                foreach (var v in array_copy)
+                {
+                    try
+                    {
+                        v.action(v.state);
+                    }
+                    catch { }
+                }
+            }
+
+            if (SoftCallbackList.Count >= 1)
+            {
+                lock (SoftCallbackList)
+                {
+                    array_copy = SoftCallbackList.ToArray();
+                }
+                foreach (var v in array_copy)
+                {
+                    try
+                    {
+                        Task.Factory.StartNew(() =>
+                        {
+                            try
+                            {
+                                v.action(v.state);
+                            }
+                            catch { }
+                        });
+                    }
+                    catch { }
+                }
+            }
         }
     }
 
@@ -5200,6 +5437,8 @@ namespace SoftEther.WebSocket.Helper
         object lockobj = new object();
         volatile TaskCompletionSource<bool> tcs;
         bool is_set = false;
+
+        public AsyncCallbackList CallbackList { get; } = new AsyncCallbackList();
 
         public AsyncManualResetEvent()
         {
@@ -5241,18 +5480,22 @@ namespace SoftEther.WebSocket.Helper
         {
             if (softly)
             {
-                if (is_set) return;
-
-                Task.Factory.StartNew(() => Set());
-                return;
-            }
-
-            lock (lockobj)
-            {
                 if (is_set == false)
                 {
-                    is_set = true;
-                    tcs.TrySetResult(true);
+                    Task.Factory.StartNew(() => Set(false));
+                }
+            }
+            else
+            {
+                lock (lockobj)
+                {
+                    if (is_set == false)
+                    {
+                        is_set = true;
+                        tcs.TrySetResult(true);
+
+                        this.CallbackList.Invoke();
+                    }
                 }
             }
         }
@@ -5758,7 +6001,7 @@ namespace SoftEther.WebSocket.Helper
     {
         public const int MaxItems = 128;
         SharedQueue<Exception> Queue = new SharedQueue<Exception>(MaxItems, true);
-        public AsyncManualResetEvent WhenExceptionRaised { get; } = new AsyncManualResetEvent();
+        public AsyncManualResetEvent WhenExceptionAdded { get; } = new AsyncManualResetEvent();
 
         HashSet<Task> WatchedTasks = new HashSet<Task>();
 
@@ -5799,7 +6042,7 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            WhenExceptionRaised.Set(true);
+            WhenExceptionAdded.Set(true);
 
             if (throwing_exception != null)
                 throwing_exception.ReThrow();
@@ -7411,6 +7654,7 @@ namespace SoftEther.WebSocket.Helper
         Init,
         Written,
         Read,
+        PartialProcessReadData,
         EmptyToNonEmpty,
         NonEmptyToEmpty,
         Disconnected,
@@ -9127,7 +9371,7 @@ namespace SoftEther.WebSocket.Helper
                         send_timeout_proc_id = PipeEnd.StreamWriter.EventListeners.RegisterCallback((buffer, type, state) =>
                         {
 //                            WriteLine($"{type}  {buffer.Length}  {buffer.IsReadyToWrite}");
-                            if (type == FastBufferCallbackEventType.Read || type == FastBufferCallbackEventType.EmptyToNonEmpty)
+                            if (type == FastBufferCallbackEventType.Read || type == FastBufferCallbackEventType.EmptyToNonEmpty || type == FastBufferCallbackEventType.PartialProcessReadData)
                                 send_timeout_detector.Keep();
                         });
                     }
@@ -10010,7 +10254,7 @@ namespace SoftEther.WebSocket.Helper
 
             List<Memory<byte>> send_array;
 
-            send_array = fifo.DequeueAllWithLock(out long _);
+            send_array = fifo.DequeueAllWithLock(out long total_read_size);
             fifo.CompleteRead();
 
             List<ArraySegment<byte>> send_array2 = new List<ArraySegment<byte>>();
@@ -10019,10 +10263,18 @@ namespace SoftEther.WebSocket.Helper
                 send_array2.Add(mem.AsSegment());
             }
 
+            //List<List<ArraySegment<byte>>> send_array3 = MemoryHelper.SplitMemoryArrayToArraySegment(send_array, int.MaxValue);
+
             await WebSocketHelper.DoAsyncWithTimeout(
                 async c =>
                 {
-                    await Socket.SendAsync(send_array2, SocketFlags.None);
+                    //foreach (var send_group in send_array3)
+                    //{
+                    //    await Socket.SendAsync(send_group, SocketFlags.None);
+                    //    fifo.EventListeners.Fire(fifo, FastBufferCallbackEventType.PartialProcessReadData);
+                    //}
+
+                    int ret = await Socket.SendAsync(send_array2, SocketFlags.None);
                     return 0;
                 },
                 cancel: cancel);

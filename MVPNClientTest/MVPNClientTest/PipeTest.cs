@@ -56,7 +56,7 @@ namespace MVPNClientTest
 
                 //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
 
-                Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 128, 15000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
+                Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 60 * 60 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
 
                 //WebSocketHelper.WaitObjectsAsync
                 //t = Test_Pipe_SslStream_Client();
@@ -112,8 +112,8 @@ namespace MVPNClientTest
             SharedExceptionQueue ExceptionQueue;
             AsyncManualResetEvent ClientStartEvent;
 
-            int ConnectTimeout = 3000;
-            int CommTimeout = 5000;
+            int ConnectTimeout = 10 * 1000;
+            int RecvTimeout = 5000;
 
             public SpeedTest(IPAddress ip, int port, int num_connection, int timespan, ModeFlag mode, CancellationToken cancel)
             {
@@ -183,23 +183,33 @@ namespace MVPNClientTest
                             await WebSocketHelper.WaitObjectsAsync(
                                 tasks: tasks.Append(when_all_ready.WaitMe).ToArray(),
                                 cancels: cw.CancelToken.ToSingleArray(),
-                                manual_events: ExceptionQueue.WhenExceptionRaised.ToSingleArray());
+                                manual_events: ExceptionQueue.WhenExceptionAdded.ToSingleArray());
                         }
 
                         Cancel.ThrowIfCancellationRequested();
                         ExceptionQueue.ThrowFirstExceptionIfExists();
 
-                        ClientStartEvent.Set(true);
-
-                        using (var when_all_completed = new WhenAll(tasks))
+                        ExceptionQueue.WhenExceptionAdded.CallbackList.AddSoftCallback(x =>
                         {
-                            Dbg.Where();
-                            await WebSocketHelper.WaitObjectsAsync(
-                                tasks: when_all_completed.WaitMe.ToSingleArray(),
-                                cancels: cw.CancelToken.ToSingleArray()
-                                );
+                            cw.Cancel();
+                        });
 
-                            await when_all_completed.WaitMe;
+                        using (new DelayAction(TimeSpan * 3 + 180 * 1000, x =>
+                        {
+                            cw.Cancel();
+                        }))
+                        {
+                            ClientStartEvent.Set(true);
+
+                            using (var when_all_completed = new WhenAll(tasks))
+                            {
+                                await WebSocketHelper.WaitObjectsAsync(
+                                    tasks: when_all_completed.WaitMe.ToSingleArray(),
+                                    cancels: cw.CancelToken.ToSingleArray()
+                                    );
+
+                                await when_all_completed.WaitMe;
+                            }
                         }
 
                         Result ret = new Result();
@@ -252,8 +262,8 @@ namespace MVPNClientTest
                     {
                         using (FastPipeEndStream st = p.GetStream())
                         {
-                            st.AttachHandle.SetStreamReceiveTimeout(CommTimeout);
-                            st.AttachHandle.SetStreamSendTimeout(CommTimeout);
+                            if (dir == Direction.Recv)
+                                st.AttachHandle.SetStreamReceiveTimeout(RecvTimeout);
 
                             try
                             {
