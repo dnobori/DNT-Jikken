@@ -28,6 +28,7 @@ using System.Net.NetworkInformation;
 using System.Security.Cryptography;
 using SoftEther.WebSocket.Helper;
 using SoftEther.VpnClient;
+using System.Collections.Concurrent;
 
 #pragma warning disable CS0162
 
@@ -56,7 +57,9 @@ namespace MVPNClientTest
 
                 //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
 
-                Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 60 * 60 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 60 * 60 * 1000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
+
+                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //WebSocketHelper.WaitObjectsAsync
                 //t = Test_Pipe_SslStream_Client();
@@ -132,6 +135,14 @@ namespace MVPNClientTest
                 InitSendData();
             }
 
+            public SpeedTest(int port, CancellationToken cancel)
+            {
+                IsServerMode = true;
+                this.Cancel = cancel;
+                this.Port = port;
+                InitSendData();
+            }
+
             void InitSendData()
             {
                 int size = 65536;
@@ -144,11 +155,144 @@ namespace MVPNClientTest
                 SendData = data;
             }
 
-            Once ClientOnce;
+            Once Once;
+
+            public class SessionData
+            {
+                public bool NoMoreData = false;
+            }
+
+            public async Task RunServerAsync()
+            {
+                if (IsServerMode == false)
+                    throw new ApplicationException("Client mode");
+
+                if (Once.IsFirstCall() == false)
+                    throw new ApplicationException("You cannot reuse the object.");
+
+                using (var sessions = new GroupManager<ulong, SessionData>(
+                    onNewGroup: (key, state) =>
+                    {
+                        Dbg.Where($"New session: {key}");
+                        return new SessionData();
+                    },
+                    onDeleteGroup: (key, ctx, state) =>
+                    {
+                        Dbg.Where($"Delete session: {key}");
+                    }))
+                {
+                    FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, p, end) =>
+                    {
+                        try
+                        {
+                            Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
+
+                            using (var st = end.GetStream())
+                            {
+                                st.AttachHandle.SetStreamReceiveTimeout(RecvTimeout);
+
+                                await st.SendAsync(Encoding.ASCII.GetBytes("TrafficServer\r\n\0"));
+
+                                MemoryBuffer<byte> buf = await st.ReceiveAsync(17);
+
+                                Direction dir = buf.ReadBool8() ? Direction.Send : Direction.Recv;
+                                ulong session_id = 0;
+                                long timespan = 0;
+
+                                try
+                                {
+                                    session_id = buf.ReadUInt64();
+                                    timespan = buf.ReadSInt64();
+                                }
+                                catch { }
+
+                                long recv_end_tick = FastTick64.Now + timespan;
+                                if (timespan == 0) recv_end_tick = long.MaxValue;
+
+                                using (var session = sessions.Enter(session_id))
+                                {
+                                    using (new DelayAction((int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => p.Disconnect()))
+                                    {
+                                        if (dir == Direction.Recv)
+                                        {
+                                            RefInt ref_tmp = new RefInt();
+                                            long total_size = 0;
+
+                                            while (true)
+                                            {
+                                                var ret = await st.FastReceiveAsync(total_recv_size: ref_tmp);
+                                                if (ret.Count == 0)
+                                                {
+                                                    break;
+                                                }
+                                                total_size += ref_tmp;
+
+                                                if (ret[0].Span[0] == (byte)'!')
+                                                    break;
+
+                                                if (FastTick64.Now >= recv_end_tick)
+                                                    break;
+                                            }
+
+                                            st.AttachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
+                                            st.AttachHandle.SetStreamSendTimeout(60 * 5 * 1000);
+
+                                            session.Context.NoMoreData = true;
+
+                                            while (true)
+                                            {
+                                                MemoryBuffer<byte> send_buf = new MemoryBuffer<byte>();
+                                                send_buf.WriteSInt64(total_size);
+
+                                                await st.SendAsync(send_buf);
+
+                                                await Task.Delay(100);
+                                            }
+                                        }
+                                        else
+                                        {
+                                            st.AttachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
+                                            st.AttachHandle.SetStreamSendTimeout(Timeout.Infinite);
+
+                                            while (true)
+                                            {
+                                                if (session_id == 0 || session.Context.NoMoreData == false)
+                                                {
+                                                    await st.SendAsync(SendData);
+                                                }
+                                                else
+                                                {
+                                                    await st.ReceiveAsync();
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            WriteLine(ex.GetSingleException().Message);
+                        }
+                    });
+
+                    listener.ListenerManager.Add(this.Port, IPVersion.IPv4);
+                    listener.ListenerManager.Add(this.Port, IPVersion.IPv6);
+
+                    WriteLine("Listening.");
+
+                    await WebSocketHelper.WaitObjectsAsync(cancels: this.Cancel.ToSingleArray());
+
+                    listener.Dispose();
+                }
+            }
 
             public async Task<Result> RunClientAsync()
             {
-                if (ClientOnce.IsFirstCall() == false)
+                if (IsServerMode)
+                    throw new ApplicationException("Server mode");
+
+                if (Once.IsFirstCall() == false)
                     throw new ApplicationException("You cannot reuse the object.");
 
                 ExceptionQueue = new SharedExceptionQueue();
@@ -380,6 +524,13 @@ namespace MVPNClientTest
                     }
                 }
             }
+        }
+
+        static async Task Test_Pipe_SpeedTest_Server(int port, CancellationToken cancel)
+        {
+            SpeedTest test = new SpeedTest(port, cancel);
+
+            await test.RunServerAsync();
         }
 
         static async Task Test_Pipe_SpeedTest_Client(string server_host, int server_port, int num_connection, int timespan, SpeedTest.ModeFlag mode, CancellationToken cancel, AddressFamily? af = null)

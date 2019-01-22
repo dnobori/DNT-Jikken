@@ -5287,6 +5287,130 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class Holder<T> : IDisposable
+    {
+        T UserData;
+        Action<T> DisposeProc;
+
+        public Holder(Action<T> dispose_proc, T user_data = default(T))
+        {
+            this.UserData = user_data;
+            this.DisposeProc = dispose_proc;
+        }
+
+        Once dispose_flag;
+        public void Dispose() => Dispose(true);
+        protected virtual void Dispose(bool disposing)
+        {
+            if (dispose_flag.IsFirstCall() && disposing)
+            {
+                DisposeProc(UserData);
+            }
+        }
+    }
+
+    public sealed class GroupManager<TKey, TGroupContext> : IDisposable
+    {
+        public class GroupHandle : Holder<GroupInstance>
+        {
+            public TKey Key { get; }
+            public TGroupContext Context { get; }
+            public GroupInstance Instance { get; }
+
+            internal GroupHandle(Action<GroupInstance> dispose_proc, GroupInstance group_instance, TKey key) : base(dispose_proc, group_instance)
+            {
+                this.Instance = group_instance;
+                this.Context = this.Instance.Context;
+                this.Key = key;
+            }
+        }
+
+        public class GroupInstance
+        {
+            public TKey Key;
+            public TGroupContext Context;
+            public int Num;
+        }
+
+        public delegate TGroupContext NewGroupContextDelegate(TKey key, object user_state);
+        public delegate void DeleteGroupContextDelegate(TKey key, TGroupContext group_context, object user_state);
+
+        public object UserState { get; }
+
+        NewGroupContextDelegate NewGroupContextProc;
+        DeleteGroupContextDelegate DeleteGroupContextProc;
+
+        Dictionary<TKey, GroupInstance> Hash = new Dictionary<TKey, GroupInstance>();
+
+        object LockObj = new object();
+
+        public GroupManager(NewGroupContextDelegate onNewGroup, DeleteGroupContextDelegate onDeleteGroup, object user_state = null)
+        {
+            NewGroupContextProc = onNewGroup;
+            DeleteGroupContextProc = onDeleteGroup;
+            UserState = user_state;
+        }
+
+        public GroupHandle Enter(TKey key)
+        {
+            lock (LockObj)
+            {
+                GroupInstance g = null;
+                if (Hash.TryGetValue(key, out g) == false)
+                {
+                    var context = NewGroupContextProc(key, UserState);
+                    g = new GroupInstance()
+                    {
+                        Key = key,
+                        Context = context,
+                        Num = 0,
+                    };
+                    Hash.Add(key, g);
+                }
+
+                Debug.Assert(g.Num >= 0);
+                g.Num++;
+
+                return new GroupHandle(x =>
+                {
+                    lock (LockObj)
+                    {
+                        x.Num--;
+                        Debug.Assert(x.Num >= 0);
+
+                        if (x.Num == 0)
+                        {
+                            Hash.Remove(x.Key);
+
+                            DeleteGroupContextProc(x.Key, x.Context, this.UserState);
+                        }
+                    }
+                }, g, key);
+            }
+        }
+
+        Once dispose_flag;
+        public void Dispose()
+        {
+            if (dispose_flag.IsFirstCall() == false)
+                return;
+
+            lock (LockObj)
+            {
+                foreach (var v in Hash.Values)
+                {
+                    try
+                    {
+                        DeleteGroupContextProc(v.Key, v.Context, this.UserState);
+                    }
+                    catch { }
+                }
+
+                Hash.Clear();
+            }
+        }
+    }
+
     public sealed class DelayAction : IDisposable
     {
         public Action<object> Action { get; }
@@ -9309,6 +9433,12 @@ namespace SoftEther.WebSocket.Helper
             int receive_timeout_proc_id = 0;
             TimeoutDetector receive_timeout_detector = null;
 
+            public void SetStreamTimeout(int recv_timeout = Timeout.Infinite, int send_timeout = Timeout.Infinite)
+            {
+                SetStreamReceiveTimeout(recv_timeout);
+                SetStreamSendTimeout(send_timeout);
+            }
+
             public void SetStreamReceiveTimeout(int timeout = Timeout.Infinite)
             {
                 lock (LockObj)
@@ -9567,6 +9697,12 @@ namespace SoftEther.WebSocket.Helper
                 return Memory<byte>.Empty;
             }
         }
+
+        public void ReceiveAll(Memory<byte> buffer, CancellationToken cancel = default(CancellationToken))
+            => ReceiveAllAsync(buffer, cancel).Wait();
+
+        public Memory<byte> ReceiveAll(int size, CancellationToken cancel = default(CancellationToken))
+            => ReceiveAllAsync(size, cancel).Result;
 
         public int Receive(Memory<byte> buffer, CancellationToken cancel = default(CancellationToken))
             => ReceiveAsync(buffer, cancel).Result;
