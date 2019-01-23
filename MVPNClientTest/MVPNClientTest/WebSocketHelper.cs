@@ -4835,6 +4835,12 @@ namespace SoftEther.WebSocket.Helper
             else
                 return (int)min_value;
         }
+
+        public static T NewWithoutConstructor<T>()
+            => (T)NewWithoutConstructor(typeof(T));
+
+        public static object NewWithoutConstructor(Type t)
+            => System.Runtime.Serialization.FormatterServices.GetUninitializedObject(t);
     }
 
     public sealed class WhenAll : IDisposable

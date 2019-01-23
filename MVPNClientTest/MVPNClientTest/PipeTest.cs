@@ -41,6 +41,9 @@ namespace MVPNClientTest
         {
             CancellationTokenSource cancel = new CancellationTokenSource();
 
+            //Console.Write("Mode>");
+            //string mode = Console.ReadLine();
+
             Thread thread = new Thread(() =>
             {
                 Console.ReadLine();
@@ -57,12 +60,20 @@ namespace MVPNClientTest
 
                 //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
 
-                //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 60 * 60 * 1000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
+                //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
+                //{
+                //    Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                //}
+                //else
+                //{
+                //    //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 60 * 60 * 1000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
+                //    Test_Pipe_SpeedTest_Client("127.0.0.1", 9821, 32, 5 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
+                //}
 
-                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+
 
                 //WebSocketHelper.WaitObjectsAsync
-                //t = Test_Pipe_SslStream_Client();
             }
             catch (Exception ex)
             {
@@ -99,7 +110,7 @@ namespace MVPNClientTest
                 public long Span;                // Period (in milliseconds)
                 public long BpsUpload;           // Upload throughput
                 public long BpsDownload;         // Download throughput
-                public long BpsTotal;			// Total throughput
+                public long BpsTotal;			 // Total throughput
             }
 
             bool IsServerMode;
@@ -294,6 +305,8 @@ namespace MVPNClientTest
 
                 if (Once.IsFirstCall() == false)
                     throw new ApplicationException("You cannot reuse the object.");
+
+                WriteLine("Client mode start");
 
                 ExceptionQueue = new SharedExceptionQueue();
                 SessionId = WebSocketHelper.RandUInt64();
@@ -547,21 +560,31 @@ namespace MVPNClientTest
 
         static async Task Test_Pipe_SslStream_Client(CancellationToken cancel)
         {
-            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync("www.google.com", 443, null, cancel))
+            string hostname = "news.goo.ne.jp";
+
+            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
             {
                 using (FastPipeEndStream st = p.GetStream())
                 {
                     using (SslStream ssl = new SslStream(st))
                     {
                         st.AttachHandle.SetStreamReceiveTimeout(3000);
-                        await ssl.AuthenticateAsClientAsync("www.google.com");
+
+                        SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
+                        {
+                            TargetHost = hostname,
+                            AllowRenegotiation = true,
+                            RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
+                        };
+
+                        await ssl.AuthenticateAsClientAsync(opt, cancel);
                         WriteLine("Connected.");
                         StreamWriter w = new StreamWriter(ssl);
                         w.AutoFlush = true;
 
                         await w.WriteAsync(
-                            "GET / HTTP/1.1\r\n" +
-                            "HOST: www.google.com\r\n\r\n"
+                            "GET / HTTP/1.0\r\n" +
+                            $"HOST: {hostname}\r\n\r\n"
                             );
 
                         StreamReader r = new StreamReader(ssl);

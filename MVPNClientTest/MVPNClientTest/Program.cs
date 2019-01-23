@@ -42,13 +42,6 @@ namespace MVPNClientTest
 
         static void Main(string[] args)
         {
-            //TestStreamBuffer(); return;
-            //pipe_socket_udp_proc().Wait();
-            //return;
-
-            //TestStreamBuffer();
-            //BenchStreamBuffer();
-            //TestPipes();
 
             PipeTest.TestMain();
 
