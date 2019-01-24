@@ -233,7 +233,7 @@ namespace MVPNClientTest
 
                                             while (true)
                                             {
-                                                var ret = await st.FastReceiveAsync(total_recv_size: ref_tmp);
+                                                var ret = await st.FastReceiveAsync(totalRecvSize: ref_tmp);
                                                 if (ret.Count == 0)
                                                 {
                                                     break;
@@ -342,7 +342,7 @@ namespace MVPNClientTest
                             await WebSocketHelper.WaitObjectsAsync(
                                 tasks: tasks.Append(when_all_ready.WaitMe).ToArray(),
                                 cancels: cw.CancelToken.ToSingleArray(),
-                                manual_events: ExceptionQueue.WhenExceptionAdded.ToSingleArray());
+                                manualEvents: ExceptionQueue.WhenExceptionAdded.ToSingleArray());
                         }
 
                         Cancel.ThrowIfCancellationRequested();
@@ -440,7 +440,7 @@ namespace MVPNClientTest
                                 cancel.ThrowIfCancellationRequested();
 
                                 await WebSocketHelper.WaitObjectsAsync(
-                                    manual_events: ClientStartEvent.ToSingleArray(),
+                                    manualEvents: ClientStartEvent.ToSingleArray(),
                                     cancels: cancel.ToSingleArray()
                                     );
 
@@ -465,7 +465,7 @@ namespace MVPNClientTest
                                             break;
 
                                         await WebSocketHelper.WaitObjectsAsync(
-                                            tasks: st.FastReceiveAsync(total_recv_size: total_recv_size).ToSingleArray(),
+                                            tasks: st.FastReceiveAsync(totalRecvSize: total_recv_size).ToSingleArray(),
                                             timeout: (int)(tick_end - now),
                                             exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);
 
@@ -510,7 +510,7 @@ namespace MVPNClientTest
                                             await st.SendAsync(surprise);
 
                                             await WebSocketHelper.WaitObjectsAsync(
-                                                manual_events: p.OnDisconnectedEvent.ToSingleArray(),
+                                                manualEvents: p.OnDisconnectedEvent.ToSingleArray(),
                                                 timeout: 200);
                                         }
                                     });

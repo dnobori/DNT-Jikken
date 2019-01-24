@@ -967,7 +967,7 @@ namespace MVPNClientTest
                         int total_size = 0;
                         for (int i = 0; ; i++)
                         {
-                            byte[] ret = await ssl.ReadAsyncWithTimeout(65536, read_all: false, timeout: 10000);
+                            byte[] ret = await ssl.ReadAsyncWithTimeout(65536, readAll: false, timeout: 10000);
                             total_size += ret.Length;
                             WriteLine("recv: " + i + " " + ret.Length + "    total: " + total_size);
                         }
@@ -993,7 +993,7 @@ namespace MVPNClientTest
                         int total_size = 0;
                         for (int i = 0; ; i++)
                         {
-                            byte[][] ret = await reader.Recv(CancellationToken.None, max_count: 100000);
+                            byte[][] ret = await reader.Recv(CancellationToken.None, maxCount: 100000);
                             total_size += ret.Length;
                             WriteLine("recv_bulk: " + i + " " + ret.Length + "    total: " + total_size);
                         }
@@ -1040,7 +1040,7 @@ namespace MVPNClientTest
                             int total_size = 0;
                             for (int i = 0; ; i++)
                             {
-                                byte[] ret = await ssl.ReadAsyncWithTimeout(65536, read_all: false, timeout: 10000);
+                                byte[] ret = await ssl.ReadAsyncWithTimeout(65536, readAll: false, timeout: 10000);
                                 total_size += ret.Length;
                                 WriteLine("recv: " + i + " " + ret.Length + "    total: " + total_size);
                             }
@@ -1053,7 +1053,7 @@ namespace MVPNClientTest
                                 //if ((num % 3) == 0) await Task.Yield();
                                 //if (num >= 20) await Task.Delay(-1);
                                 //return new byte[65536];
-                                return new ValueOrClosed<byte[]>(await ssl.ReadAsyncWithTimeout(1, read_all: false, timeout: 3000));
+                                return new ValueOrClosed<byte[]>(await ssl.ReadAsyncWithTimeout(1, readAll: false, timeout: 3000));
 
                                 //byte[] ret = new byte[65536];
                                 //int r = await ssl.ReadAsync(ret);
@@ -1063,7 +1063,7 @@ namespace MVPNClientTest
                             int total_size = 0;
                             for (int i = 0; ; i++)
                             {
-                                byte[][] ret = await reader.Recv(CancellationToken.None, max_count: 100000);
+                                byte[][] ret = await reader.Recv(CancellationToken.None, maxCount: 100000);
                                 total_size += ret.Length;
                                 WriteLine("recv_bulk: " + i + " " + ret.Length);
                             }

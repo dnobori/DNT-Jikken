@@ -245,7 +245,7 @@ namespace SoftEther.WebSocket
                         0, tmp_buffer.Length,
                         timeout: TimeoutComm,
                         cancel: Cancel,
-                        cancel_tokens: cancellationToken);
+                        cancelTokens: cancellationToken);
 
                     this.PhysicalRecvFifo.Write(tmp_buffer, 0, recv_size);
                 }
@@ -290,7 +290,7 @@ namespace SoftEther.WebSocket
                 await this.st.WriteAsyncWithTimeout(this.PhysicalSendFifo.Read(),
                     timeout: TimeoutComm,
                     cancel: Cancel,
-                    cancel_tokens: cancellationToken);
+                    cancelTokens: cancellationToken);
             }
             catch
             {

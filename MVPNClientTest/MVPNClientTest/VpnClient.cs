@@ -149,12 +149,12 @@ namespace SoftEther.VpnClient
             ssl = new SslStream(sock, true, check_cert);
 
             await WebSocketHelper.DoAsyncWithTimeout(
-                main_proc: async c =>
+                mainProc: async c =>
                 {
                     await ssl.AuthenticateAsClientAsync(Setting.Host.Hostname);
                     return 0;
                 },
-                cancel_proc: () => ssl.DisposeSafe(),
+                cancelProc: () => ssl.DisposeSafe(),
                 timeout: Setting.Details.TimeoutConnect,
                 cancel: this.cancel);
 
@@ -176,7 +176,7 @@ namespace SoftEther.VpnClient
             return await ws.ReadAsyncWithTimeout(max_size,
                 timeout: Setting.Details.TimeoutComm,
                 cancel: this.cancel,
-                read_all: read_all);
+                readAll: read_all);
         }
 
         public async Task<int> RecvAsync(byte[] buffer, int pos, int size, bool read_all = false)
@@ -184,7 +184,7 @@ namespace SoftEther.VpnClient
             int ret = await ws.ReadAsyncWithTimeout(buffer, pos, size,
                 timeout: Setting.Details.TimeoutComm,
                 cancel: this.cancel,
-                read_all: read_all);
+                readAll: read_all);
 
             return ret;
         }

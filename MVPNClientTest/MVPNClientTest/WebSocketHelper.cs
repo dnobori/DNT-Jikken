@@ -44,11 +44,11 @@ namespace SoftEther.WebSocket.Helper
         public Span<T> SpanBefore { get => Span.Slice(0, CurrentPosition); }
         public Span<T> SpanAfter { get => Span.Slice(CurrentPosition); }
 
-        public SpanBuffer(Span<T> base_span)
+        public SpanBuffer(Span<T> baseSpan)
         {
-            InternalSpan = base_span;
+            InternalSpan = baseSpan;
             CurrentPosition = 0;
-            Length = base_span.Length;
+            Length = baseSpan.Length;
         }
 
         public static implicit operator SpanBuffer<T>(Span<T> span) => new SpanBuffer<T>(span);
@@ -89,17 +89,17 @@ namespace SoftEther.WebSocket.Helper
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Span<T> Walk(int size, bool no_move = false)
+        public Span<T> Walk(int size, bool noMove = false)
         {
-            int new_size = checked(CurrentPosition + size);
+            int newSize = checked(CurrentPosition + size);
 
-            if (InternalSpan.Length < new_size)
+            if (InternalSpan.Length < newSize)
             {
-                EnsureInternalBufferReserved(new_size);
+                EnsureInternalBufferReserved(newSize);
             }
             var ret = InternalSpan.Slice(CurrentPosition, size);
-            Length = Math.Max(new_size, Length);
-            if (no_move == false) CurrentPosition += size;
+            Length = Math.Max(newSize, Length);
+            if (noMove == false) CurrentPosition += size;
             return ret;
         }
 
@@ -119,47 +119,47 @@ namespace SoftEther.WebSocket.Helper
             data.CopyTo(span);
         }
 
-        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            Span<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Peek(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            Span<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
         public void Seek(int offset, SeekOrigin mode)
         {
-            int new_position = 0;
+            int newPosition = 0;
             if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
+                newPosition = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Length + offset);
+                newPosition = checked(Length + offset);
             else
-                new_position = offset;
+                newPosition = offset;
 
-            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (newPosition < 0) throw new ArgumentOutOfRangeException("new_position < 0");
+            if (newPosition > Length) throw new ArgumentOutOfRangeException("new_position > Size");
 
-            CurrentPosition = new_position;
+            CurrentPosition = newPosition;
         }
 
         public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
@@ -185,15 +185,15 @@ namespace SoftEther.WebSocket.Helper
         public int Read(T[] dest, int offset, int size) => Read(dest.AsSpan(offset, size), size);
         public int Peek(T[] dest, int offset, int size) => Peek(dest.AsSpan(offset, size), size);
 
-        public void EnsureInternalBufferReserved(int new_size)
+        public void EnsureInternalBufferReserved(int newSize)
         {
-            if (InternalSpan.Length >= new_size) return;
+            if (InternalSpan.Length >= newSize) return;
 
-            int new_internal_size = InternalSpan.Length;
-            while (new_internal_size < new_size)
-                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
+            int newInternalSize = InternalSpan.Length;
+            while (newInternalSize < newSize)
+                newInternalSize = checked(Math.Max(newInternalSize, 128) * 2);
 
-            InternalSpan = InternalSpan.ReAlloc(new_internal_size);
+            InternalSpan = InternalSpan.ReAlloc(newInternalSize);
         }
 
         public void Clear()
@@ -249,54 +249,54 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        public ReadOnlySpanBuffer(ReadOnlySpan<T> base_span)
+        public ReadOnlySpanBuffer(ReadOnlySpan<T> baseSpan)
         {
-            InternalSpan = base_span;
+            InternalSpan = baseSpan;
             CurrentPosition = 0;
-            Length = base_span.Length;
+            Length = baseSpan.Length;
         }
 
-        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Peek(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
         public void Seek(int offset, SeekOrigin mode)
         {
-            int new_position = 0;
+            int newPosition = 0;
             if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
+                newPosition = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Length + offset);
+                newPosition = checked(Length + offset);
             else
-                new_position = offset;
+                newPosition = offset;
 
-            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (newPosition < 0) throw new ArgumentOutOfRangeException("newPosition < 0");
+            if (newPosition > Length) throw new ArgumentOutOfRangeException("newPosition > Size");
 
-            CurrentPosition = new_position;
+            CurrentPosition = newPosition;
         }
 
         public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
@@ -346,11 +346,11 @@ namespace SoftEther.WebSocket.Helper
         public Span<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
         public Span<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
 
-        public FastMemoryBuffer(Memory<T> base_memory)
+        public FastMemoryBuffer(Memory<T> baseMemory)
         {
-            InternalBuffer = base_memory;
+            InternalBuffer = baseMemory;
             CurrentPosition = 0;
-            Length = base_memory.Length;
+            Length = baseMemory.Length;
             InternalSpan = InternalBuffer.Span;
         }
 
@@ -409,16 +409,16 @@ namespace SoftEther.WebSocket.Helper
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Span<T> Walk(int size, bool no_move = false)
+        public Span<T> Walk(int size, bool noMove = false)
         {
-            int new_size = checked(CurrentPosition + size);
-            if (InternalBuffer.Length < new_size)
+            int newSize = checked(CurrentPosition + size);
+            if (InternalBuffer.Length < newSize)
             {
-                EnsureInternalBufferReserved(new_size);
+                EnsureInternalBufferReserved(newSize);
             }
             var ret = InternalSpan.Slice(CurrentPosition, size);
-            Length = Math.Max(new_size, Length);
-            if (no_move == false) CurrentPosition += size;
+            Length = Math.Max(newSize, Length);
+            if (noMove == false) CurrentPosition += size;
             return ret;
         }
 
@@ -438,74 +438,74 @@ namespace SoftEther.WebSocket.Helper
             data.CopyTo(span);
         }
 
-        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Peek(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            Span<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            Span<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
-        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
         public void Seek(int offset, SeekOrigin mode)
         {
-            int new_position = 0;
+            int newPosition = 0;
             if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
+                newPosition = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Length + offset);
+                newPosition = checked(Length + offset);
             else
-                new_position = offset;
+                newPosition = offset;
 
-            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (newPosition < 0) throw new ArgumentOutOfRangeException("newPosition < 0");
+            if (newPosition > Length) throw new ArgumentOutOfRangeException("newPosition > Size");
 
-            CurrentPosition = new_position;
+            CurrentPosition = newPosition;
         }
 
         public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
@@ -547,15 +547,15 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public void EnsureInternalBufferReserved(int new_size)
+        public void EnsureInternalBufferReserved(int newSize)
         {
-            if (InternalBuffer.Length >= new_size) return;
+            if (InternalBuffer.Length >= newSize) return;
 
-            int new_internal_size = InternalBuffer.Length;
-            while (new_internal_size < new_size)
-                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
+            int newInternalSize = InternalBuffer.Length;
+            while (newInternalSize < newSize)
+                newInternalSize = checked(Math.Max(newInternalSize, 128) * 2);
 
-            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
+            InternalBuffer = InternalBuffer.ReAlloc(newInternalSize);
             InternalSpan = InternalBuffer.Span;
         }
 
@@ -583,11 +583,11 @@ namespace SoftEther.WebSocket.Helper
         public ReadOnlySpan<T> SpanBefore { get => Memory.Slice(0, CurrentPosition).Span; }
         public ReadOnlySpan<T> SpanAfter { get => Memory.Slice(CurrentPosition).Span; }
 
-        public FastReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
+        public FastReadOnlyMemoryBuffer(ReadOnlyMemory<T> baseMemory)
         {
-            InternalBuffer = base_memory;
+            InternalBuffer = baseMemory;
             CurrentPosition = 0;
-            Length = base_memory.Length;
+            Length = baseMemory.Length;
             InternalSpan = InternalBuffer.Span;
         }
 
@@ -634,74 +634,74 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Peek(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, size_read);
+            ReadOnlySpan<T> ret = InternalSpan.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
-        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
         public void Seek(int offset, SeekOrigin mode)
         {
-            int new_position = 0;
+            int newPosition = 0;
             if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
+                newPosition = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Length + offset);
+                newPosition = checked(Length + offset);
             else
-                new_position = offset;
+                newPosition = offset;
 
-            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (newPosition < 0) throw new ArgumentOutOfRangeException("newPosition < 0");
+            if (newPosition > Length) throw new ArgumentOutOfRangeException("newPosition > Size");
 
-            CurrentPosition = new_position;
+            CurrentPosition = newPosition;
         }
 
         public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
@@ -769,11 +769,11 @@ namespace SoftEther.WebSocket.Helper
 
         public MemoryBuffer() : this(Memory<T>.Empty) { }
 
-        public MemoryBuffer(Memory<T> base_memory)
+        public MemoryBuffer(Memory<T> baseMemory)
         {
-            InternalBuffer = base_memory;
+            InternalBuffer = baseMemory;
             CurrentPosition = 0;
-            Length = base_memory.Length;
+            Length = baseMemory.Length;
         }
 
         public static implicit operator MemoryBuffer<T>(Memory<T> memory) => new MemoryBuffer<T>(memory);
@@ -831,16 +831,16 @@ namespace SoftEther.WebSocket.Helper
         }
 
         [MethodImpl(MethodImplOptions.NoInlining)]
-        public Span<T> Walk(int size, bool no_move = false)
+        public Span<T> Walk(int size, bool noMove = false)
         {
-            int new_size = checked(CurrentPosition + size);
-            if (InternalBuffer.Length < new_size)
+            int newSize = checked(CurrentPosition + size);
+            if (InternalBuffer.Length < newSize)
             {
-                EnsureInternalBufferReserved(new_size);
+                EnsureInternalBufferReserved(newSize);
             }
             var ret = InternalBuffer.Span.Slice(CurrentPosition, size);
-            Length = Math.Max(new_size, Length);
-            if (no_move == false) CurrentPosition += size;
+            Length = Math.Max(newSize, Length);
+            if (noMove == false) CurrentPosition += size;
             return ret;
         }
 
@@ -860,74 +860,74 @@ namespace SoftEther.WebSocket.Helper
             data.CopyTo(span);
         }
 
-        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Peek(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            Span<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            Span<T> ret = InternalBuffer.Span.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
-        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
         public void Seek(int offset, SeekOrigin mode)
         {
-            int new_position = 0;
+            int newPosition = 0;
             if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
+                newPosition = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Length + offset);
+                newPosition = checked(Length + offset);
             else
-                new_position = offset;
+                newPosition = offset;
 
-            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (newPosition < 0) throw new ArgumentOutOfRangeException("newPosition < 0");
+            if (newPosition > Length) throw new ArgumentOutOfRangeException("newPosition > Size");
 
-            CurrentPosition = new_position;
+            CurrentPosition = newPosition;
         }
 
         public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
@@ -969,15 +969,15 @@ namespace SoftEther.WebSocket.Helper
             return span.Length;
         }
 
-        public void EnsureInternalBufferReserved(int new_size)
+        public void EnsureInternalBufferReserved(int newSize)
         {
-            if (InternalBuffer.Length >= new_size) return;
+            if (InternalBuffer.Length >= newSize) return;
 
-            int new_internal_size = InternalBuffer.Length;
-            while (new_internal_size < new_size)
-                new_internal_size = checked(Math.Max(new_internal_size, 128) * 2);
+            int newInternalSize = InternalBuffer.Length;
+            while (newInternalSize < newSize)
+                newInternalSize = checked(Math.Max(newInternalSize, 128) * 2);
 
-            InternalBuffer = InternalBuffer.ReAlloc(new_internal_size);
+            InternalBuffer = InternalBuffer.ReAlloc(newInternalSize);
         }
 
         public void Clear()
@@ -1004,11 +1004,11 @@ namespace SoftEther.WebSocket.Helper
 
         public ReadOnlyMemoryBuffer() : this(ReadOnlyMemory<T>.Empty) { }
 
-        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> base_memory)
+        public ReadOnlyMemoryBuffer(ReadOnlyMemory<T> baseMemory)
         {
-            InternalBuffer = base_memory;
+            InternalBuffer = baseMemory;
             CurrentPosition = 0;
-            Length = base_memory.Length;
+            Length = baseMemory.Length;
         }
 
         public static implicit operator ReadOnlyMemoryBuffer<T>(ReadOnlyMemory<T> memory) => new ReadOnlyMemoryBuffer<T>(memory);
@@ -1054,74 +1054,74 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        public ReadOnlySpan<T> Read(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Read(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlySpan<T> Peek(int size, bool allow_partial = false)
+        public ReadOnlySpan<T> Peek(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, size_read);
+            ReadOnlySpan<T> ret = InternalBuffer.Span.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
-        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> ReadAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
-            CurrentPosition += size_read;
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
+            CurrentPosition += sizeRead;
             return ret;
         }
 
-        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allow_partial = false)
+        public ReadOnlyMemory<T> PeekAsMemory(int size, bool allowPartial = false)
         {
-            int size_read = size;
+            int sizeRead = size;
             if (checked(CurrentPosition + size) > Length)
             {
-                if (allow_partial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
-                size_read = Length - CurrentPosition;
+                if (allowPartial == false) throw new ArgumentOutOfRangeException("(CurrentPosition + size) > Size");
+                sizeRead = Length - CurrentPosition;
             }
 
-            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, size_read);
+            ReadOnlyMemory<T> ret = InternalBuffer.Slice(CurrentPosition, sizeRead);
             return ret;
         }
 
         public void Seek(int offset, SeekOrigin mode)
         {
-            int new_position = 0;
+            int newPosition = 0;
             if (mode == SeekOrigin.Current)
-                new_position = checked(CurrentPosition + offset);
+                newPosition = checked(CurrentPosition + offset);
             else if (mode == SeekOrigin.End)
-                new_position = checked(Length + offset);
+                newPosition = checked(Length + offset);
             else
-                new_position = offset;
+                newPosition = offset;
 
-            if (new_position < 0) throw new ArgumentOutOfRangeException("new_position < 0");
-            if (new_position > Length) throw new ArgumentOutOfRangeException("new_position > Size");
+            if (newPosition < 0) throw new ArgumentOutOfRangeException("newPosition < 0");
+            if (newPosition > Length) throw new ArgumentOutOfRangeException("newPosition > Size");
 
-            CurrentPosition = new_position;
+            CurrentPosition = newPosition;
         }
 
         public void SeekToBegin() => Seek(0, SeekOrigin.Begin);
@@ -2219,14 +2219,14 @@ namespace SoftEther.WebSocket.Helper
         public static int WalkGetPin<T>(this Memory<T> memory) => WalkGetPin(memory.AsReadOnlyMemory());
         public static int WalkGetPin<T>(this ReadOnlyMemory<T> memory) => memory.AsSegment().Offset;
 
-        public static int WalkGetCurrentLength<T>(this Memory<T> memory, int compare_target_pin) => WalkGetCurrentLength(memory.AsReadOnlyMemory(), compare_target_pin);
+        public static int WalkGetCurrentLength<T>(this Memory<T> memory, int compareTargetPin) => WalkGetCurrentLength(memory.AsReadOnlyMemory(), compareTargetPin);
 
 
-        public static int WalkGetCurrentLength<T>(this ReadOnlyMemory<T> memory, int compare_target_pin)
+        public static int WalkGetCurrentLength<T>(this ReadOnlyMemory<T> memory, int compareTargetPin)
         {
-            int current_pin = memory.WalkGetPin();
-            if (current_pin < compare_target_pin) throw new ArgumentOutOfRangeException("current_pin < compare_target_pin");
-            return current_pin - compare_target_pin;
+            int currentPin = memory.WalkGetPin();
+            if (currentPin < compareTargetPin) throw new ArgumentOutOfRangeException("currentPin < compareTargetPin");
+            return currentPin - compareTargetPin;
         }
 
 
@@ -2284,7 +2284,7 @@ namespace SoftEther.WebSocket.Helper
         public static Memory<T> WalkAutoStatic<T>(ref this Memory<T> memory, int size) => memory.WalkAutoInternal(size, true, false);
 
 
-        static Memory<T> WalkAutoInternal<T>(ref this Memory<T> memory, int size, bool no_realloc, bool no_step)
+        static Memory<T> WalkAutoInternal<T>(ref this Memory<T> memory, int size, bool noReAlloc, bool noStep)
         {
             if (size == 0) return Memory<T>.Empty;
             if (size < 0) throw new ArgumentOutOfRangeException("size");
@@ -2296,37 +2296,37 @@ namespace SoftEther.WebSocket.Helper
             if (((long)memory.Length + (long)size) > int.MaxValue) throw new OverflowException("size");
 
             ArraySegment<T> a = memory.AsSegment();
-            long required_len = (long)a.Offset + (long)a.Count + (long)size;
-            if (required_len > int.MaxValue) throw new OverflowException("size");
+            long requiredLen = (long)a.Offset + (long)a.Count + (long)size;
+            if (requiredLen > int.MaxValue) throw new OverflowException("size");
 
-            int new_len = a.Array.Length;
-            while (new_len < required_len)
+            int newLen = a.Array.Length;
+            while (newLen < requiredLen)
             {
-                new_len = (int)Math.Min(Math.Max((long)new_len, 128) * 2, int.MaxValue);
+                newLen = (int)Math.Min(Math.Max((long)newLen, 128) * 2, int.MaxValue);
             }
 
-            T[] new_array = a.Array;
-            if (new_array.Length < new_len)
+            T[] newArray = a.Array;
+            if (newArray.Length < newLen)
             {
-                if (no_realloc)
+                if (noReAlloc)
                 {
-                    throw new ArgumentOutOfRangeException("Internal byte array overflow: array.Length < new_len");
+                    throw new ArgumentOutOfRangeException("Internal byte array overflow: array.Length < newLen");
                 }
-                new_array = a.Array.ReAlloc(new_len);
+                newArray = a.Array.ReAlloc(newLen);
             }
 
-            if (no_step == false)
+            if (noStep == false)
             {
-                a = new ArraySegment<T>(new_array, a.Offset, Math.Max(a.Count, size));
+                a = new ArraySegment<T>(newArray, a.Offset, Math.Max(a.Count, size));
             }
             else
             {
-                a = new ArraySegment<T>(new_array, a.Offset, a.Count);
+                a = new ArraySegment<T>(newArray, a.Offset, a.Count);
             }
 
             var m = a.AsMemory();
 
-            if (no_step == false)
+            if (noStep == false)
             {
                 var ret = m.Walk(size);
                 memory = m;
@@ -2428,44 +2428,44 @@ namespace SoftEther.WebSocket.Helper
             return seg;
         }
 
-        public static T[] ReAlloc<T>(this T[] src, int new_size)
+        public static T[] ReAlloc<T>(this T[] src, int newSize)
         {
-            if (new_size < 0) throw new ArgumentOutOfRangeException("new_size");
-            if (new_size == src.Length)
+            if (newSize < 0) throw new ArgumentOutOfRangeException("newSize");
+            if (newSize == src.Length)
             {
                 return src;
             }
 
             T[] ret = src;
-            Array.Resize(ref ret, new_size);
+            Array.Resize(ref ret, newSize);
             return ret;
         }
 
-        public static Span<T> ReAlloc<T>(this Span<T> src, int new_size)
+        public static Span<T> ReAlloc<T>(this Span<T> src, int newSize)
         {
-            if (new_size < 0) throw new ArgumentOutOfRangeException("new_size");
-            if (new_size == src.Length)
+            if (newSize < 0) throw new ArgumentOutOfRangeException("newSize");
+            if (newSize == src.Length)
             {
                 return src;
             }
             else
             {
-                T[] ret = new T[new_size];
+                T[] ret = new T[newSize];
                 src.Slice(0, Math.Min(src.Length, ret.Length)).CopyTo(ret);
                 return ret.AsSpan();
             }
         }
 
-        public static Memory<T> ReAlloc<T>(this Memory<T> src, int new_size)
+        public static Memory<T> ReAlloc<T>(this Memory<T> src, int newSize)
         {
-            if (new_size < 0) throw new ArgumentOutOfRangeException("new_size");
-            if (new_size == src.Length)
+            if (newSize < 0) throw new ArgumentOutOfRangeException("newSize");
+            if (newSize == src.Length)
             {
                 return src;
             }
             else
             {
-                T[] ret = new T[new_size];
+                T[] ret = new T[newSize];
                 src.Slice(0, Math.Min(src.Length, ret.Length)).CopyTo(ret);
                 return ret.AsMemory();
             }
@@ -2473,12 +2473,12 @@ namespace SoftEther.WebSocket.Helper
 
         public const int MemoryUsePoolThreshold = 1024;
 
-        public static T[] FastAlloc<T>(int minimum_size)
+        public static T[] FastAlloc<T>(int minimumSize)
         {
-            if (minimum_size < MemoryUsePoolThreshold)
-                return new T[minimum_size];
+            if (minimumSize < MemoryUsePoolThreshold)
+                return new T[minimumSize];
             else
-                return ArrayPool<T>.Shared.Rent(minimum_size);
+                return ArrayPool<T>.Shared.Rent(minimumSize);
         }
 
         public static Memory<T> FastAllocMemory<T>(int size)
@@ -2498,27 +2498,27 @@ namespace SoftEther.WebSocket.Helper
         public static void FastFree<T>(this Memory<T> memory) => memory.GetInternalArray().FastFree();
 
 
-        static readonly long _memory_object_offset;
-        static readonly long _memory_index_offset;
-        static readonly long _memory_length_offset;
-        static readonly bool _use_fast = false;
+        static readonly long _MemoryObjectOffset;
+        static readonly long _MemoryIndexOffset;
+        static readonly long _MemoryLengthOffset;
+        static readonly bool _UseFast = false;
 
         static unsafe MemoryHelper()
         {
             try
             {
-                _memory_object_offset = Marshal.OffsetOf<Memory<byte>>("_object").ToInt64();
-                _memory_index_offset = Marshal.OffsetOf<Memory<byte>>("_index").ToInt64();
-                _memory_length_offset = Marshal.OffsetOf<Memory<byte>>("_length").ToInt64();
+                _MemoryObjectOffset = Marshal.OffsetOf<Memory<byte>>("_object").ToInt64();
+                _MemoryIndexOffset = Marshal.OffsetOf<Memory<byte>>("_index").ToInt64();
+                _MemoryLengthOffset = Marshal.OffsetOf<Memory<byte>>("_length").ToInt64();
 
-                if (_memory_object_offset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_object").ToInt64() ||
-                    _memory_index_offset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_index").ToInt64() ||
-                    _memory_length_offset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_length").ToInt64())
+                if (_MemoryObjectOffset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_object").ToInt64() ||
+                    _MemoryIndexOffset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_index").ToInt64() ||
+                    _MemoryLengthOffset != Marshal.OffsetOf<ReadOnlyMemory<DummyValueType>>("_length").ToInt64())
                 {
                     throw new Exception();
                 }
 
-                _use_fast = true;
+                _UseFast = true;
             }
             catch
             {
@@ -2540,11 +2540,11 @@ namespace SoftEther.WebSocket.Helper
 
                 if (ok)
                 {
-                    _memory_object_offset = 0;
-                    _memory_index_offset = sizeof(void*);
-                    _memory_length_offset = _memory_index_offset + sizeof(int);
+                    _MemoryObjectOffset = 0;
+                    _MemoryIndexOffset = sizeof(void*);
+                    _MemoryLengthOffset = _MemoryIndexOffset + sizeof(int);
 
-                    _use_fast = true;
+                    _UseFast = true;
                 }
             }
         }
@@ -2561,9 +2561,9 @@ namespace SoftEther.WebSocket.Helper
                 DummyValueType[] obj = new DummyValueType[a];
                 Memory<DummyValueType> mem = new Memory<DummyValueType>(obj, b, c);
 
-                void* mem_ptr = Unsafe.AsPointer(ref mem);
+                void* memPtr = Unsafe.AsPointer(ref mem);
 
-                byte* p = (byte*)mem_ptr;
+                byte* p = (byte*)memPtr;
                 DummyValueType[] array = Unsafe.Read<DummyValueType[]>(p);
                 if (array == obj)
                 {
@@ -2592,9 +2592,9 @@ namespace SoftEther.WebSocket.Helper
                 DummyValueType[] obj = new DummyValueType[a];
                 ReadOnlyMemory<DummyValueType> mem = new ReadOnlyMemory<DummyValueType>(obj, b, c);
 
-                void* mem_ptr = Unsafe.AsPointer(ref mem);
+                void* memPtr = Unsafe.AsPointer(ref mem);
 
-                byte* p = (byte*)mem_ptr;
+                byte* p = (byte*)memPtr;
                 DummyValueType[] array = Unsafe.Read<DummyValueType[]>(p);
                 if (array == obj)
                 {
@@ -2622,7 +2622,7 @@ namespace SoftEther.WebSocket.Helper
             unsafe
             {
                 byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
-                ptr += _memory_object_offset;
+                ptr += _MemoryObjectOffset;
                 T[] o = Unsafe.Read<T[]>(ptr);
                 return o;
             }
@@ -2631,118 +2631,118 @@ namespace SoftEther.WebSocket.Helper
 
         public static ArraySegment<T> AsSegment<T>(this Memory<T> memory)
         {
-            if (_use_fast == false) return AsSegmentSlow(memory);
+            if (_UseFast == false) return AsSegmentSlow(memory);
 
             unsafe
             {
                 byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
                 return new ArraySegment<T>(
-                    Unsafe.Read<T[]>(ptr + _memory_object_offset),
-                    *((int*)(ptr + _memory_index_offset)),
-                    *((int*)(ptr + _memory_length_offset))
+                    Unsafe.Read<T[]>(ptr + _MemoryObjectOffset),
+                    *((int*)(ptr + _MemoryIndexOffset)),
+                    *((int*)(ptr + _MemoryLengthOffset))
                     );
             }
         }
 
         public static ArraySegment<T> AsSegment<T>(this ReadOnlyMemory<T> memory)
         {
-            if (_use_fast == false) return AsSegmentSlow(memory);
+            if (_UseFast == false) return AsSegmentSlow(memory);
 
             unsafe
             {
                 byte* ptr = (byte*)Unsafe.AsPointer(ref memory);
                 return new ArraySegment<T>(
-                    Unsafe.Read<T[]>(ptr + _memory_object_offset),
-                    *((int*)(ptr + _memory_index_offset)),
-                    *((int*)(ptr + _memory_length_offset))
+                    Unsafe.Read<T[]>(ptr + _MemoryObjectOffset),
+                    *((int*)(ptr + _MemoryIndexOffset)),
+                    *((int*)(ptr + _MemoryLengthOffset))
                     );
             }
         }
 
-        public static List<List<Memory<T>>> SplitMemoryArray<T>(IEnumerable<Memory<T>> src, int element_max_size)
+        public static List<List<Memory<T>>> SplitMemoryArray<T>(IEnumerable<Memory<T>> src, int elementMaxSize)
         {
-            element_max_size = Math.Max(1, element_max_size);
+            elementMaxSize = Math.Max(1, elementMaxSize);
 
-            int current_size = 0;
+            int currentSize = 0;
             List<List<Memory<T>>> ret = new List<List<Memory<T>>>();
-            List<Memory<T>> current_list = new List<Memory<T>>();
+            List<Memory<T>> currentList = new List<Memory<T>>();
 
-            foreach (Memory<T> m_src in src)
+            foreach (Memory<T> mSrc in src)
             {
-                Memory<T> m = m_src;
+                Memory<T> m = mSrc;
 
                 LABEL_START:
 
                 if (m.Length >= 1)
                 {
-                    int over_size = (current_size + m.Length) - element_max_size;
-                    if (over_size >= 0)
+                    int overSize = (currentSize + m.Length) - elementMaxSize;
+                    if (overSize >= 0)
                     {
-                        Memory<T> m_add = m.Slice(0, m.Length - over_size);
+                        Memory<T> mAdd = m.Slice(0, m.Length - overSize);
 
-                        current_list.Add(m_add);
-                        ret.Add(current_list);
-                        current_list = new List<Memory<T>>();
-                        current_size = 0;
+                        currentList.Add(mAdd);
+                        ret.Add(currentList);
+                        currentList = new List<Memory<T>>();
+                        currentSize = 0;
 
-                        m = m.Slice(m_add.Length);
+                        m = m.Slice(mAdd.Length);
 
                         goto LABEL_START;
                     }
                     else
                     {
-                        current_list.Add(m);
-                        current_size += m.Length;
+                        currentList.Add(m);
+                        currentSize += m.Length;
                     }
                 }
             }
 
-            if (current_list.Count >= 1)
-                ret.Add(current_list);
+            if (currentList.Count >= 1)
+                ret.Add(currentList);
 
             return ret;
         }
 
-        public static List<List<ArraySegment<T>>> SplitMemoryArrayToArraySegment<T>(IEnumerable<Memory<T>> src, int element_max_size)
+        public static List<List<ArraySegment<T>>> SplitMemoryArrayToArraySegment<T>(IEnumerable<Memory<T>> src, int elementMaxSize)
         {
-            element_max_size = Math.Max(1, element_max_size);
+            elementMaxSize = Math.Max(1, elementMaxSize);
 
-            int current_size = 0;
+            int currentSize = 0;
             List<List<ArraySegment<T>>> ret = new List<List<ArraySegment<T>>>();
-            List<ArraySegment<T>> current_list = new List<ArraySegment<T>>();
+            List<ArraySegment<T>> currentList = new List<ArraySegment<T>>();
 
-            foreach (Memory<T> m_src in src)
+            foreach (Memory<T> mSrc in src)
             {
-                Memory<T> m = m_src;
+                Memory<T> m = mSrc;
 
                 LABEL_START:
 
                 if (m.Length >= 1)
                 {
-                    int over_size = (current_size + m.Length) - element_max_size;
-                    if (over_size >= 0)
+                    int overSize = (currentSize + m.Length) - elementMaxSize;
+                    if (overSize >= 0)
                     {
-                        Memory<T> m_add = m.Slice(0, m.Length - over_size);
+                        Memory<T> mAdd = m.Slice(0, m.Length - overSize);
 
-                        current_list.Add(m_add.AsSegment());
-                        ret.Add(current_list);
-                        current_list = new List<ArraySegment<T>>();
-                        current_size = 0;
+                        currentList.Add(mAdd.AsSegment());
+                        ret.Add(currentList);
+                        currentList = new List<ArraySegment<T>>();
+                        currentSize = 0;
 
-                        m = m.Slice(m_add.Length);
+                        m = m.Slice(mAdd.Length);
 
                         goto LABEL_START;
                     }
                     else
                     {
-                        current_list.Add(m.AsSegment());
-                        current_size += m.Length;
+                        currentList.Add(m.AsSegment());
+                        currentSize += m.Length;
                     }
                 }
             }
 
-            if (current_list.Count >= 1)
-                ret.Add(current_list);
+            if (currentList.Count >= 1)
+                ret.Add(currentList);
 
             return ret;
         }
@@ -2754,53 +2754,53 @@ namespace SoftEther.WebSocket.Helper
         int CurrentPos;
         int MinReserveSize;
 
-        public FastMemoryAllocator(int initial_size = 0)
+        public FastMemoryAllocator(int initialSize = 0)
         {
-            initial_size = Math.Min(initial_size, 1);
-            Pool = new T[initial_size];
-            MinReserveSize = initial_size;
+            initialSize = Math.Min(initialSize, 1);
+            Pool = new T[initialSize];
+            MinReserveSize = initialSize;
         }
 
-        public Memory<T> Reserve(int max_size)
+        public Memory<T> Reserve(int maxSize)
         {
             checked
             {
-                if (max_size < 0) throw new ArgumentOutOfRangeException("size");
-                if (max_size == 0) return Memory<T>.Empty;
+                if (maxSize < 0) throw new ArgumentOutOfRangeException("size");
+                if (maxSize == 0) return Memory<T>.Empty;
 
                 Debug.Assert((Pool.Length - CurrentPos) >= 0);
 
-                if ((Pool.Length - CurrentPos) < max_size)
+                if ((Pool.Length - CurrentPos) < maxSize)
                 {
-                    MinReserveSize = Math.Max(MinReserveSize, max_size * 5);
+                    MinReserveSize = Math.Max(MinReserveSize, maxSize * 5);
                     Pool = new T[MinReserveSize];
                     CurrentPos = 0;
                 }
 
-                var ret = Pool.Slice(CurrentPos, max_size);
-                CurrentPos += max_size;
+                var ret = Pool.Slice(CurrentPos, maxSize);
+                CurrentPos += maxSize;
                 return ret;
             }
         }
 
-        public void Commit(ref Memory<T> reserved_memory, int commit_size)
+        public void Commit(ref Memory<T> reservedMemory, int commitSize)
         {
-            reserved_memory = Commit(reserved_memory, commit_size);
+            reservedMemory = Commit(reservedMemory, commitSize);
         }
 
-        public Memory<T> Commit(Memory<T> reserved_memory, int commit_size)
+        public Memory<T> Commit(Memory<T> reservedMemory, int commitSize)
         {
             checked
             {
-                int return_size = reserved_memory.Length - commit_size;
-                Debug.Assert(return_size >= 0);
-                if (return_size == 0) return reserved_memory;
+                int returnSize = reservedMemory.Length - commitSize;
+                Debug.Assert(returnSize >= 0);
+                if (returnSize == 0) return reservedMemory;
 
-                CurrentPos -= return_size;
+                CurrentPos -= returnSize;
                 Debug.Assert(CurrentPos >= 0);
 
-                if (commit_size >= 1)
-                    return reserved_memory.Slice(0, commit_size);
+                if (commitSize >= 1)
+                    return reservedMemory.Slice(0, commitSize);
                 else
                     return Memory<T>.Empty;
             }
@@ -2817,23 +2817,23 @@ namespace SoftEther.WebSocket.Helper
         static long GetTick64()
         {
             uint value = (uint)Environment.TickCount;
-            uint value_16bit = (value >> 16) & 0xFFFF;
+            uint value16bit = (value >> 16) & 0xFFFF;
 
-            uint state_copy = state;
+            uint stateCopy = state;
 
-            uint state_16bit = (state_copy >> 16) & 0xFFFF;
-            uint rotate_16bit = state_copy & 0xFFFF;
+            uint state16bit = (stateCopy >> 16) & 0xFFFF;
+            uint rotate16bit = stateCopy & 0xFFFF;
 
-            if (value_16bit <= 0x1000 && state_16bit >= 0xF000)
+            if (value16bit <= 0x1000 && state16bit >= 0xF000)
             {
-                rotate_16bit++;
+                rotate16bit++;
             }
 
-            uint state_new = (value_16bit << 16) & 0xFFFF0000 | rotate_16bit & 0x0000FFFF;
+            uint stateNew = (value16bit << 16) & 0xFFFF0000 | rotate16bit & 0x0000FFFF;
 
-            state = state_new;
+            state = stateNew;
 
-            return (long)value + 0x100000000L * (long)rotate_16bit;
+            return (long)value + 0x100000000L * (long)rotate16bit;
         }
     }
 
@@ -2920,10 +2920,10 @@ namespace SoftEther.WebSocket.Helper
 
         #endregion
 
-        public static int Xor(params int[] hash_list)
+        public static int Xor(params int[] hashList)
         {
             int ret = 0;
-            foreach (var i in hash_list)
+            foreach (var i in hashList)
                 ret ^= i;
             return ret;
         }
@@ -3479,26 +3479,26 @@ namespace SoftEther.WebSocket.Helper
         {
             checked
             {
-                int i, need_size;
-                bool realloc_flag;
+                int i, needSize;
+                bool reallocFlag;
 
                 i = this.size;
                 this.size += size;
-                need_size = this.pos + this.size;
-                realloc_flag = false;
+                needSize = this.pos + this.size;
+                reallocFlag = false;
 
                 int memsize = p.Length;
-                while (need_size > memsize)
+                while (needSize > memsize)
                 {
                     memsize = Math.Max(memsize, FifoInitMemSize) * 3;
-                    realloc_flag = true;
+                    reallocFlag = true;
                 }
 
-                if (realloc_flag)
+                if (reallocFlag)
                 {
-                    byte[] new_p = new byte[memsize];
-                    WebSocketHelper.CopyByte(new_p, 0, this.p, 0, this.p.Length);
-                    this.p = new_p;
+                    byte[] newArray = new byte[memsize];
+                    WebSocketHelper.CopyByte(newArray, 0, this.p, 0, this.p.Length);
+                    this.p = newArray;
                 }
 
                 if (src != null)
@@ -3529,8 +3529,8 @@ namespace SoftEther.WebSocket.Helper
         public byte[] Read(int size)
         {
             byte[] ret = new byte[size];
-            int read_size = Read(ret);
-            Array.Resize<byte>(ref ret, read_size);
+            int readSize = Read(ret);
+            Array.Resize<byte>(ref ret, readSize);
 
             return ret;
         }
@@ -3550,19 +3550,19 @@ namespace SoftEther.WebSocket.Helper
         {
             checked
             {
-                int read_size;
+                int readSize;
 
-                read_size = Math.Min(size, this.size);
-                if (read_size == 0)
+                readSize = Math.Min(size, this.size);
+                if (readSize == 0)
                 {
                     return 0;
                 }
                 if (dst != null)
                 {
-                    WebSocketHelper.CopyByte(dst, offset, this.p, this.pos, read_size);
+                    WebSocketHelper.CopyByte(dst, offset, this.p, this.pos, readSize);
                 }
-                this.pos += read_size;
-                this.size -= read_size;
+                this.pos += readSize;
+                this.size -= readSize;
 
                 if (this.size == 0)
                 {
@@ -3573,21 +3573,21 @@ namespace SoftEther.WebSocket.Helper
                     this.p.Length >= this.reallocMemSize &&
                     (this.p.Length / 2) > this.size)
                 {
-                    byte[] new_p;
-                    int new_size;
+                    byte[] newArray;
+                    int newSize;
 
-                    new_size = Math.Max(this.p.Length / 2, FifoInitMemSize);
-                    new_p = new byte[new_size];
-                    WebSocketHelper.CopyByte(new_p, 0, this.p, this.pos, this.size);
+                    newSize = Math.Max(this.p.Length / 2, FifoInitMemSize);
+                    newArray = new byte[newSize];
+                    WebSocketHelper.CopyByte(newArray, 0, this.p, this.pos, this.size);
 
-                    this.p = new_p;
+                    this.p = newArray;
 
                     this.pos = 0;
                 }
 
-                totalReadSize += read_size;
+                totalReadSize += readSize;
 
-                return read_size;
+                return readSize;
             }
         }
 
@@ -3610,10 +3610,10 @@ namespace SoftEther.WebSocket.Helper
                 this.parent = parent;
             }
 
-            Once dispose_flag;
+            Once DisposeFlag;
             public void Dispose()
             {
-                if (dispose_flag.IsFirstCall())
+                if (DisposeFlag.IsFirstCall())
                 {
                     this.parent.Unlock();
                 }
@@ -3621,7 +3621,7 @@ namespace SoftEther.WebSocket.Helper
         }
 
         SemaphoreSlim semaphone = new SemaphoreSlim(1, 1);
-        Once dispose_flag;
+        Once DisposeFlag;
 
         public async Task<LockHolder> LockWithAwait()
         {
@@ -3635,7 +3635,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 semaphone.DisposeSafe();
                 semaphone = null;
@@ -3647,15 +3647,15 @@ namespace SoftEther.WebSocket.Helper
     {
         static object LockObj = new object();
 
-        public static long Where(object msg_obj = null, [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null, long last_tick = 0)
+        public static long Where(object msgObj = null, [CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null, long lastTick = 0)
         {
             string msg = "";
-            if (msg_obj != null) msg = msg_obj.ToString();
+            if (msgObj != null) msg = msgObj.ToString();
             lock (LockObj)
             {
                 long now = DateTime.Now.Ticks;
-                long diff = now - last_tick;
-                WriteLine($"{FastTick64.Now}  {Path.GetFileName(filename)}:{line} in {caller}()" + (last_tick == 0 ? "" : $" (took {diff} msecs) ") + (string.IsNullOrEmpty(msg) == false ? (": " + msg) : ""));
+                long diff = now - lastTick;
+                WriteLine($"{FastTick64.Now}  {Path.GetFileName(filename)}:{line} in {caller}()" + (lastTick == 0 ? "" : $" (took {diff} msecs) ") + (string.IsNullOrEmpty(msg) == false ? (": " + msg) : ""));
                 return now;
             }
         }
@@ -3690,32 +3690,32 @@ namespace SoftEther.WebSocket.Helper
         }
         public static bool IsFilled(this string str) => !IsEmpty(str);
 
-        public static string ObjectToJson(this object obj, bool include_null = false, bool escape_html = false, int? max_depth = DefaultMaxDepth, bool compact = false, bool reference_handling = false) => Serialize(obj, include_null, escape_html, max_depth, compact, reference_handling);
-        public static T JsonToObject<T>(this string str, bool include_null = false, int? max_depth = DefaultMaxDepth) => Deserialize<T>(str, include_null, max_depth);
-        public static object JsonToObject(this string str, Type type, bool include_null = false, int? max_depth = DefaultMaxDepth) => Deserialize(str, type, include_null, max_depth);
+        public static string ObjectToJson(this object obj, bool includeNull = false, bool escapeHtml = false, int? maxDepth = DefaultMaxDepth, bool compact = false, bool referenceHandling = false) => Serialize(obj, includeNull, escapeHtml, maxDepth, compact, referenceHandling);
+        public static T JsonToObject<T>(this string str, bool includeNull = false, int? maxDepth = DefaultMaxDepth) => Deserialize<T>(str, includeNull, maxDepth);
+        public static object JsonToObject(this string str, Type type, bool includeNull = false, int? maxDepth = DefaultMaxDepth) => Deserialize(str, type, includeNull, maxDepth);
 
-        public static string Serialize(object obj, bool include_null = false, bool escape_html = false, int? max_depth = DefaultMaxDepth, bool compact = false, bool reference_handling = false)
+        public static string Serialize(object obj, bool includeNull = false, bool escapeHtml = false, int? maxDepth = DefaultMaxDepth, bool compact = false, bool referenceHandling = false)
         {
             JsonSerializerSettings setting = new JsonSerializerSettings()
             {
-                MaxDepth = max_depth,
-                NullValueHandling = include_null ? NullValueHandling.Include : NullValueHandling.Ignore,
+                MaxDepth = maxDepth,
+                NullValueHandling = includeNull ? NullValueHandling.Include : NullValueHandling.Ignore,
                 ReferenceLoopHandling = ReferenceLoopHandling.Error,
-                PreserveReferencesHandling = reference_handling ? PreserveReferencesHandling.All : PreserveReferencesHandling.None,
-                StringEscapeHandling = escape_html ? StringEscapeHandling.EscapeHtml : StringEscapeHandling.Default,
+                PreserveReferencesHandling = referenceHandling ? PreserveReferencesHandling.All : PreserveReferencesHandling.None,
+                StringEscapeHandling = escapeHtml ? StringEscapeHandling.EscapeHtml : StringEscapeHandling.Default,
             };
             return JsonConvert.SerializeObject(obj, compact ? Formatting.None : Formatting.Indented, setting);
         }
 
-        public static T Deserialize<T>(string str, bool include_null = false, int? max_depth = DefaultMaxDepth)
-            => (T)Deserialize(str, typeof(T), include_null, max_depth);
+        public static T Deserialize<T>(string str, bool includeNull = false, int? maxDepth = DefaultMaxDepth)
+            => (T)Deserialize(str, typeof(T), includeNull, maxDepth);
 
-        public static object Deserialize(string str, Type type, bool include_null = false, int? max_depth = DefaultMaxDepth)
+        public static object Deserialize(string str, Type type, bool includeNull = false, int? maxDepth = DefaultMaxDepth)
         {
             JsonSerializerSettings setting = new JsonSerializerSettings()
             {
-                MaxDepth = max_depth,
-                NullValueHandling = include_null ? NullValueHandling.Include : NullValueHandling.Ignore,
+                MaxDepth = maxDepth,
+                NullValueHandling = includeNull ? NullValueHandling.Include : NullValueHandling.Ignore,
                 ObjectCreationHandling = ObjectCreationHandling.Replace,
                 ReferenceLoopHandling = ReferenceLoopHandling.Error,
             };
@@ -3762,21 +3762,21 @@ namespace SoftEther.WebSocket.Helper
             return false;
         }
 
-        static readonly IPEndPoint udp_ep_ipv4 = new IPEndPoint(IPAddress.Any, 0);
-        static readonly IPEndPoint udp_ep_ipv6 = new IPEndPoint(IPAddress.IPv6Any, 0);
-        const int udp_max_retry_on_ignore_error = 1000;
+        static readonly IPEndPoint StaticUdpEndPointIPv4 = new IPEndPoint(IPAddress.Any, 0);
+        static readonly IPEndPoint StaticUdpEndPointIPv6 = new IPEndPoint(IPAddress.IPv6Any, 0);
+        const int UdpMaxRetryOnIgnoreError = 1000;
         public static async Task<SocketReceiveFromResult> ReceiveFromSafeUdpErrorAsync(this Socket socket, ArraySegment<byte> buffer, SocketFlags socketFlags)
         {
-            int num_retry = 0;
+            int numRetry = 0;
 
             LABEL_RETRY:
 
             try
             {
-                Task<SocketReceiveFromResult> t = socket.ReceiveFromAsync(buffer, socketFlags, socket.AddressFamily == AddressFamily.InterNetworkV6 ? udp_ep_ipv6 : udp_ep_ipv4);
+                Task<SocketReceiveFromResult> t = socket.ReceiveFromAsync(buffer, socketFlags, socket.AddressFamily == AddressFamily.InterNetworkV6 ? StaticUdpEndPointIPv6 : StaticUdpEndPointIPv4);
                 if (t.IsCompleted == false)
                 {
-                    num_retry = 0;
+                    numRetry = 0;
                     await t;
                 }
                 SocketReceiveFromResult ret = t.Result;
@@ -3785,8 +3785,8 @@ namespace SoftEther.WebSocket.Helper
             }
             catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e) || socket.Available >= 1)
             {
-                num_retry++;
-                if (num_retry >= udp_max_retry_on_ignore_error)
+                numRetry++;
+                if (numRetry >= UdpMaxRetryOnIgnoreError)
                 {
                     throw;
                 }
@@ -3819,21 +3819,21 @@ namespace SoftEther.WebSocket.Helper
             => SendToSafeUdpErrorAsync(socket, buffer.AsSegment(), socketFlags, remoteEP);
 
         public static async Task ConnectAsync(this TcpClient tc, string host, int port,
-            int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+            int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancelTokens)
         {
             await DoAsyncWithTimeout(
-            main_proc: async c =>
+            mainProc: async c =>
             {
                 await tc.ConnectAsync(host, port);
                 return 0;
             },
-            cancel_proc: () =>
+            cancelProc: () =>
             {
                 tc.DisposeSafe();
             },
             timeout: timeout,
             cancel: cancel,
-            cancel_tokens: cancel_tokens);
+            cancelTokens: cancelTokens);
         }
 
         public static void DisposeSafe(this IDisposable obj)
@@ -4173,51 +4173,51 @@ namespace SoftEther.WebSocket.Helper
             catch { }
         }
 
-        public static async Task<byte[]> ReadAsyncWithTimeout(this Stream stream, int max_size = 65536, int? timeout = null, bool? read_all = false, CancellationToken cancel = default(CancellationToken))
+        public static async Task<byte[]> ReadAsyncWithTimeout(this Stream stream, int maxSize = 65536, int? timeout = null, bool? readAll = false, CancellationToken cancel = default(CancellationToken))
         {
-            byte[] tmp = new byte[max_size];
+            byte[] tmp = new byte[maxSize];
             int ret = await stream.ReadAsyncWithTimeout(tmp, 0, tmp.Length, timeout,
-                read_all: read_all,
+                readAll: readAll,
                 cancel: cancel);
             return CopyByte(tmp, 0, ret);
         }
 
-        public static async Task<int> ReadAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, bool? read_all = false, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task<int> ReadAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, bool? readAll = false, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancelTokens)
         {
             if (timeout == null) timeout = stream.ReadTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
-            int target_read_size = count ?? (buffer.Length - offset);
-            if (target_read_size == 0) return 0;
+            int targetReadSize = count ?? (buffer.Length - offset);
+            if (targetReadSize == 0) return 0;
 
             try
             {
-                int ret = await DoAsyncWithTimeout(async (cancel_for_proc) =>
+                int ret = await DoAsyncWithTimeout(async (cancelLocal) =>
                 {
-                    if (read_all == false)
+                    if (readAll == false)
                     {
-                        return await stream.ReadAsync(buffer, offset, target_read_size, cancel_for_proc);
+                        return await stream.ReadAsync(buffer, offset, targetReadSize, cancelLocal);
                     }
                     else
                     {
-                        int current_read_size = 0;
+                        int currentReadSize = 0;
 
-                        while (current_read_size != target_read_size)
+                        while (currentReadSize != targetReadSize)
                         {
-                            int sz = await stream.ReadAsync(buffer, offset + current_read_size, target_read_size - current_read_size, cancel_for_proc);
+                            int sz = await stream.ReadAsync(buffer, offset + currentReadSize, targetReadSize - currentReadSize, cancelLocal);
                             if (sz == 0)
                             {
                                 return 0;
                             }
 
-                            current_read_size += sz;
+                            currentReadSize += sz;
                         }
 
-                        return current_read_size;
+                        return currentReadSize;
                     }
                 },
                 timeout: (int)timeout,
                 cancel: cancel,
-                cancel_tokens: cancel_tokens);
+                cancelTokens: cancelTokens);
 
                 if (ret <= 0)
                 {
@@ -4233,23 +4233,23 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public static async Task WriteAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task WriteAsyncWithTimeout(this Stream stream, byte[] buffer, int offset = 0, int? count = null, int? timeout = null, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancelTokens)
         {
             if (timeout == null) timeout = stream.WriteTimeout;
             if (timeout <= 0) timeout = Timeout.Infinite;
-            int target_write_size = count ?? (buffer.Length - offset);
-            if (target_write_size == 0) return;
+            int targetWriteSize = count ?? (buffer.Length - offset);
+            if (targetWriteSize == 0) return;
 
             try
             {
-                await DoAsyncWithTimeout(async (cancel_for_proc) =>
+                await DoAsyncWithTimeout(async (cancelLocal) =>
                 {
-                    await stream.WriteAsync(buffer, offset, target_write_size, cancel_for_proc);
+                    await stream.WriteAsync(buffer, offset, targetWriteSize, cancelLocal);
                     return 0;
                 },
                 timeout: (int)timeout,
                 cancel: cancel,
-                cancel_tokens: cancel_tokens);
+                cancelTokens: cancelTokens);
 
             }
             catch
@@ -4259,24 +4259,24 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<CancellationToken, Task<TResult>> main_proc, Action cancel_proc = null, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancel_tokens)
+        public static async Task<TResult> DoAsyncWithTimeout<TResult>(Func<CancellationToken, Task<TResult>> mainProc, Action cancelProc = null, int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancelTokens)
         {
             if (timeout < 0) timeout = Timeout.Infinite;
             if (timeout == 0) throw new TimeoutException("timeout == 0");
 
-            List<Task> wait_tasks = new List<Task>();
+            List<Task> waitTasks = new List<Task>();
             List<IDisposable> disposes = new List<IDisposable>();
-            Task timeout_task = null;
-            CancellationTokenSource timeout_cts = null;
-            CancellationTokenSource cancel_for_proc = new CancellationTokenSource();
+            Task timeoutTask = null;
+            CancellationTokenSource timeoutCancelSources = null;
+            CancellationTokenSource cancelLocal = new CancellationTokenSource();
 
             if (timeout != Timeout.Infinite)
             {
-                timeout_cts = new CancellationTokenSource();
-                timeout_task = Task.Delay(timeout, timeout_cts.Token);
-                disposes.Add(timeout_cts);
+                timeoutCancelSources = new CancellationTokenSource();
+                timeoutTask = Task.Delay(timeout, timeoutCancelSources.Token);
+                disposes.Add(timeoutCancelSources);
 
-                wait_tasks.Add(timeout_task);
+                waitTasks.Add(timeoutTask);
             }
 
             try
@@ -4287,10 +4287,10 @@ namespace SoftEther.WebSocket.Helper
 
                     Task t = WhenCanceled(cancel, out CancellationTokenRegistration reg);
                     disposes.Add(reg);
-                    wait_tasks.Add(t);
+                    waitTasks.Add(t);
                 }
 
-                foreach (CancellationToken c in cancel_tokens)
+                foreach (CancellationToken c in cancelTokens)
                 {
                     if (c.CanBeCanceled)
                     {
@@ -4298,31 +4298,31 @@ namespace SoftEther.WebSocket.Helper
 
                         Task t = WhenCanceled(c, out CancellationTokenRegistration reg);
                         disposes.Add(reg);
-                        wait_tasks.Add(t);
+                        waitTasks.Add(t);
                     }
                 }
 
-                Task<TResult> proc_task = main_proc(cancel_for_proc.Token);
+                Task<TResult> procTask = mainProc(cancelLocal.Token);
 
-                if (proc_task.IsCompleted)
+                if (procTask.IsCompleted)
                 {
-                    return proc_task.Result;
+                    return procTask.Result;
                 }
 
-                wait_tasks.Add(proc_task);
+                waitTasks.Add(procTask);
 
-                await Task.WhenAny(wait_tasks.ToArray());
+                await Task.WhenAny(waitTasks.ToArray());
 
-                foreach (CancellationToken c in cancel_tokens)
+                foreach (CancellationToken c in cancelTokens)
                 {
                     c.ThrowIfCancellationRequested();
                 }
 
                 cancel.ThrowIfCancellationRequested();
 
-                if (proc_task.IsCompleted)
+                if (procTask.IsCompleted)
                 {
-                    return proc_task.Result;
+                    return procTask.Result;
                 }
 
                 throw new TimeoutException();
@@ -4331,12 +4331,12 @@ namespace SoftEther.WebSocket.Helper
             {
                 try
                 {
-                    cancel_for_proc.Cancel();
+                    cancelLocal.Cancel();
                 }
                 catch { }
                 try
                 {
-                    if (cancel_proc != null) cancel_proc();
+                    if (cancelProc != null) cancelProc();
                 }
                 catch
                 {
@@ -4345,11 +4345,11 @@ namespace SoftEther.WebSocket.Helper
             }
             finally
             {
-                if (timeout_cts != null)
+                if (timeoutCancelSources != null)
                 {
                     try
                     {
-                        timeout_cts.Cancel();
+                        timeoutCancelSources.Cancel();
                     }
                     catch
                     {
@@ -4491,13 +4491,13 @@ namespace SoftEther.WebSocket.Helper
             => value.HasFlag(flag);
 
         public static async Task WaitObjectsAsync(Task[] tasks = null, CancellationToken[] cancels = null, AsyncAutoResetEvent[] events = null,
-            AsyncManualResetEvent[] manual_events = null, int timeout = Timeout.Infinite,
+            AsyncManualResetEvent[] manualEvents = null, int timeout = Timeout.Infinite,
             ExceptionWhen exceptions = ExceptionWhen.None)
         {
             if (tasks == null) tasks = new Task[0];
             if (cancels == null) cancels = new CancellationToken[0];
             if (events == null) events = new AsyncAutoResetEvent[0];
-            if (manual_events == null) manual_events = new AsyncManualResetEvent[0];
+            if (manualEvents == null) manualEvents = new AsyncManualResetEvent[0];
             if (timeout == 0)
             {
                 if (exceptions.Bit(ExceptionWhen.TimeoutException))
@@ -4523,76 +4523,76 @@ namespace SoftEther.WebSocket.Helper
                     c.ThrowIfCancellationRequested();
             }
 
-            List<Task> task_list = new List<Task>();
-            List<CancellationTokenRegistration> reg_list = new List<CancellationTokenRegistration>();
-            List<Action> undo_list = new List<Action>();
+            List<Task> taskList = new List<Task>();
+            List<CancellationTokenRegistration> regList = new List<CancellationTokenRegistration>();
+            List<Action> undoList = new List<Action>();
 
             foreach (Task t in tasks)
             {
                 if (t != null)
                 {
-                    task_list.Add(t);
+                    taskList.Add(t);
                 }
             }
 
             foreach (CancellationToken c in cancels)
             {
-                task_list.Add(WhenCanceled(c, out CancellationTokenRegistration reg));
-                reg_list.Add(reg);
+                taskList.Add(WhenCanceled(c, out CancellationTokenRegistration reg));
+                regList.Add(reg);
             }
 
             foreach (AsyncAutoResetEvent ev in events)
             {
                 if (ev != null)
                 {
-                    task_list.Add(ev.WaitOneAsync(out Action undo));
-                    undo_list.Add(undo);
+                    taskList.Add(ev.WaitOneAsync(out Action undo));
+                    undoList.Add(undo);
                 }
             }
 
-            foreach (AsyncManualResetEvent ev in manual_events)
+            foreach (AsyncManualResetEvent ev in manualEvents)
             {
                 if (ev != null)
                 {
-                    task_list.Add(ev.WaitAsync());
+                    taskList.Add(ev.WaitAsync());
                 }
             }
 
-            CancellationTokenSource delay_cancel = new CancellationTokenSource();
+            CancellationTokenSource delayCancel = new CancellationTokenSource();
 
-            Task timeout_task = null;
-            bool timed_out = false;
+            Task timeoutTask = null;
+            bool timedOut = false;
 
             if (timeout >= 1)
             {
-                timeout_task = Task.Delay(timeout, delay_cancel.Token);
-                task_list.Add(timeout_task);
+                timeoutTask = Task.Delay(timeout, delayCancel.Token);
+                taskList.Add(timeoutTask);
             }
 
             try
             {
-                Task r = await Task.WhenAny(task_list.ToArray());
-                if (r == timeout_task) timed_out = true;
+                Task r = await Task.WhenAny(taskList.ToArray());
+                if (r == timeoutTask) timedOut = true;
             }
             catch { }
             finally
             {
-                foreach (Action undo in undo_list)
+                foreach (Action undo in undoList)
                     undo();
 
-                foreach (CancellationTokenRegistration reg in reg_list)
+                foreach (CancellationTokenRegistration reg in regList)
                 {
                     reg.Dispose();
                 }
 
-                if (delay_cancel != null)
+                if (delayCancel != null)
                 {
-                    delay_cancel.Cancel();
-                    delay_cancel.Dispose();
+                    delayCancel.Cancel();
+                    delayCancel.Dispose();
                 }
 
                 if (exceptions.Bit(ExceptionWhen.TimeoutException))
-                    if (timed_out)
+                    if (timedOut)
                         throw new TimeoutException();
 
                 if (exceptions.Bit(ExceptionWhen.TaskException))
@@ -4820,7 +4820,7 @@ namespace SoftEther.WebSocket.Helper
 
         public static int GetMinTimeout(params int[] values)
         {
-            long min_value = long.MaxValue;
+            long minValue = long.MaxValue;
             foreach (int v in values)
             {
                 long vv;
@@ -4828,12 +4828,12 @@ namespace SoftEther.WebSocket.Helper
                     vv = long.MaxValue;
                 else
                     vv = v;
-                min_value = Math.Min(min_value, vv);
+                minValue = Math.Min(minValue, vv);
             }
-            if (min_value == long.MaxValue)
+            if (minValue == long.MaxValue)
                 return Timeout.Infinite;
             else
-                return (int)min_value;
+                return (int)minValue;
         }
 
         public static T NewWithoutConstructor<T>()
@@ -4851,44 +4851,44 @@ namespace SoftEther.WebSocket.Helper
 
         CancellationTokenSource CancelSource = new CancellationTokenSource();
 
-        public WhenAll(IEnumerable<Task> tasks, bool throw_exception = false) : this(throw_exception, tasks.ToArray()) { }
+        public WhenAll(IEnumerable<Task> tasks, bool throwException = false) : this(throwException, tasks.ToArray()) { }
 
-        public WhenAll(Task t, bool throw_exception = false) : this(throw_exception, t.ToSingleArray()) { }
+        public WhenAll(Task t, bool throwException = false) : this(throwException, t.ToSingleArray()) { }
 
-        public static Task Await(IEnumerable<Task> tasks, bool throw_exception = false)
-            => Await(throw_exception, tasks.ToArray());
+        public static Task Await(IEnumerable<Task> tasks, bool throwException = false)
+            => Await(throwException, tasks.ToArray());
 
-        public static Task Await(Task t, bool throw_exception = false)
-            => Await(throw_exception, t.ToSingleArray());
+        public static Task Await(Task t, bool throwException = false)
+            => Await(throwException, t.ToSingleArray());
 
-        public static async Task Await(bool throw_exception = false, params Task[] tasks)
+        public static async Task Await(bool throwException = false, params Task[] tasks)
         {
-            using (var w = new WhenAll(throw_exception, tasks))
+            using (var w = new WhenAll(throwException, tasks))
                 await w.WaitMe;
         }
 
-        public WhenAll(bool throw_exception = false, params Task[] tasks)
+        public WhenAll(bool throwException = false, params Task[] tasks)
         {
-            this.WaitMe = WaitMain(tasks, throw_exception);
+            this.WaitMe = WaitMain(tasks, throwException);
         }
 
-        async Task WaitMain(Task[] tasks, bool throw_exception)
+        async Task WaitMain(Task[] tasks, bool throwException)
         {
-            Task cancel_task = WebSocketHelper.WhenCanceled(CancelSource.Token, out CancellationTokenRegistration reg);
+            Task cancelTask = WebSocketHelper.WhenCanceled(CancelSource.Token, out CancellationTokenRegistration reg);
             using (reg)
             {
-                bool all_ok = true;
+                bool allOk = true;
                 foreach (Task t in tasks)
                 {
                     if (t != null)
                     {
                         try
                         {
-                            await Task.WhenAny(t, cancel_task);
+                            await Task.WhenAny(t, cancelTask);
                         }
                         catch { }
 
-                        if (throw_exception)
+                        if (throwException)
                         {
                             if (t.IsFaulted)
                                 t.Exception.ReThrow();
@@ -4897,24 +4897,24 @@ namespace SoftEther.WebSocket.Helper
                         }
 
                         if (t.IsCompletedSuccessfully == false)
-                            all_ok = false;
+                            allOk = false;
 
                         if (CancelSource.Token.IsCancellationRequested)
                         {
-                            all_ok = false;
+                            allOk = false;
                             return;
                         }
                     }
                 }
 
-                AllOk = all_ok;
+                AllOk = allOk;
             }
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 CancelSource.Cancel();
             }
@@ -4988,7 +4988,7 @@ namespace SoftEther.WebSocket.Helper
 
     public sealed class TimeoutDetector : IDisposable
     {
-        Task main_loop;
+        Task mainLoop;
 
         object LockObj = new object();
 
@@ -5001,12 +5001,12 @@ namespace SoftEther.WebSocket.Helper
         CancellationTokenSource halt = new CancellationTokenSource();
 
         CancelWatcher watcher;
-        AutoResetEvent event_auto;
-        ManualResetEvent event_manual;
+        AutoResetEvent eventAuto;
+        ManualResetEvent eventManual;
 
         CancellationTokenSource cts = new CancellationTokenSource();
         public CancellationToken Cancel { get => cts.Token; }
-        public Task TaskWaitMe { get => this.main_loop; }
+        public Task TaskWaitMe { get => this.mainLoop; }
 
         public object UserState { get; }
 
@@ -5014,8 +5014,8 @@ namespace SoftEther.WebSocket.Helper
 
         TimeoutDetectorCallbackDelegate Callback;
 
-        public TimeoutDetector(int timeout, CancelWatcher watcher = null, AutoResetEvent event_auto = null, ManualResetEvent event_manual = null,
-            TimeoutDetectorCallbackDelegate callback = null, object user_state = null)
+        public TimeoutDetector(int timeout, CancelWatcher watcher = null, AutoResetEvent eventAuto = null, ManualResetEvent eventManual = null,
+            TimeoutDetectorCallbackDelegate callback = null, object userState = null)
         {
             if (timeout == System.Threading.Timeout.Infinite || timeout == int.MaxValue)
             {
@@ -5024,13 +5024,13 @@ namespace SoftEther.WebSocket.Helper
 
             this.Timeout = timeout;
             this.watcher = watcher;
-            this.event_auto = event_auto;
-            this.event_manual = event_manual;
+            this.eventAuto = eventAuto;
+            this.eventManual = eventManual;
             this.Callback = callback;
-            this.UserState = user_state;
+            this.UserState = userState;
 
             NextTimeout = FastTick64.Now + this.Timeout;
-            main_loop = timeout_detector_main_loop();
+            mainLoop = TimeoutDetectorMainLooop();
         }
 
         public void Keep()
@@ -5038,19 +5038,19 @@ namespace SoftEther.WebSocket.Helper
             Interlocked.Exchange(ref this.NextTimeout, FastTick64.Now + this.Timeout);
         }
 
-        async Task timeout_detector_main_loop()
+        async Task TimeoutDetectorMainLooop()
         {
             using (LeakChecker.EnterShared())
             {
                 while (true)
                 {
-                    long next_timeout = Interlocked.Read(ref this.NextTimeout);
+                    long nextTimeout = Interlocked.Read(ref this.NextTimeout);
 
                     long now = FastTick64.Now;
 
-                    long remain_time = next_timeout - now;
+                    long remainTime = nextTimeout - now;
 
-                    if (remain_time <= 0)
+                    if (remainTime <= 0)
                     {
                         if (Callback != null && Callback(this))
                         {
@@ -5067,8 +5067,8 @@ namespace SoftEther.WebSocket.Helper
                         cts.TryCancelAsync().LaissezFaire();
 
                         if (this.watcher != null) this.watcher.Cancel();
-                        if (this.event_auto != null) this.event_auto.Set();
-                        if (this.event_manual != null) this.event_manual.Set();
+                        if (this.eventAuto != null) this.eventAuto.Set();
+                        if (this.eventManual != null) this.eventManual.Set();
 
                         return;
                     }
@@ -5077,16 +5077,16 @@ namespace SoftEther.WebSocket.Helper
                         await WebSocketHelper.WaitObjectsAsync(
                             events: new AsyncAutoResetEvent[] { ev },
                             cancels: new CancellationToken[] { halt.Token },
-                            timeout: (int)remain_time);
+                            timeout: (int)remainTime);
                     }
                 }
             }
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 halt.TryCancelAsync().LaissezFaire();
             }
@@ -5106,8 +5106,8 @@ namespace SoftEther.WebSocket.Helper
         AsyncAutoResetEvent ev = new AsyncAutoResetEvent();
         volatile bool halt = false;
 
-        HashSet<CancellationToken> target_list = new HashSet<CancellationToken>();
-        List<Task> task_list = new List<Task>();
+        HashSet<CancellationToken> targetList = new HashSet<CancellationToken>();
+        List<Task> taskList = new List<Task>();
 
         object LockObj = new object();
 
@@ -5116,7 +5116,7 @@ namespace SoftEther.WebSocket.Helper
             AddWatch(canceller.Token);
             AddWatch(cancels);
 
-            this.TaskWaitMe = cancel_watch_mainloop();
+            this.TaskWaitMe = CancelWatcherMainLoop();
         }
 
         public void Cancel()
@@ -5125,7 +5125,7 @@ namespace SoftEther.WebSocket.Helper
             this.Canceled = true;
         }
 
-        async Task cancel_watch_mainloop()
+        async Task CancelWatcherMainLoop()
         {
             using (LeakChecker.EnterShared())
             {
@@ -5135,7 +5135,7 @@ namespace SoftEther.WebSocket.Helper
 
                     lock (LockObj)
                     {
-                        foreach (CancellationToken c in target_list)
+                        foreach (CancellationToken c in targetList)
                             cancels.Add(c);
                     }
 
@@ -5147,7 +5147,7 @@ namespace SoftEther.WebSocket.Helper
 
                     lock (LockObj)
                     {
-                        foreach (CancellationToken c in target_list)
+                        foreach (CancellationToken c in targetList)
                         {
                             if (c.IsCancellationRequested)
                             {
@@ -5183,9 +5183,9 @@ namespace SoftEther.WebSocket.Helper
                 {
                     if (cancel != CancellationToken.None)
                     {
-                        if (this.target_list.Contains(cancel) == false)
+                        if (this.targetList.Contains(cancel) == false)
                         {
-                            this.target_list.Add(cancel);
+                            this.targetList.Add(cancel);
                             ret = true;
                         }
                     }
@@ -5200,11 +5200,11 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
 
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 this.halt = true;
                 this.Canceled = true;
@@ -5219,8 +5219,8 @@ namespace SoftEther.WebSocket.Helper
     public class AsyncAutoResetEvent
     {
         object lockobj = new object();
-        List<AsyncManualResetEvent> event_queue = new List<AsyncManualResetEvent>();
-        bool is_set = false;
+        List<AsyncManualResetEvent> eventQueue = new List<AsyncManualResetEvent>();
+        bool isSet = false;
 
         public AsyncCallbackList CallbackList { get; } = new AsyncCallbackList();
 
@@ -5228,9 +5228,9 @@ namespace SoftEther.WebSocket.Helper
         {
             lock (lockobj)
             {
-                if (is_set)
+                if (isSet)
                 {
-                    is_set = false;
+                    isSet = false;
                     cancel = () => { };
                     return Task.CompletedTask;
                 }
@@ -5239,13 +5239,13 @@ namespace SoftEther.WebSocket.Helper
 
                 Task ret = e.WaitAsync();
 
-                event_queue.Add(e);
+                eventQueue.Add(e);
 
                 cancel = () =>
                 {
                     lock (lockobj)
                     {
-                        event_queue.Remove(e);
+                        eventQueue.Remove(e);
                     }
                 };
 
@@ -5253,15 +5253,15 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        volatile int lazy_queued_set = 0;
+        volatile int lazyQueuedSet = 0;
 
 
-        public void SetLazy() => Interlocked.Exchange(ref lazy_queued_set, 1);
+        public void SetLazy() => Interlocked.Exchange(ref lazyQueuedSet, 1);
 
 
         public void SetIfLazyQueued(bool softly = false)
         {
-            if (Interlocked.CompareExchange(ref lazy_queued_set, 0, 1) == 1)
+            if (Interlocked.CompareExchange(ref lazyQueuedSet, 0, 1) == 1)
             {
                 Set(softly);
             }
@@ -5272,15 +5272,15 @@ namespace SoftEther.WebSocket.Helper
             AsyncManualResetEvent ev = null;
             lock (lockobj)
             {
-                if (event_queue.Count >= 1)
+                if (eventQueue.Count >= 1)
                 {
-                    ev = event_queue[event_queue.Count - 1];
-                    event_queue.Remove(ev);
+                    ev = eventQueue[eventQueue.Count - 1];
+                    eventQueue.Remove(ev);
                 }
 
                 if (ev == null)
                 {
-                    is_set = true;
+                    isSet = true;
                 }
             }
 
@@ -5298,17 +5298,17 @@ namespace SoftEther.WebSocket.Helper
         T UserData;
         Action<T> DisposeProc;
 
-        public Holder(Action<T> dispose_proc, T user_data = default(T))
+        public Holder(Action<T> disposeProc, T userData = default(T))
         {
-            this.UserData = user_data;
-            this.DisposeProc = dispose_proc;
+            this.UserData = userData;
+            this.DisposeProc = disposeProc;
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (dispose_flag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 DisposeProc(UserData);
             }
@@ -5323,9 +5323,9 @@ namespace SoftEther.WebSocket.Helper
             public TGroupContext Context { get; }
             public GroupInstance Instance { get; }
 
-            internal GroupHandle(Action<GroupInstance> dispose_proc, GroupInstance group_instance, TKey key) : base(dispose_proc, group_instance)
+            internal GroupHandle(Action<GroupInstance> disposeProc, GroupInstance groupInstance, TKey key) : base(disposeProc, groupInstance)
             {
-                this.Instance = group_instance;
+                this.Instance = groupInstance;
                 this.Context = this.Instance.Context;
                 this.Key = key;
             }
@@ -5338,8 +5338,8 @@ namespace SoftEther.WebSocket.Helper
             public int Num;
         }
 
-        public delegate TGroupContext NewGroupContextDelegate(TKey key, object user_state);
-        public delegate void DeleteGroupContextDelegate(TKey key, TGroupContext group_context, object user_state);
+        public delegate TGroupContext NewGroupContextDelegate(TKey key, object userState);
+        public delegate void DeleteGroupContextDelegate(TKey key, TGroupContext groupContext, object userState);
 
         public object UserState { get; }
 
@@ -5350,11 +5350,11 @@ namespace SoftEther.WebSocket.Helper
 
         object LockObj = new object();
 
-        public GroupManager(NewGroupContextDelegate onNewGroup, DeleteGroupContextDelegate onDeleteGroup, object user_state = null)
+        public GroupManager(NewGroupContextDelegate onNewGroup, DeleteGroupContextDelegate onDeleteGroup, object userState = null)
         {
             NewGroupContextProc = onNewGroup;
             DeleteGroupContextProc = onDeleteGroup;
-            UserState = user_state;
+            UserState = userState;
         }
 
         public GroupHandle Enter(TKey key)
@@ -5395,10 +5395,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall() == false)
+            if (DisposeFlag.IsFirstCall() == false)
                 return;
 
             lock (LockObj)
@@ -5433,13 +5433,13 @@ namespace SoftEther.WebSocket.Helper
 
         CancellationTokenSource CancelSource = new CancellationTokenSource();
 
-        public DelayAction(int timeout, Action<object> action, object user_state = null)
+        public DelayAction(int timeout, Action<object> action, object userState = null)
         {
             if (timeout < 0 || timeout == int.MaxValue) timeout = System.Threading.Timeout.Infinite;
 
             this.Timeout = timeout;
             this.Action = action;
-            this.UserState = user_state;
+            this.UserState = userState;
 
             this.MainTask = MainTaskProc();
         }
@@ -5485,10 +5485,10 @@ namespace SoftEther.WebSocket.Helper
 
         public void Cancel() => Dispose();
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall() == false)
+            if (DisposeFlag.IsFirstCall() == false)
                 return;
 
             CancelSource.Cancel();
@@ -5519,15 +5519,15 @@ namespace SoftEther.WebSocket.Helper
 
         public void Invoke()
         {
-            (Action<object> action, object state)[] array_copy;
+            (Action<object> action, object state)[] arrayCopy;
 
             if (HardCallbackList.Count >= 1)
             {
                 lock (HardCallbackList)
                 {
-                    array_copy = HardCallbackList.ToArray();
+                    arrayCopy = HardCallbackList.ToArray();
                 }
-                foreach (var v in array_copy)
+                foreach (var v in arrayCopy)
                 {
                     try
                     {
@@ -5541,9 +5541,9 @@ namespace SoftEther.WebSocket.Helper
             {
                 lock (SoftCallbackList)
                 {
-                    array_copy = SoftCallbackList.ToArray();
+                    arrayCopy = SoftCallbackList.ToArray();
                 }
-                foreach (var v in array_copy)
+                foreach (var v in arrayCopy)
                 {
                     try
                     {
@@ -5566,7 +5566,7 @@ namespace SoftEther.WebSocket.Helper
     {
         object lockobj = new object();
         volatile TaskCompletionSource<bool> tcs;
-        bool is_set = false;
+        bool isSet = false;
 
         public AsyncCallbackList CallbackList { get; } = new AsyncCallbackList();
 
@@ -5586,7 +5586,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 lock (lockobj)
                 {
-                    return this.is_set;
+                    return this.isSet;
                 }
             }
         }
@@ -5595,7 +5595,7 @@ namespace SoftEther.WebSocket.Helper
         {
             lock (lockobj)
             {
-                if (is_set)
+                if (isSet)
                 {
                     return Task.CompletedTask;
                 }
@@ -5610,7 +5610,7 @@ namespace SoftEther.WebSocket.Helper
         {
             if (softly)
             {
-                if (is_set == false)
+                if (isSet == false)
                 {
                     Task.Factory.StartNew(() => Set(false));
                 }
@@ -5619,9 +5619,9 @@ namespace SoftEther.WebSocket.Helper
             {
                 lock (lockobj)
                 {
-                    if (is_set == false)
+                    if (isSet == false)
                     {
-                        is_set = true;
+                        isSet = true;
                         tcs.TrySetResult(true);
 
                         this.CallbackList.Invoke();
@@ -5634,9 +5634,9 @@ namespace SoftEther.WebSocket.Helper
         {
             lock (lockobj)
             {
-                if (is_set)
+                if (isSet)
                 {
-                    is_set = false;
+                    isSet = false;
                     init();
                 }
             }
@@ -5743,10 +5743,10 @@ namespace SoftEther.WebSocket.Helper
 
         public IPEndPoint IPEndPoint { get => (IPEndPoint)EndPoint; set => EndPoint = value; }
 
-        public Datagram(Memory<byte> data, EndPoint end_point, byte flag = 0)
+        public Datagram(Memory<byte> data, EndPoint endPoint, byte flag = 0)
         {
             Data = data;
-            EndPoint = end_point;
+            EndPoint = endPoint;
             Flag = flag;
         }
     }
@@ -5779,12 +5779,12 @@ namespace SoftEther.WebSocket.Helper
 
         AsyncBulkReceiver<Datagram, int> UdpBulkReader;
 
-        public NonBlockSocket(Socket s, CancellationToken cancel = default(CancellationToken), int tmp_buffer_size = 65536, int max_recv_buffer_size = 65536, int max_recv_udp_queue_size = 4096)
+        public NonBlockSocket(Socket s, CancellationToken cancel = default(CancellationToken), int tmpBufferSize = 65536, int maxRecvBufferSize = 65536, int maxRecvUdpQueueSize = 4096)
         {
-            if (tmp_buffer_size < 65536) tmp_buffer_size = 65536;
-            TmpRecvBuffer = new byte[tmp_buffer_size];
-            MaxRecvFifoSize = max_recv_buffer_size;
-            MaxRecvUdpQueueSize = max_recv_udp_queue_size;
+            if (tmpBufferSize < 65536) tmpBufferSize = 65536;
+            TmpRecvBuffer = new byte[tmpBufferSize];
+            MaxRecvFifoSize = maxRecvBufferSize;
+            MaxRecvUdpQueueSize = maxRecvUdpQueueSize;
 
             EventSendReady.Set();
             EventRecvReady.Set();
@@ -5861,35 +5861,35 @@ namespace SoftEther.WebSocket.Helper
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
-                        Datagram[] recv_packets = await UdpBulkReader.Recv(cancel);
+                        Datagram[] recvPackets = await UdpBulkReader.Recv(cancel);
 
-                        bool full_queue = false;
-                        bool pkt_received = false;
+                        bool fullQueue = false;
+                        bool pktReceived = false;
 
                         lock (RecvUdpQueue)
                         {
-                            foreach (Datagram p in recv_packets)
+                            foreach (Datagram p in recvPackets)
                             {
                                 if (RecvUdpQueue.Count <= MaxRecvUdpQueueSize)
                                 {
                                     RecvUdpQueue.Enqueue(p);
-                                    pkt_received = true;
+                                    pktReceived = true;
                                 }
                                 else
                                 {
-                                    full_queue = true;
+                                    fullQueue = true;
                                     break;
                                 }
                             }
                         }
 
-                        if (full_queue)
+                        if (fullQueue)
                         {
                             await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel },
                                 timeout: 10);
                         }
 
-                        if (pkt_received)
+                        if (pktReceived)
                         {
                             EventRecvReady.Set();
                         }
@@ -5916,16 +5916,16 @@ namespace SoftEther.WebSocket.Helper
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
-                        byte[] send_data = null;
+                        byte[] sendData = null;
 
                         while (cancel.IsCancellationRequested == false)
                         {
                             lock (SendTcpFifo)
                             {
-                                send_data = SendTcpFifo.Read();
+                                sendData = SendTcpFifo.Read();
                             }
 
-                            if (send_data != null && send_data.Length >= 1)
+                            if (sendData != null && sendData.Length >= 1)
                             {
                                 break;
                             }
@@ -5934,7 +5934,7 @@ namespace SoftEther.WebSocket.Helper
                                 events: new AsyncAutoResetEvent[] { EventSendNow });
                         }
 
-                        int r = await Sock.SendAsync(send_data, SocketFlags.None, cancel);
+                        int r = await Sock.SendAsync(sendData, SocketFlags.None, cancel);
                         if (r <= 0) break;
 
                         EventSendReady.Set();
@@ -6052,72 +6052,72 @@ namespace SoftEther.WebSocket.Helper
 
         AsyncReceiveProcDelegate AsyncReceiveProc;
 
-        public AsyncBulkReceiver(AsyncReceiveProcDelegate async_receive_proc, int default_max_count = 1024)
+        public AsyncBulkReceiver(AsyncReceiveProcDelegate asyncReceiveProc, int defaultMaxCount = 1024)
         {
-            DefaultMaxCount = default_max_count;
-            AsyncReceiveProc = async_receive_proc;
+            DefaultMaxCount = defaultMaxCount;
+            AsyncReceiveProc = asyncReceiveProc;
         }
 
-        Task<ValueOrClosed<TUserReturnElement>> pushed_user_task = null;
+        Task<ValueOrClosed<TUserReturnElement>> pushedUserTask = null;
 
-        public async Task<TUserReturnElement[]> Recv(CancellationToken cancel, TUserState state = default(TUserState), int? max_count = null)
+        public async Task<TUserReturnElement[]> Recv(CancellationToken cancel, TUserState state = default(TUserState), int? maxCount = null)
         {
-            if (max_count == null) max_count = DefaultMaxCount;
-            if (max_count <= 0) max_count = int.MaxValue;
+            if (maxCount == null) maxCount = DefaultMaxCount;
+            if (maxCount <= 0) maxCount = int.MaxValue;
             List<TUserReturnElement> ret = new List<TUserReturnElement>();
 
             while (true)
             {
                 cancel.ThrowIfCancellationRequested();
 
-                Task<ValueOrClosed<TUserReturnElement>> user_task;
-                if (pushed_user_task != null)
+                Task<ValueOrClosed<TUserReturnElement>> userTask;
+                if (pushedUserTask != null)
                 {
-                    user_task = pushed_user_task;
-                    pushed_user_task = null;
+                    userTask = pushedUserTask;
+                    pushedUserTask = null;
                 }
                 else
                 {
-                    user_task = AsyncReceiveProc(state);
+                    userTask = AsyncReceiveProc(state);
                 }
-                if (user_task.IsCompleted == false)
+                if (userTask.IsCompleted == false)
                 {
                     if (ret.Count >= 1)
                     {
-                        pushed_user_task = user_task;
+                        pushedUserTask = userTask;
                         break;
                     }
                     else
                     {
                         await WebSocketHelper.WaitObjectsAsync(
-                            tasks: new Task[] { user_task },
+                            tasks: new Task[] { userTask },
                             cancels: new CancellationToken[] { cancel });
 
                         cancel.ThrowIfCancellationRequested();
 
-                        if (user_task.Result.IsOpen)
+                        if (userTask.Result.IsOpen)
                         {
-                            ret.Add(user_task.Result.Value);
+                            ret.Add(userTask.Result.Value);
                         }
                         else
                         {
-                            pushed_user_task = user_task;
+                            pushedUserTask = userTask;
                             break;
                         }
                     }
                 }
                 else
                 {
-                    if (user_task.Result.IsOpen)
+                    if (userTask.Result.IsOpen)
                     {
-                        ret.Add(user_task.Result.Value);
+                        ret.Add(userTask.Result.Value);
                     }
                     else
                     {
                         break;
                     }
                 }
-                if (ret.Count >= max_count) break;
+                if (ret.Count >= maxCount) break;
             }
 
             if (ret.Count >= 1)
@@ -6137,15 +6137,15 @@ namespace SoftEther.WebSocket.Helper
 
         public void Raise(Exception ex) => Add(ex, true);
 
-        public void Add(Exception ex, bool raise_first_exception = false, bool do_not_check_watched_tasks = false)
+        public void Add(Exception ex, bool raiseFirstException = false, bool doNotCheckWatchedTasks = false)
         {
             if (ex == null)
                 ex = new Exception("null exception");
 
-            if (do_not_check_watched_tasks == false)
+            if (doNotCheckWatchedTasks == false)
                 CheckWatchedTasks();
 
-            Exception throwing_exception = null;
+            Exception throwingException = null;
 
             AggregateException aex = ex as AggregateException;
 
@@ -6158,8 +6158,8 @@ namespace SoftEther.WebSocket.Helper
                     foreach (var expi in exp)
                         Queue.Enqueue(expi);
 
-                    if (raise_first_exception)
-                        throwing_exception = Queue.ItemsReadOnly[0];
+                    if (raiseFirstException)
+                        throwingException = Queue.ItemsReadOnly[0];
                 }
             }
             else
@@ -6167,15 +6167,15 @@ namespace SoftEther.WebSocket.Helper
                 lock (SharedQueue<Exception>.GlobalLock)
                 {
                     Queue.Enqueue(ex);
-                    if (raise_first_exception)
-                        throwing_exception = Queue.ItemsReadOnly[0];
+                    if (raiseFirstException)
+                        throwingException = Queue.ItemsReadOnly[0];
                 }
             }
 
             WhenExceptionAdded.Set(true);
 
-            if (throwing_exception != null)
-                throwing_exception.ReThrow();
+            if (throwingException != null)
+                throwingException.ReThrow();
         }
 
         public void Encounter(SharedExceptionQueue other) => this.Queue.Encounter(other.Queue);
@@ -6241,7 +6241,7 @@ namespace SoftEther.WebSocket.Helper
         {
             List<Task> o = new List<Task>();
 
-            List<Exception> exp_list = new List<Exception>();
+            List<Exception> expList = new List<Exception>();
 
             lock (SharedQueue<Exception>.GlobalLock)
             {
@@ -6250,9 +6250,9 @@ namespace SoftEther.WebSocket.Helper
                     if (t.IsCompleted)
                     {
                         if (t.IsFaulted)
-                            exp_list.Add(t.Exception);
+                            expList.Add(t.Exception);
                         else if (t.IsCanceled)
-                            exp_list.Add(new TaskCanceledException());
+                            expList.Add(new TaskCanceledException());
 
                         o.Add(t);
                     }
@@ -6262,8 +6262,8 @@ namespace SoftEther.WebSocket.Helper
                     WatchedTasks.Remove(t);
             }
 
-            foreach (Exception ex in exp_list)
-                Add(ex, do_not_check_watched_tasks: true);
+            foreach (Exception ex in expList)
+                Add(ex, doNotCheckWatchedTasks: true);
         }
     }
 
@@ -6271,17 +6271,17 @@ namespace SoftEther.WebSocket.Helper
     {
         class QueueBody
         {
-            static long global_timestamp;
+            static long globalTimestamp;
 
             public QueueBody Next;
 
             public SortedList<long, T> List = new SortedList<long, T>();
             public readonly int MaxItems;
 
-            public QueueBody(int max_items)
+            public QueueBody(int maxItems)
             {
-                if (max_items <= 0) max_items = int.MaxValue;
-                MaxItems = max_items;
+                if (maxItems <= 0) maxItems = int.MaxValue;
+                MaxItems = maxItems;
             }
 
             public void Enqueue(T item, bool distinct = false)
@@ -6290,7 +6290,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     if (List.Count > MaxItems) return;
                     if (distinct && List.ContainsValue(item)) return;
-                    long ts = Interlocked.Increment(ref global_timestamp);
+                    long ts = Interlocked.Increment(ref globalTimestamp);
                     List.Add(ts, item);
                 }
             }
@@ -6333,14 +6333,14 @@ namespace SoftEther.WebSocket.Helper
                         if (q3.List.Count > q3.MaxItems)
                         {
                             int num = 0;
-                            List<long> remove_list = new List<long>();
+                            List<long> removeList = new List<long>();
                             foreach (long ts in q3.List.Keys)
                             {
                                 num++;
                                 if (num > q3.MaxItems)
-                                    remove_list.Add(ts);
+                                    removeList.Add(ts);
                             }
-                            foreach (long ts in remove_list)
+                            foreach (long ts in removeList)
                                 q3.List.Remove(ts);
                         }
                         q1.List = null;
@@ -6368,10 +6368,10 @@ namespace SoftEther.WebSocket.Helper
 
         public bool Distinct { get; }
 
-        public SharedQueue(int max_items = 0, bool distinct = false)
+        public SharedQueue(int maxItems = 0, bool distinct = false)
         {
             Distinct = distinct;
-            First = new QueueBody(max_items);
+            First = new QueueBody(maxItems);
         }
 
         public void Encounter(SharedQueue<T> other)
@@ -6490,7 +6490,7 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        double MeasureInternal(int duration, TUserVariable state, Action<TUserVariable, int> proc, int interations_pass_value)
+        double MeasureInternal(int duration, TUserVariable state, Action<TUserVariable, int> proc, int interationsPassValue)
         {
             StopFlag = false;
 
@@ -6514,14 +6514,14 @@ namespace SoftEther.WebSocket.Helper
             TimeSpan ts1 = sw.Elapsed;
             while (StopFlag == false)
             {
-                if (Init == null && interations_pass_value == 0)
+                if (Init == null && interationsPassValue == 0)
                 {
                     DummyLoopProc(state, Iterations);
                 }
                 else
                 {
-                    proc(state, interations_pass_value);
-                    if (interations_pass_value == 0)
+                    proc(state, interationsPassValue);
+                    if (interationsPassValue == 0)
                     {
                         for (int i = 0; i < Iterations; i++) Limbo.SInt++;
                     }
@@ -6533,9 +6533,9 @@ namespace SoftEther.WebSocket.Helper
             thread.Join();
 
             double nano = (double)ts.Ticks * 100.0;
-            double nano_per_call = nano / (double)count;
+            double nanoPerCall = nano / (double)count;
 
-            return nano_per_call;
+            return nanoPerCall;
         }
 
         public double Start(int duration = 0)
@@ -6628,10 +6628,10 @@ namespace SoftEther.WebSocket.Helper
                     checker.List.Add(Id, name);
             }
 
-            Once dispose_flag;
+            Once DisposeFlag;
             public void Dispose()
             {
-                if (dispose_flag.IsFirstCall())
+                if (DisposeFlag.IsFirstCall())
                 {
                     lock (Checker.List)
                     {
@@ -6674,37 +6674,37 @@ namespace SoftEther.WebSocket.Helper
             {
                 Debug.Assert(Last != null);
                 Debug.Assert(Count >= 1);
-                var old_first = First;
-                var nn = new FastLinkedListNode<T>() { Value = value, Next = old_first, Previous = null };
-                Debug.Assert(old_first.Previous == null);
-                old_first.Previous = nn;
+                var oldFirst = First;
+                var nn = new FastLinkedListNode<T>() { Value = value, Next = oldFirst, Previous = null };
+                Debug.Assert(oldFirst.Previous == null);
+                oldFirst.Previous = nn;
                 First = nn;
                 Count++;
                 return nn;
             }
         }
 
-        public void AddFirst(FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        public void AddFirst(FastLinkedListNode<T> chainFirst, FastLinkedListNode<T> chainLast, int chainedCount)
         {
             if (First == null)
             {
                 Debug.Assert(Last == null);
                 Debug.Assert(Count == 0);
-                First = chain_first;
-                Last = chain_last;
-                chain_first.Previous = null;
-                chain_last.Next = null;
-                Count = chained_count;
+                First = chainFirst;
+                Last = chainLast;
+                chainFirst.Previous = null;
+                chainLast.Next = null;
+                Count = chainedCount;
             }
             else
             {
                 Debug.Assert(Last != null);
                 Debug.Assert(Count >= 1);
-                var old_first = First;
-                Debug.Assert(old_first.Previous == null);
-                old_first.Previous = chain_last;
-                First = chain_first;
-                Count += chained_count;
+                var oldFirst = First;
+                Debug.Assert(oldFirst.Previous == null);
+                oldFirst.Previous = chainLast;
+                First = chainFirst;
+                Count += chainedCount;
             }
         }
 
@@ -6722,94 +6722,94 @@ namespace SoftEther.WebSocket.Helper
             {
                 Debug.Assert(First != null);
                 Debug.Assert(Count >= 1);
-                var old_last = Last;
-                var nn = new FastLinkedListNode<T>() { Value = value, Next = null, Previous = old_last };
-                Debug.Assert(old_last.Next == null);
-                old_last.Next = nn;
+                var oldLast = Last;
+                var nn = new FastLinkedListNode<T>() { Value = value, Next = null, Previous = oldLast };
+                Debug.Assert(oldLast.Next == null);
+                oldLast.Next = nn;
                 Last = nn;
                 Count++;
                 return nn;
             }
         }
 
-        public void AddLast(FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        public void AddLast(FastLinkedListNode<T> chainFirst, FastLinkedListNode<T> chainLast, int chainedCount)
         {
             if (Last == null)
             {
                 Debug.Assert(First == null);
                 Debug.Assert(Count == 0);
-                First = chain_first;
-                Last = chain_last;
-                chain_first.Previous = null;
-                chain_last.Next = null;
-                Count = chained_count;
+                First = chainFirst;
+                Last = chainLast;
+                chainFirst.Previous = null;
+                chainLast.Next = null;
+                Count = chainedCount;
             }
             else
             {
                 Debug.Assert(First != null);
                 Debug.Assert(Count >= 1);
-                var old_last = Last;
-                Debug.Assert(old_last.Next == null);
-                old_last.Next = chain_first;
-                Last = chain_last;
-                Count += chained_count;
+                var oldLast = Last;
+                Debug.Assert(oldLast.Next == null);
+                oldLast.Next = chainFirst;
+                Last = chainLast;
+                Count += chainedCount;
             }
         }
 
-        public FastLinkedListNode<T> AddAfter(FastLinkedListNode<T> prev_node, T value)
+        public FastLinkedListNode<T> AddAfter(FastLinkedListNode<T> prevNode, T value)
         {
-            var next_node = prev_node.Next;
+            var nextNode = prevNode.Next;
             Debug.Assert(First != null && Last != null);
-            Debug.Assert(next_node != null || Last == prev_node);
-            Debug.Assert(next_node == null || next_node.Previous == prev_node);
-            var nn = new FastLinkedListNode<T>() { Value = value, Next = next_node, Previous = prev_node };
-            prev_node.Next = nn;
-            if (next_node != null) next_node.Previous = nn;
-            if (Last == prev_node) Last = nn;
+            Debug.Assert(nextNode != null || Last == prevNode);
+            Debug.Assert(nextNode == null || nextNode.Previous == prevNode);
+            var nn = new FastLinkedListNode<T>() { Value = value, Next = nextNode, Previous = prevNode };
+            prevNode.Next = nn;
+            if (nextNode != null) nextNode.Previous = nn;
+            if (Last == prevNode) Last = nn;
             Count++;
             return nn;
         }
 
-        public void AddAfter(FastLinkedListNode<T> prev_node, FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        public void AddAfter(FastLinkedListNode<T> prevNode, FastLinkedListNode<T> chainFirst, FastLinkedListNode<T> chainLast, int chainedCount)
         {
-            var next_node = prev_node.Next;
+            var nextNode = prevNode.Next;
             Debug.Assert(First != null && Last != null);
-            Debug.Assert(next_node != null || Last == prev_node);
-            Debug.Assert(next_node == null || next_node.Previous == prev_node);
-            prev_node.Next = chain_first;
-            chain_first.Previous = prev_node;
-            if (next_node != null) next_node.Previous = chain_last;
-            chain_last.Previous = next_node;
-            if (Last == prev_node) Last = chain_last;
-            Count += chained_count;
+            Debug.Assert(nextNode != null || Last == prevNode);
+            Debug.Assert(nextNode == null || nextNode.Previous == prevNode);
+            prevNode.Next = chainFirst;
+            chainFirst.Previous = prevNode;
+            if (nextNode != null) nextNode.Previous = chainLast;
+            chainLast.Previous = nextNode;
+            if (Last == prevNode) Last = chainLast;
+            Count += chainedCount;
         }
 
-        public FastLinkedListNode<T> AddBefore(FastLinkedListNode<T> next_node, T value)
+        public FastLinkedListNode<T> AddBefore(FastLinkedListNode<T> nextNode, T value)
         {
-            var prev_node = next_node.Previous;
+            var prevNode = nextNode.Previous;
             Debug.Assert(First != null && Last != null);
-            Debug.Assert(prev_node != null || First == next_node);
-            Debug.Assert(prev_node == null || prev_node.Next == next_node);
-            var nn = new FastLinkedListNode<T>() { Value = value, Next = next_node, Previous = prev_node };
-            next_node.Previous = nn;
-            if (prev_node != null) prev_node.Next = nn;
-            if (First == next_node) First = nn;
+            Debug.Assert(prevNode != null || First == nextNode);
+            Debug.Assert(prevNode == null || prevNode.Next == nextNode);
+            var nn = new FastLinkedListNode<T>() { Value = value, Next = nextNode, Previous = prevNode };
+            nextNode.Previous = nn;
+            if (prevNode != null) prevNode.Next = nn;
+            if (First == nextNode) First = nn;
             Count++;
             return nn;
         }
 
-        public void AddBefore(FastLinkedListNode<T> next_node, FastLinkedListNode<T> chain_first, FastLinkedListNode<T> chain_last, int chained_count)
+        public void AddBefore(FastLinkedListNode<T> nextNode, FastLinkedListNode<T> chainFirst, FastLinkedListNode<T> chainLast, int chainedCount)
         {
-            var prev_node = next_node.Previous;
+            var prevNode = nextNode.Previous;
             Debug.Assert(First != null && Last != null);
-            Debug.Assert(prev_node != null || First == next_node);
-            Debug.Assert(prev_node == null || prev_node.Next == next_node);
-            next_node.Previous = chain_last;
-            chain_last.Next = next_node;
-            if (prev_node != null) prev_node.Next = chain_first;
-            chain_first.Previous = prev_node;
-            if (First == next_node) First = chain_first;
-            Count += chained_count;
+            Debug.Assert(prevNode != null || First == nextNode);
+            Debug.Assert(prevNode == null || prevNode.Next == nextNode);
+            nextNode.Previous = chainLast;
+            chainLast.Next = nextNode;
+            if (prevNode != null) prevNode.Next = chainFirst;
+            chainFirst.Previous = prevNode;
+            if (First == nextNode) First = chainFirst;
+            Count += chainedCount;
         }
 
         public void Remove(FastLinkedListNode<T> node)
@@ -6884,13 +6884,13 @@ namespace SoftEther.WebSocket.Helper
         public long Now { get; private set; } = FastTick64.Now;
         public bool AutomaticUpdateNow { get; }
 
-        public LocalTimer(bool automatic_update_now = true)
+        public LocalTimer(bool automaticUpdateNow = true)
         {
-            AutomaticUpdateNow = automatic_update_now;
+            AutomaticUpdateNow = automaticUpdateNow;
         }
 
         public void UpdateNow() => Now = FastTick64.Now;
-        public void UpdateNow(long now_tick) => Now = now_tick;
+        public void UpdateNow(long nowTick) => Now = nowTick;
 
         public long AddTick(long tick)
         {
@@ -6915,15 +6915,15 @@ namespace SoftEther.WebSocket.Helper
             int ret = Timeout.Infinite;
             if (AutomaticUpdateNow) UpdateNow();
             long now = Now;
-            List<long> delete_list = null;
+            List<long> deleteList = null;
 
             foreach (long v in List)
             {
                 if (now >= v)
                 {
                     ret = 0;
-                    if (delete_list == null) delete_list = new List<long>();
-                    delete_list.Add(v);
+                    if (deleteList == null) deleteList = new List<long>();
+                    deleteList.Add(v);
                 }
                 else
                 {
@@ -6931,9 +6931,9 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            if (delete_list != null)
+            if (deleteList != null)
             {
-                foreach (long v in delete_list)
+                foreach (long v in deleteList)
                 {
                     List.Remove(v);
                     Hash.Remove(v);
@@ -7049,9 +7049,9 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public override bool Equals(BackgroundStateData other_arg)
+        public override bool Equals(BackgroundStateData otherArg)
         {
-            HostNetInfo other = other_arg as HostNetInfo;
+            HostNetInfo other = otherArg as HostNetInfo;
             if (string.Equals(this.HostName, other.HostName) == false) return false;
             if (string.Equals(this.DomainName, other.DomainName) == false) return false;
             if (this.IsIPv4Supported != other.IsIPv4Supported) return false;
@@ -7060,11 +7060,11 @@ namespace SoftEther.WebSocket.Helper
             return true;
         }
 
-        Action call_me_cache = null;
+        Action callMeCache = null;
 
-        public override void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action call_me)
+        public override void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action callMe)
         {
-            call_me_cache = call_me;
+            callMeCache = callMe;
 
             NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
             NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
@@ -7072,14 +7072,14 @@ namespace SoftEther.WebSocket.Helper
 
         private void NetworkChange_NetworkAddressChanged(object sender, EventArgs e)
         {
-            call_me_cache();
+            callMeCache();
 
             NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
         }
 
         private void NetworkChange_NetworkAvailabilityChanged(object sender, NetworkAvailabilityEventArgs e)
         {
-            call_me_cache();
+            callMeCache();
 
             NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
         }
@@ -7161,13 +7161,13 @@ namespace SoftEther.WebSocket.Helper
         public const int DefaultMaxPollingInterval = 60 * 1000;
         public const int DefaultIdleTimeoutToFreeThreadInterval = 180 * 1000;
 
-        public BackgroundStateDataUpdatePolicy(int initial_polling_interval = DefaultInitialPollingInterval,
-            int max_polling_interval = DefaultMaxPollingInterval,
-            int timeout_to_stop_thread = DefaultIdleTimeoutToFreeThreadInterval)
+        public BackgroundStateDataUpdatePolicy(int initialPollingInterval = DefaultInitialPollingInterval,
+            int maxPollingInterval = DefaultMaxPollingInterval,
+            int timeoutToStopThread = DefaultIdleTimeoutToFreeThreadInterval)
         {
-            InitialPollingInterval = initial_polling_interval;
-            MaxPollingInterval = max_polling_interval;
-            IdleTimeoutToFreeThreadInterval = timeout_to_stop_thread;
+            InitialPollingInterval = initialPollingInterval;
+            MaxPollingInterval = maxPollingInterval;
+            IdleTimeoutToFreeThreadInterval = timeoutToStopThread;
         }
 
         public static BackgroundStateDataUpdatePolicy Default { get; }
@@ -7195,7 +7195,7 @@ namespace SoftEther.WebSocket.Helper
 
         public abstract bool Equals(BackgroundStateData other);
 
-        public abstract void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action call_me);
+        public abstract void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action callMe);
     }
 
     public static class BackgroundState<TData>
@@ -7228,8 +7228,8 @@ namespace SoftEther.WebSocket.Helper
 
         static object LockObj = new object();
         static Thread thread = null;
-        static AutoResetEvent thread_signal = new AutoResetEvent(false);
-        static bool callback_is_called = false;
+        static AutoResetEvent threadSignal = new AutoResetEvent(false);
+        static bool callbackIsCalled = false;
 
         public static FastEventListenerList<TData, int> EventListener { get; } = new FastEventListenerList<TData, int>();
 
@@ -7245,9 +7245,9 @@ namespace SoftEther.WebSocket.Helper
                     {
                         ret.RegisterSystemStateChangeNotificationCallbackOnlyOnce(() =>
                         {
-                            callback_is_called = true;
+                            callbackIsCalled = true;
                             GetState();
-                            thread_signal.Set();
+                            threadSignal.Set();
                         });
 
                         CallbackIsRegistered = true;
@@ -7278,11 +7278,11 @@ namespace SoftEther.WebSocket.Helper
             }
             else
             {
-                BackgroundStateDataUpdatePolicy update_policy = BackgroundStateDataUpdatePolicy.Default;
+                BackgroundStateDataUpdatePolicy updatePolicy = BackgroundStateDataUpdatePolicy.Default;
                 TData data = TryGetTData();
                 if (data != null)
                 {
-                    update_policy = data.DataUpdatePolicy;
+                    updatePolicy = data.DataUpdatePolicy;
 
                     bool inc = false;
                     if (CacheData == null)
@@ -7303,13 +7303,13 @@ namespace SoftEther.WebSocket.Helper
                     }
                 }
 
-                EnsureStartThreadIfStopped(update_policy);
+                EnsureStartThreadIfStopped(updatePolicy);
 
                 return CacheData;
             }
         }
 
-        static void EnsureStartThreadIfStopped(BackgroundStateDataUpdatePolicy update_policy)
+        static void EnsureStartThreadIfStopped(BackgroundStateDataUpdatePolicy updatePolicy)
         {
             lock (LockObj)
             {
@@ -7319,12 +7319,12 @@ namespace SoftEther.WebSocket.Helper
                     thread.IsBackground = true;
                     thread.Priority = ThreadPriority.BelowNormal;
                     thread.Name = $"MaintainThread for BackgroundState<{typeof(TData).ToString()}>";
-                    thread.Start(update_policy);
+                    thread.Start(updatePolicy);
                 }
             }
         }
 
-        static int next_interval = 0;
+        static int nextInterval = 0;
 
         static void MaintainThread(object param)
         {
@@ -7333,43 +7333,43 @@ namespace SoftEther.WebSocket.Helper
 
             LocalTimer tm = new LocalTimer();
 
-            if (next_interval == 0)
+            if (nextInterval == 0)
             {
-                next_interval = policy.InitialPollingInterval;
+                nextInterval = policy.InitialPollingInterval;
             }
 
-            long next_getdata_tick = tm.AddTimeout(next_interval);
+            long nextGetDataTick = tm.AddTimeout(nextInterval);
 
-            long next_idle_detect_tick = tm.AddTimeout(policy.IdleTimeoutToFreeThreadInterval);
+            long nextIdleDetectTick = tm.AddTimeout(policy.IdleTimeoutToFreeThreadInterval);
 
-            int last_numread = NumRead;
+            int lastNumRead = NumRead;
 
             while (true)
             {
-                if (FastTick64.Now >= next_getdata_tick || callback_is_called)
+                if (FastTick64.Now >= nextGetDataTick || callbackIsCalled)
                 {
                     TData data = TryGetTData();
 
-                    next_interval = Math.Min(next_interval + policy.InitialPollingInterval, policy.MaxPollingInterval);
+                    nextInterval = Math.Min(nextInterval + policy.InitialPollingInterval, policy.MaxPollingInterval);
                     bool inc = false;
 
                     if (data != null)
                     {
                         if (data.Equals(CacheData) == false)
                         {
-                            next_interval = policy.InitialPollingInterval;
+                            nextInterval = policy.InitialPollingInterval;
                             inc = true;
                         }
                         CacheData = data;
                     }
                     else
                     {
-                        next_interval = policy.InitialPollingInterval;
+                        nextInterval = policy.InitialPollingInterval;
                     }
 
-                    if (callback_is_called)
+                    if (callbackIsCalled)
                     {
-                        next_interval = policy.InitialPollingInterval;
+                        nextInterval = policy.InitialPollingInterval;
                     }
 
                     if (inc)
@@ -7378,18 +7378,18 @@ namespace SoftEther.WebSocket.Helper
                         EventListener.Fire(CacheData, 0);
                     }
 
-                    next_getdata_tick = tm.AddTimeout(next_interval);
+                    nextGetDataTick = tm.AddTimeout(nextInterval);
 
-                    callback_is_called = false;
+                    callbackIsCalled = false;
                 }
 
-                if (FastTick64.Now >= next_idle_detect_tick)
+                if (FastTick64.Now >= nextIdleDetectTick)
                 {
                     int numread = NumRead;
-                    if (last_numread != numread)
+                    if (lastNumRead != numread)
                     {
-                        last_numread = numread;
-                        next_idle_detect_tick = tm.AddTimeout(policy.IdleTimeoutToFreeThreadInterval);
+                        lastNumRead = numread;
+                        nextIdleDetectTick = tm.AddTimeout(policy.IdleTimeoutToFreeThreadInterval);
                     }
                     else
                     {
@@ -7402,7 +7402,7 @@ namespace SoftEther.WebSocket.Helper
 
                 i = Math.Max(i, 100);
 
-                thread_signal.WaitOne(i);
+                threadSignal.WaitOne(i);
             }
         }
     }
@@ -7454,20 +7454,20 @@ namespace SoftEther.WebSocket.Helper
                 InternalTask = ListenLoop();
             }
 
-            static internal string MakeHashKey(IPVersion ip_ver, IPAddress ip_address, int port)
+            static internal string MakeHashKey(IPVersion ipVer, IPAddress ipAddress, int port)
             {
-                return $"{port} / {ip_address} / {ip_address.AddressFamily} / {ip_ver}";
+                return $"{port} / {ipAddress} / {ipAddress.AddressFamily} / {ipVer}";
             }
 
             async Task ListenLoop()
             {
-                AsyncAutoResetEvent network_changed_event = new AsyncAutoResetEvent();
-                int event_register_id = BackgroundState<HostNetInfo>.EventListener.RegisterAsyncEvent(network_changed_event);
+                AsyncAutoResetEvent networkChangedEvent = new AsyncAutoResetEvent();
+                int eventRegisterId = BackgroundState<HostNetInfo>.EventListener.RegisterAsyncEvent(networkChangedEvent);
 
                 Status = ListenStatus.Trying;
 
-                int num_retry = 0;
-                int last_network_info_ver = BackgroundState<HostNetInfo>.Current.Version;
+                int numRetry = 0;
+                int lastNetworkInfoVer = BackgroundState<HostNetInfo>.Current.Version;
 
                 try
                 {
@@ -7476,19 +7476,19 @@ namespace SoftEther.WebSocket.Helper
                         Status = ListenStatus.Trying;
                         InternalSelfCancelToken.ThrowIfCancellationRequested();
 
-                        int sleep_delay = (int)Math.Min(RetryIntervalStandard * num_retry, RetryIntervalMax);
-                        if (sleep_delay >= 1)
-                            sleep_delay = WebSocketHelper.RandSInt31() % sleep_delay;
-                        await WebSocketHelper.WaitObjectsAsync(timeout: sleep_delay,
+                        int sleepDelay = (int)Math.Min(RetryIntervalStandard * numRetry, RetryIntervalMax);
+                        if (sleepDelay >= 1)
+                            sleepDelay = WebSocketHelper.RandSInt31() % sleepDelay;
+                        await WebSocketHelper.WaitObjectsAsync(timeout: sleepDelay,
                             cancels: new CancellationToken[] { InternalSelfCancelToken },
-                            events: new AsyncAutoResetEvent[] { network_changed_event } );
-                        num_retry++;
+                            events: new AsyncAutoResetEvent[] { networkChangedEvent } );
+                        numRetry++;
 
-                        int network_info_ver = BackgroundState<HostNetInfo>.Current.Version;
-                        if (last_network_info_ver != network_info_ver)
+                        int networkInfoVer = BackgroundState<HostNetInfo>.Current.Version;
+                        if (lastNetworkInfoVer != networkInfoVer)
                         {
-                            last_network_info_ver = network_info_ver;
-                            num_retry = 0;
+                            lastNetworkInfoVer = networkInfoVer;
+                            numRetry = 0;
                         }
 
                         InternalSelfCancelToken.ThrowIfCancellationRequested();
@@ -7537,7 +7537,7 @@ namespace SoftEther.WebSocket.Helper
                 }
                 finally
                 {
-                    BackgroundState<HostNetInfo>.EventListener.UnregisterAsyncEvent(event_register_id);
+                    BackgroundState<HostNetInfo>.EventListener.UnregisterAsyncEvent(eventRegisterId);
                     Status = ListenStatus.Stopped;
                 }
             }
@@ -7572,21 +7572,21 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public TcpListenManager(Func<TcpListenManager, Listener, Socket, Task> accepted_proc)
+        public TcpListenManager(Func<TcpListenManager, Listener, Socket, Task> acceptedProc)
         {
-            AcceptedProc = accepted_proc;
+            AcceptedProc = acceptedProc;
         }
 
-        public Listener Add(int port, IPVersion? ip_ver = null, IPAddress addr = null)
+        public Listener Add(int port, IPVersion? ipVer = null, IPAddress addr = null)
         {
             if (addr == null)
-                addr = ((ip_ver ?? IPVersion.IPv4) == IPVersion.IPv4) ? IPAddress.Any : IPAddress.IPv6Any;
-            if (ip_ver == null)
+                addr = ((ipVer ?? IPVersion.IPv4) == IPVersion.IPv4) ? IPAddress.Any : IPAddress.IPv6Any;
+            if (ipVer == null)
             {
                 if (addr.AddressFamily == AddressFamily.InterNetwork)
-                    ip_ver = IPVersion.IPv4;
+                    ipVer = IPVersion.IPv4;
                 else if (addr.AddressFamily == AddressFamily.InterNetworkV6)
-                    ip_ver = IPVersion.IPv6;
+                    ipVer = IPVersion.IPv6;
                 else
                     throw new ArgumentException("Unsupported AddressFamily.");
             }
@@ -7594,13 +7594,13 @@ namespace SoftEther.WebSocket.Helper
 
             lock (LockObj)
             {
-                if (dispose_flag.IsSet) throw new ObjectDisposedException("TcpListenManager");
+                if (DisposeFlag.IsSet) throw new ObjectDisposedException("TcpListenManager");
 
-                var s = Search(Listener.MakeHashKey((IPVersion)ip_ver, addr, port));
+                var s = Search(Listener.MakeHashKey((IPVersion)ipVer, addr, port));
                 if (s != null)
                     return s;
-                s = new Listener(this, (IPVersion)ip_ver, addr, port);
-                List.Add(Listener.MakeHashKey((IPVersion)ip_ver, addr, port), s);
+                s = new Listener(this, (IPVersion)ipVer, addr, port);
+                List.Add(Listener.MakeHashKey((IPVersion)ipVer, addr, port), s);
                 return s;
             }
         }
@@ -7610,19 +7610,19 @@ namespace SoftEther.WebSocket.Helper
             Listener s;
             lock (LockObj)
             {
-                string hash_key = Listener.MakeHashKey(listener.IPVersion, listener.IPAddress, listener.Port);
-                s = Search(hash_key);
+                string hashKey = Listener.MakeHashKey(listener.IPVersion, listener.IPAddress, listener.Port);
+                s = Search(hashKey);
                 if (s == null)
                     return false;
-                List.Remove(hash_key);
+                List.Remove(hashKey);
             }
             await s.InternalStopAsync();
             return true;
         }
 
-        Listener Search(string hash_key)
+        Listener Search(string hashKey)
         {
-            if (List.TryGetValue(hash_key, out Listener ret) == false)
+            if (List.TryGetValue(hashKey, out Listener ret) == false)
                 return null;
             return ret;
         }
@@ -7662,10 +7662,10 @@ namespace SoftEther.WebSocket.Helper
         }
 
         bool disposed = false;
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 List<Listener> o = new List<Listener>();
                 lock (LockObj)
@@ -7699,17 +7699,17 @@ namespace SoftEther.WebSocket.Helper
     public class SocketDisconnectedException : DisconnectedException { }
     public class BaseStreamDisconnectedException : DisconnectedException { }
 
-    public delegate void FastEventCallback<TCaller, TEventType>(TCaller buffer, TEventType type, object user_state);
+    public delegate void FastEventCallback<TCaller, TEventType>(TCaller buffer, TEventType type, object userState);
 
     public class FastEvent<TCaller, TEventType>
     {
         public FastEventCallback<TCaller, TEventType> Proc { get; }
         public object UserState { get; }
 
-        public FastEvent(FastEventCallback<TCaller, TEventType> proc, object user_state)
+        public FastEvent(FastEventCallback<TCaller, TEventType> proc, object userState)
         {
             this.Proc = proc;
-            this.UserState = user_state;
+            this.UserState = userState;
         }
 
         public void CallSafe(TCaller buffer, TEventType type)
@@ -7728,10 +7728,10 @@ namespace SoftEther.WebSocket.Helper
         FastReadList<AutoResetEvent> EventList;
         FastReadList<AsyncAutoResetEvent> AsyncEventList;
 
-        public int RegisterCallback(FastEventCallback<TCaller, TEventType> proc, object user_state = null)
+        public int RegisterCallback(FastEventCallback<TCaller, TEventType> proc, object userState = null)
         {
             if (proc == null) return 0;
-            return ListenerList.Add(new FastEvent<TCaller, TEventType>(proc, user_state));
+            return ListenerList.Add(new FastEvent<TCaller, TEventType>(proc, userState));
         }
 
         public bool UnregisterCallback(int id)
@@ -7763,19 +7763,19 @@ namespace SoftEther.WebSocket.Helper
 
         public void Fire(TCaller caller, TEventType type)
         {
-            var listener_list = ListenerList.GetListFast();
-            if (listener_list != null)
-                foreach (var e in listener_list)
+            var listenerList = ListenerList.GetListFast();
+            if (listenerList != null)
+                foreach (var e in listenerList)
                     e.CallSafe(caller, type);
 
-            var event_list = EventList.GetListFast();
-            if (event_list != null)
-                foreach (var e in event_list)
+            var eventList = EventList.GetListFast();
+            if (eventList != null)
+                foreach (var e in eventList)
                     e.Set();
 
-            var async_event_list = AsyncEventList.GetListFast();
-            if (async_event_list != null)
-                foreach (var e in async_event_list)
+            var asyncEventList = AsyncEventList.GetListFast();
+            if (asyncEventList != null)
+                foreach (var e in asyncEventList)
                     e.Set();
         }
     }
@@ -7812,18 +7812,18 @@ namespace SoftEther.WebSocket.Helper
         FastEventListenerList<IFastBufferState, FastBufferCallbackEventType> EventListeners { get; }
 
         void CompleteRead();
-        void CompleteWrite(bool check_disconnect = true);
+        void CompleteWrite(bool checkDisconnect = true);
     }
 
     public interface IFastBuffer<T> : IFastBufferState
     {
         void Clear();
         void Enqueue(T item);
-        void EnqueueAll(Span<T> item_list);
-        void EnqueueAllWithLock(Span<T> item_list);
-        List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true);
-        List<T> DequeueAll(out long total_read_size);
-        List<T> DequeueAllWithLock(out long total_read_size);
+        void EnqueueAll(Span<T> itemList);
+        void EnqueueAllWithLock(Span<T> itemList);
+        List<T> Dequeue(long minReadSize, out long totalReadSize, bool allowSplitSegments = true);
+        List<T> DequeueAll(out long totalReadSize);
+        List<T> DequeueAllWithLock(out long totalReadSize);
         long DequeueAllAndEnqueueToOther(IFastBuffer<T> other);
     }
 
@@ -7833,11 +7833,11 @@ namespace SoftEther.WebSocket.Helper
         public readonly long Pin;
         public readonly long RelativeOffset;
 
-        public FastBufferSegment(T item, long pin, long relative_offset)
+        public FastBufferSegment(T item, long pin, long relativeOffset)
         {
             Item = item;
             Pin = pin;
-            RelativeOffset = relative_offset;
+            RelativeOffset = relativeOffset;
         }
     }
 
@@ -7854,9 +7854,9 @@ namespace SoftEther.WebSocket.Helper
 
         public int ReAllocMemSize { get; }
 
-        public Fifo(int realloc_mem_size = FifoReAllocSize)
+        public Fifo(int reAllocMemSize = FifoReAllocSize)
         {
-            ReAllocMemSize = realloc_mem_size;
+            ReAllocMemSize = reAllocMemSize;
             Size = Position = 0;
             PhysicalData = new T[FifoInitSize];
         }
@@ -7885,27 +7885,27 @@ namespace SoftEther.WebSocket.Helper
         {
             checked
             {
-                int old_size, new_size, need_size;
+                int oldSize, newSize, needSize;
 
-                old_size = Size;
-                new_size = old_size + size;
-                need_size = Position + new_size;
+                oldSize = Size;
+                newSize = oldSize + size;
+                needSize = Position + newSize;
 
-                bool realloc_flag = false;
-                int new_physical_size = PhysicalData.Length;
-                while (need_size > new_physical_size)
+                bool reallocFlag = false;
+                int newPhysicalSize = PhysicalData.Length;
+                while (needSize > newPhysicalSize)
                 {
-                    new_physical_size = Math.Max(new_physical_size, FifoInitSize) * 3;
-                    realloc_flag = true;
+                    newPhysicalSize = Math.Max(newPhysicalSize, FifoInitSize) * 3;
+                    reallocFlag = true;
                 }
 
-                if (realloc_flag)
-                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, new_physical_size);
+                if (reallocFlag)
+                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, newPhysicalSize);
 
                 if (src != null)
-                    src.CopyTo(PhysicalData.AsSpan().Slice(Position + old_size));
+                    src.CopyTo(PhysicalData.AsSpan().Slice(Position + oldSize));
 
-                Size = new_size;
+                Size = newSize;
             }
         }
 
@@ -7913,27 +7913,27 @@ namespace SoftEther.WebSocket.Helper
         {
             checked
             {
-                int old_size, new_size, need_size;
+                int oldSize, newSize, needSize;
 
-                old_size = Size;
-                new_size = old_size + 1;
-                need_size = Position + new_size;
+                oldSize = Size;
+                newSize = oldSize + 1;
+                needSize = Position + newSize;
 
-                bool realloc_flag = false;
-                int new_physical_size = PhysicalData.Length;
-                while (need_size > new_physical_size)
+                bool reallocFlag = false;
+                int newPhysicalSize = PhysicalData.Length;
+                while (needSize > newPhysicalSize)
                 {
-                    new_physical_size = Math.Max(new_physical_size, FifoInitSize) * 3;
-                    realloc_flag = true;
+                    newPhysicalSize = Math.Max(newPhysicalSize, FifoInitSize) * 3;
+                    reallocFlag = true;
                 }
 
-                if (realloc_flag)
-                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, new_physical_size);
+                if (reallocFlag)
+                    PhysicalData = MemoryHelper.ReAlloc(PhysicalData, newPhysicalSize);
 
                 if (src != null)
-                    PhysicalData[Position + old_size] = src;
+                    PhysicalData[Position + oldSize] = src;
 
-                Size = new_size;
+                Size = newSize;
             }
         }
 
@@ -7945,8 +7945,8 @@ namespace SoftEther.WebSocket.Helper
 
         public T[] Read(int size)
         {
-            int read_size = Math.Min(this.Size, size);
-            T[] ret = new T[read_size];
+            int readSize = Math.Min(this.Size, size);
+            T[] ret = new T[readSize];
             Read(ret);
             return ret;
         }
@@ -7957,10 +7957,10 @@ namespace SoftEther.WebSocket.Helper
         {
             checked
             {
-                int read_size;
+                int readSize;
 
-                read_size = Math.Min(size, Size);
-                if (read_size == 0)
+                readSize = Math.Min(size, Size);
+                if (readSize == 0)
                 {
                     return 0;
                 }
@@ -7968,8 +7968,8 @@ namespace SoftEther.WebSocket.Helper
                 {
                     PhysicalData.AsSpan(this.Position, size).CopyTo(dest);
                 }
-                Position += read_size;
-                Size -= read_size;
+                Position += readSize;
+                Size -= readSize;
 
                 if (Size == 0)
                 {
@@ -7980,18 +7980,18 @@ namespace SoftEther.WebSocket.Helper
                     this.PhysicalData.Length >= this.ReAllocMemSize &&
                     (this.PhysicalData.Length / 2) > this.Size)
                 {
-                    int new_physical_size;
+                    int newPhysicalSize;
 
-                    new_physical_size = Math.Max(this.PhysicalData.Length / 2, FifoInitSize);
+                    newPhysicalSize = Math.Max(this.PhysicalData.Length / 2, FifoInitSize);
 
-                    T[] new_p = new T[new_physical_size];
-                    this.PhysicalData.AsSpan(this.Position, this.Size).CopyTo(new_p);
-                    this.PhysicalData = new_p;
+                    T[] newArray = new T[newPhysicalSize];
+                    this.PhysicalData.AsSpan(this.Position, this.Size).CopyTo(newArray);
+                    this.PhysicalData = newArray;
 
                     this.Position = 0;
                 }
 
-                return read_size;
+                return readSize;
             }
         }
 
@@ -8053,12 +8053,12 @@ namespace SoftEther.WebSocket.Helper
 
         public SharedExceptionQueue ExceptionQueue { get; } = new SharedExceptionQueue();
 
-        public FastStreamBuffer(bool enable_events = false, long? threshold_length = null)
+        public FastStreamBuffer(bool enableEvents = false, long? thresholdLength = null)
         {
-            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
+            if (thresholdLength < 0) throw new ArgumentOutOfRangeException("thresholdLength < 0");
 
-            Threshold = threshold_length ?? DefaultThreshold;
-            IsEventsEnabled = enable_events;
+            Threshold = thresholdLength ?? DefaultThreshold;
+            IsEventsEnabled = enableEvents;
             if (IsEventsEnabled)
             {
                 EventWriteReady = new AsyncAutoResetEvent();
@@ -8100,7 +8100,7 @@ namespace SoftEther.WebSocket.Helper
         {
             if (IsEventsEnabled)
             {
-                bool set_flag = false;
+                bool setFlag = false;
 
                 lock (LockObj)
                 {
@@ -8109,13 +8109,13 @@ namespace SoftEther.WebSocket.Helper
                     {
                         LastHeadPin = current;
                         if (IsReadyToWrite)
-                            set_flag = true;
+                            setFlag = true;
                     }
                     if (IsDisconnected)
-                        set_flag = true;
+                        setFlag = true;
                 }
 
-                if (set_flag)
+                if (setFlag)
                 {
                     EventWriteReady.Set();
                 }
@@ -8124,29 +8124,29 @@ namespace SoftEther.WebSocket.Helper
 
         long LastTailPin = long.MinValue;
 
-        public void CompleteWrite(bool check_disconnect = true)
+        public void CompleteWrite(bool checkDisconnect = true)
         {
             if (IsEventsEnabled)
             {
-                bool set_flag = false;
+                bool setFlag = false;
                 lock (LockObj)
                 {
                     long current = PinTail;
                     if (LastTailPin != current)
                     {
                         LastTailPin = current;
-                        set_flag = true;
+                        setFlag = true;
                     }
                     if (IsDisconnected)
-                        set_flag = true;
+                        setFlag = true;
                 }
-                if (set_flag)
+                if (setFlag)
                 {
                     EventReadReady.Set();
                 }
             }
 
-            if (check_disconnect)
+            if (checkDisconnect)
                 CheckDisconnected();
         }
 
@@ -8192,7 +8192,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void Insert(long pin, Memory<T> item, bool append_if_overrun = false)
+        public void Insert(long pin, Memory<T> item, bool appendIfOverrun = false)
         {
             CheckDisconnected();
             checked
@@ -8205,7 +8205,7 @@ namespace SoftEther.WebSocket.Helper
                     return;
                 }
 
-                if (append_if_overrun)
+                if (appendIfOverrun)
                 {
                     if (pin < PinHead)
                         InsertBefore(new T[PinHead - pin]);
@@ -8216,41 +8216,41 @@ namespace SoftEther.WebSocket.Helper
                 else
                 {
                     if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
-                    if (pin < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
+                    if (pin < PinHead) throw new ArgumentOutOfRangeException("pin < PinHead");
                     if (pin > PinTail) throw new ArgumentOutOfRangeException("pin > PinTail");
                 }
 
-                var node = GetNodeWithPin(pin, out int offset_in_segment, out _);
+                var node = GetNodeWithPin(pin, out int offsetInSegment, out _);
                 Debug.Assert(node != null);
-                if (offset_in_segment == 0)
+                if (offsetInSegment == 0)
                 {
-                    var new_node = List.AddBefore(node, item);
+                    var newNode = List.AddBefore(node, item);
                     PinTail += item.Length;
                 }
-                else if (node.Value.Length == offset_in_segment)
+                else if (node.Value.Length == offsetInSegment)
                 {
-                    var new_node = List.AddAfter(node, item);
+                    var newNode = List.AddAfter(node, item);
                     PinTail += item.Length;
                 }
                 else
                 {
-                    Memory<T> slice_before = node.Value.Slice(0, offset_in_segment);
-                    Memory<T> slice_after = node.Value.Slice(offset_in_segment);
+                    Memory<T> sliceBefore = node.Value.Slice(0, offsetInSegment);
+                    Memory<T> sliceAfter = node.Value.Slice(offsetInSegment);
 
-                    node.Value = slice_before;
-                    var new_node = List.AddAfter(node, item);
-                    List.AddAfter(new_node, slice_after);
+                    node.Value = sliceBefore;
+                    var newNode = List.AddAfter(node, item);
+                    List.AddAfter(newNode, sliceAfter);
                     PinTail += item.Length;
                 }
             }
         }
 
-        FastLinkedListNode<Memory<T>> GetNodeWithPin(long pin, out int offset_in_segment, out long node_pin)
+        FastLinkedListNode<Memory<T>> GetNodeWithPin(long pin, out int offsetInSegment, out long nodePin)
         {
             checked
             {
-                offset_in_segment = 0;
-                node_pin = 0;
+                offsetInSegment = 0;
+                nodePin = 0;
                 if (List.First == null)
                 {
                     if (pin != PinHead) throw new ArgumentOutOfRangeException("List.First == null, but pin != PinHead");
@@ -8259,7 +8259,7 @@ namespace SoftEther.WebSocket.Helper
                 if (pin < PinHead) throw new ArgumentOutOfRangeException("pin < PinHead");
                 if (pin == PinHead)
                 {
-                    node_pin = pin;
+                    nodePin = pin;
                     return List.First;
                 }
                 if (pin > PinTail) throw new ArgumentOutOfRangeException("pin > PinTail");
@@ -8268,83 +8268,83 @@ namespace SoftEther.WebSocket.Helper
                     var last = List.Last;
                     if (last != null)
                     {
-                        offset_in_segment = last.Value.Length;
-                        node_pin = PinTail - last.Value.Length;
+                        offsetInSegment = last.Value.Length;
+                        nodePin = PinTail - last.Value.Length;
                     }
                     else
                     {
-                        node_pin = PinTail;
+                        nodePin = PinTail;
                     }
                     return last;
                 }
-                long current_pin = PinHead;
+                long currentPin = PinHead;
                 FastLinkedListNode<Memory<T>> node = List.First;
                 while (node != null)
                 {
-                    if (pin >= current_pin && pin < (current_pin + node.Value.Length))
+                    if (pin >= currentPin && pin < (currentPin + node.Value.Length))
                     {
-                        offset_in_segment = (int)(pin - current_pin);
-                        node_pin = current_pin;
+                        offsetInSegment = (int)(pin - currentPin);
+                        nodePin = currentPin;
                         return node;
                     }
-                    current_pin += node.Value.Length;
+                    currentPin += node.Value.Length;
                     node = node.Next;
                 }
                 throw new ApplicationException("GetNodeWithPin: Bug!");
             }
         }
 
-        void GetOverlappedNodes(long pin_start, long pin_end,
-            out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-            out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
-            out int node_counts, out int lack_remain_length)
+        void GetOverlappedNodes(long pinStart, long pinEnd,
+            out FastLinkedListNode<Memory<T>> firstNode, out int firstNodeOffsetInSegment, out long firstNodePin,
+            out FastLinkedListNode<Memory<T>> lastNode, out int lastNodeOffsetInSegment, out long lastNodePin,
+            out int nodeCounts, out int lackRemainLength)
         {
             checked
             {
-                if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
+                if (pinStart > pinEnd) throw new ArgumentOutOfRangeException("pinStart > pinEnd");
 
-                first_node = GetNodeWithPin(pin_start, out first_node_offset_in_segment, out first_node_pin);
+                firstNode = GetNodeWithPin(pinStart, out firstNodeOffsetInSegment, out firstNodePin);
 
-                if (pin_end > PinTail)
+                if (pinEnd > PinTail)
                 {
-                    lack_remain_length = (int)checked(pin_end - PinTail);
-                    pin_end = PinTail;
+                    lackRemainLength = (int)checked(pinEnd - PinTail);
+                    pinEnd = PinTail;
                 }
 
-                FastLinkedListNode<Memory<T>> node = first_node;
-                long current_pin = pin_start - first_node_offset_in_segment;
-                node_counts = 0;
+                FastLinkedListNode<Memory<T>> node = firstNode;
+                long currentPin = pinStart - firstNodeOffsetInSegment;
+                nodeCounts = 0;
                 while (true)
                 {
                     Debug.Assert(node != null, "node == null");
 
-                    node_counts++;
-                    if (pin_end <= (current_pin + node.Value.Length))
+                    nodeCounts++;
+                    if (pinEnd <= (currentPin + node.Value.Length))
                     {
-                        last_node_offset_in_segment = (int)(pin_end - current_pin);
-                        last_node = node;
-                        lack_remain_length = 0;
-                        last_node_pin = current_pin;
+                        lastNodeOffsetInSegment = (int)(pinEnd - currentPin);
+                        lastNode = node;
+                        lackRemainLength = 0;
+                        lastNodePin = currentPin;
 
-                        Debug.Assert(first_node_offset_in_segment != first_node.Value.Length);
-                        Debug.Assert(last_node_offset_in_segment != 0);
+                        Debug.Assert(firstNodeOffsetInSegment != firstNode.Value.Length);
+                        Debug.Assert(lastNodeOffsetInSegment != 0);
 
                         return;
                     }
-                    current_pin += node.Value.Length;
+                    currentPin += node.Value.Length;
                     node = node.Next;
                 }
             }
         }
 
-        public FastBufferSegment<Memory<T>>[] GetSegmentsFast(long pin, long size, out long read_size, bool allow_partial = false)
+        public FastBufferSegment<Memory<T>>[] GetSegmentsFast(long pin, long size, out long readSize, bool allowPartial = false)
         {
             checked
             {
-                if (size < 0) throw new ArgumentOutOfRangeException("read_size < 0");
+                if (size < 0) throw new ArgumentOutOfRangeException("size < 0");
                 if (size == 0)
                 {
-                    read_size = 0;
+                    readSize = 0;
                     return new FastBufferSegment<Memory<T>>[0];
                 }
                 if (pin > PinTail)
@@ -8353,32 +8353,32 @@ namespace SoftEther.WebSocket.Helper
                 }
                 if ((pin + size) > PinTail)
                 {
-                    if (allow_partial == false)
+                    if (allowPartial == false)
                         throw new ArgumentOutOfRangeException("(pin + size) > PinTail");
                     size = PinTail - pin;
                 }
 
                 FastBufferSegment<Memory<T>>[] ret = GetUncontiguousSegments(pin, pin + size, false);
-                read_size = size;
+                readSize = size;
                 return ret;
             }
         }
 
-        public FastBufferSegment<Memory<T>>[] ReadForwardFast(ref long pin, long size, out long read_size, bool allow_partial = false)
+        public FastBufferSegment<Memory<T>>[] ReadForwardFast(ref long pin, long size, out long readSize, bool allowPartial = false)
         {
             checked
             {
-                FastBufferSegment<Memory<T>>[] ret = GetSegmentsFast(pin, size, out read_size, allow_partial);
-                pin += read_size;
+                FastBufferSegment<Memory<T>>[] ret = GetSegmentsFast(pin, size, out readSize, allowPartial);
+                pin += readSize;
                 return ret;
             }
         }
 
-        public Memory<T> GetContiguous(long pin, long size, bool allow_partial = false)
+        public Memory<T> GetContiguous(long pin, long size, bool allowPartial = false)
         {
             checked
             {
-                if (size < 0) throw new ArgumentOutOfRangeException("read_size < 0");
+                if (size < 0) throw new ArgumentOutOfRangeException("size < 0");
                 if (size == 0)
                 {
                     return new Memory<T>();
@@ -8389,7 +8389,7 @@ namespace SoftEther.WebSocket.Helper
                 }
                 if ((pin + size) > PinTail)
                 {
-                    if (allow_partial == false)
+                    if (allowPartial == false)
                         throw new ArgumentOutOfRangeException("(pin + size) > PinTail");
                     size = PinTail - pin;
                 }
@@ -8398,35 +8398,35 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public Memory<T> ReadForwardContiguous(ref long pin, long size, bool allow_partial = false)
+        public Memory<T> ReadForwardContiguous(ref long pin, long size, bool allowPartial = false)
         {
             checked
             {
-                Memory<T> ret = GetContiguous(pin, size, allow_partial);
+                Memory<T> ret = GetContiguous(pin, size, allowPartial);
                 pin += ret.Length;
                 return ret;
             }
         }
 
-        public Memory<T> PutContiguous(long pin, long size, bool append_if_overrun = false)
+        public Memory<T> PutContiguous(long pin, long size, bool appendIfOverrun = false)
         {
             checked
             {
-                if (size < 0) throw new ArgumentOutOfRangeException("read_size < 0");
+                if (size < 0) throw new ArgumentOutOfRangeException("size < 0");
                 if (size == 0)
                 {
                     return new Memory<T>();
                 }
-                Memory<T> ret = GetContiguousMemory(pin, pin + size, append_if_overrun, false);
+                Memory<T> ret = GetContiguousMemory(pin, pin + size, appendIfOverrun, false);
                 return ret;
             }
         }
 
-        public Memory<T> WriteForwardContiguous(ref long pin, long size, bool append_if_overrun = false)
+        public Memory<T> WriteForwardContiguous(ref long pin, long size, bool appendIfOverrun = false)
         {
             checked
             {
-                Memory<T> ret = PutContiguous(pin, size, append_if_overrun);
+                Memory<T> ret = PutContiguous(pin, size, appendIfOverrun);
                 pin += ret.Length;
                 return ret;
             }
@@ -8435,28 +8435,28 @@ namespace SoftEther.WebSocket.Helper
         public void Enqueue(Memory<T> item)
         {
             CheckDisconnected();
-            long old_len = Length;
+            long oldLen = Length;
             if (item.Length == 0) return;
             InsertTail(item);
             EventListeners.Fire(this, FastBufferCallbackEventType.Written);
-            if (Length != 0 && old_len == 0)
+            if (Length != 0 && oldLen == 0)
                 EventListeners.Fire(this, FastBufferCallbackEventType.EmptyToNonEmpty);
         }
 
-        public void EnqueueAllWithLock(Span<Memory<T>> item_list)
+        public void EnqueueAllWithLock(Span<Memory<T>> itemList)
         {
             lock (LockObj)
-                EnqueueAll(item_list);
+                EnqueueAll(itemList);
         }
 
-        public void EnqueueAll(Span<Memory<T>> item_list)
+        public void EnqueueAll(Span<Memory<T>> itemList)
         {
             CheckDisconnected();
             checked
             {
                 int num = 0;
-                long old_len = Length;
-                foreach (Memory<T> t in item_list)
+                long oldLen = Length;
+                foreach (Memory<T> t in itemList)
                 {
                     if (t.Length != 0)
                     {
@@ -8469,7 +8469,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     EventListeners.Fire(this, FastBufferCallbackEventType.Written);
 
-                    if (Length != 0 && old_len == 0)
+                    if (Length != 0 && oldLen == 0)
                         EventListeners.Fire(this, FastBufferCallbackEventType.EmptyToNonEmpty);
                 }
             }
@@ -8480,26 +8480,26 @@ namespace SoftEther.WebSocket.Helper
             if (IsDisconnected && this.Length == 0) CheckDisconnected();
             checked
             {
-                long old_len = Length;
+                long oldLen = Length;
                 if (size < 0) throw new ArgumentOutOfRangeException("size < 0");
                 size = Math.Min(size, dest.Length);
                 Debug.Assert(size >= 0);
                 if (size == 0) return 0;
-                var memarray = Dequeue(size, out long total_size, true);
-                Debug.Assert(total_size <= size);
-                if (total_size > int.MaxValue) throw new IndexOutOfRangeException("total_size > int.MaxValue");
-                if (dest.Length < total_size) throw new ArgumentOutOfRangeException("dest.Length < total_size");
+                var memarray = Dequeue(size, out long totalSize, true);
+                Debug.Assert(totalSize <= size);
+                if (totalSize > int.MaxValue) throw new IndexOutOfRangeException("totalSize > int.MaxValue");
+                if (dest.Length < totalSize) throw new ArgumentOutOfRangeException("dest.Length < totalSize");
                 int pos = 0;
                 foreach (var mem in memarray)
                 {
                     mem.CopyTo(dest.Slice(pos, mem.Length));
                     pos += mem.Length;
                 }
-                Debug.Assert(pos == total_size);
+                Debug.Assert(pos == totalSize);
                 EventListeners.Fire(this, FastBufferCallbackEventType.Read);
-                if (Length == 0 && old_len != 0)
+                if (Length == 0 && oldLen != 0)
                     EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
-                return (int)total_size;
+                return (int)totalSize;
             }
         }
 
@@ -8508,74 +8508,74 @@ namespace SoftEther.WebSocket.Helper
             if (IsDisconnected && this.Length == 0) CheckDisconnected();
             checked
             {
-                long old_len = Length;
+                long oldLen = Length;
                 if (size < 0) throw new ArgumentOutOfRangeException("size < 0");
                 if (size == 0) return Memory<T>.Empty;
-                int read_size = (int)Math.Min(size, Length);
-                Memory<T> ret = new T[read_size];
-                int r = DequeueContiguousSlow(ret, read_size);
-                Debug.Assert(r <= read_size);
+                int readSize = (int)Math.Min(size, Length);
+                Memory<T> ret = new T[readSize];
+                int r = DequeueContiguousSlow(ret, readSize);
+                Debug.Assert(r <= readSize);
                 ret = ret.Slice(0, r);
                 EventListeners.Fire(this, FastBufferCallbackEventType.Read);
-                if (Length == 0 && old_len != 0)
+                if (Length == 0 && oldLen != 0)
                     EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
                 return ret;
             }
         }
 
-        public List<Memory<T>> DequeueAllWithLock(out long total_read_size)
+        public List<Memory<T>> DequeueAllWithLock(out long totalReadSize)
         {
             lock (this.LockObj)
-                return DequeueAll(out total_read_size);
+                return DequeueAll(out totalReadSize);
         }
-        public List<Memory<T>> DequeueAll(out long total_read_size) => Dequeue(long.MaxValue, out total_read_size);
-        public List<Memory<T>> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true)
+        public List<Memory<T>> DequeueAll(out long totalReadSize) => Dequeue(long.MaxValue, out totalReadSize);
+        public List<Memory<T>> Dequeue(long minReadSize, out long totalReadSize, bool allowSplitSegments = true)
         {
             if (IsDisconnected && this.Length == 0) CheckDisconnected();
             checked
             {
-                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
+                if (minReadSize < 1) throw new ArgumentOutOfRangeException("size < 1");
 
-                total_read_size = 0;
+                totalReadSize = 0;
                 if (List.First == null)
                 {
                     return new List<Memory<T>>();
                 }
 
-                long old_len = Length;
+                long oldLen = Length;
 
                 FastLinkedListNode<Memory<T>> node = List.First;
                 List<Memory<T>> ret = new List<Memory<T>>();
                 while (true)
                 {
-                    if ((total_read_size + node.Value.Length) >= min_read_size)
+                    if ((totalReadSize + node.Value.Length) >= minReadSize)
                     {
-                        if (allow_split_segments && (total_read_size + node.Value.Length) > min_read_size)
+                        if (allowSplitSegments && (totalReadSize + node.Value.Length) > minReadSize)
                         {
-                            int last_segment_read_size = (int)(min_read_size - total_read_size);
-                            Debug.Assert(last_segment_read_size <= node.Value.Length);
-                            ret.Add(node.Value.Slice(0, last_segment_read_size));
-                            if (last_segment_read_size == node.Value.Length)
+                            int lastSegmentReadSize = (int)(minReadSize - totalReadSize);
+                            Debug.Assert(lastSegmentReadSize <= node.Value.Length);
+                            ret.Add(node.Value.Slice(0, lastSegmentReadSize));
+                            if (lastSegmentReadSize == node.Value.Length)
                                 List.Remove(node);
                             else
-                                node.Value = node.Value.Slice(last_segment_read_size);
-                            total_read_size += last_segment_read_size;
-                            PinHead += total_read_size;
-                            Debug.Assert(min_read_size >= total_read_size);
+                                node.Value = node.Value.Slice(lastSegmentReadSize);
+                            totalReadSize += lastSegmentReadSize;
+                            PinHead += totalReadSize;
+                            Debug.Assert(minReadSize >= totalReadSize);
                             EventListeners.Fire(this, FastBufferCallbackEventType.Read);
-                            if (Length == 0 && old_len != 0)
+                            if (Length == 0 && oldLen != 0)
                                 EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
                             return ret;
                         }
                         else
                         {
                             ret.Add(node.Value);
-                            total_read_size += node.Value.Length;
+                            totalReadSize += node.Value.Length;
                             List.Remove(node);
-                            PinHead += total_read_size;
-                            Debug.Assert(min_read_size <= total_read_size);
+                            PinHead += totalReadSize;
+                            Debug.Assert(minReadSize <= totalReadSize);
                             EventListeners.Fire(this, FastBufferCallbackEventType.Read);
-                            if (Length == 0 && old_len != 0)
+                            if (Length == 0 && oldLen != 0)
                                 EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
                             return ret;
                         }
@@ -8583,18 +8583,18 @@ namespace SoftEther.WebSocket.Helper
                     else
                     {
                         ret.Add(node.Value);
-                        total_read_size += node.Value.Length;
+                        totalReadSize += node.Value.Length;
 
-                        FastLinkedListNode<Memory<T>> delete_node = node;
+                        FastLinkedListNode<Memory<T>> deleteNode = node;
                         node = node.Next;
 
-                        List.Remove(delete_node);
+                        List.Remove(deleteNode);
 
                         if (node == null)
                         {
-                            PinHead += total_read_size;
+                            PinHead += totalReadSize;
                             EventListeners.Fire(this, FastBufferCallbackEventType.Read);
-                            if (Length == 0 && old_len != 0)
+                            if (Length == 0 && oldLen != 0)
                                 EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
                             return ret;
                         }
@@ -8622,107 +8622,107 @@ namespace SoftEther.WebSocket.Helper
                 if (other.Length == 0)
                 {
                     long length = this.Length;
-                    long other_old_len = other.Length;
-                    long old_len = Length;
+                    long otherOldLen = other.Length;
+                    long oldLen = Length;
                     Debug.Assert(other.List.Count == 0);
                     other.List = this.List;
                     this.List = new FastLinkedList<Memory<T>>();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
                     EventListeners.Fire(this, FastBufferCallbackEventType.Read);
-                    if (Length == 0 && old_len != 0)
+                    if (Length == 0 && oldLen != 0)
                         EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
                     other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
-                    if (other.Length != 0 && other_old_len == 0)
+                    if (other.Length != 0 && otherOldLen == 0)
                         other.EventListeners.Fire(other, FastBufferCallbackEventType.EmptyToNonEmpty);
                     return length;
                 }
                 else
                 {
                     long length = this.Length;
-                    long old_len = Length;
-                    long other_old_len = other.Length;
-                    var chain_first = this.List.First;
-                    var chain_last = this.List.Last;
+                    long oldLen = Length;
+                    long otherOldLen = other.Length;
+                    var chainFirst = this.List.First;
+                    var chainLast = this.List.Last;
                     other.List.AddLast(this.List.First, this.List.Last, this.List.Count);
                     this.List.Clear();
                     this.PinHead = this.PinTail;
                     other.PinTail += length;
                     EventListeners.Fire(this, FastBufferCallbackEventType.Read);
-                    if (Length == 0 && old_len != 0)
+                    if (Length == 0 && oldLen != 0)
                         EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
                     other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
-                    if (other.Length != 0 && other_old_len == 0)
+                    if (other.Length != 0 && otherOldLen == 0)
                         other.EventListeners.Fire(other, FastBufferCallbackEventType.EmptyToNonEmpty);
                     return length;
                 }
             }
         }
 
-        FastBufferSegment<Memory<T>>[] GetUncontiguousSegments(long pin_start, long pin_end, bool append_if_overrun)
+        FastBufferSegment<Memory<T>>[] GetUncontiguousSegments(long pinStart, long pinEnd, bool appendIfOverrun)
         {
             checked
             {
-                if (pin_start == pin_end) return new FastBufferSegment<Memory<T>>[0];
-                if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
+                if (pinStart == pinEnd) return new FastBufferSegment<Memory<T>>[0];
+                if (pinStart > pinEnd) throw new ArgumentOutOfRangeException("pinStart > pinEnd");
 
-                if (append_if_overrun)
+                if (appendIfOverrun)
                 {
                     if (List.First == null)
                     {
-                        InsertHead(new T[pin_end - pin_start]);
-                        PinHead = pin_start;
-                        PinTail = pin_end;
+                        InsertHead(new T[pinEnd - pinStart]);
+                        PinHead = pinStart;
+                        PinTail = pinEnd;
                     }
 
-                    if (pin_start < PinHead)
-                        InsertBefore(new T[PinHead - pin_start]);
+                    if (pinStart < PinHead)
+                        InsertBefore(new T[PinHead - pinStart]);
 
-                    if (pin_end > PinTail)
-                        InsertTail(new T[pin_end - PinTail]);
+                    if (pinEnd > PinTail)
+                        InsertTail(new T[pinEnd - PinTail]);
                 }
                 else
                 {
                     if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
-                    if (pin_start < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
-                    if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
+                    if (pinStart < PinHead) throw new ArgumentOutOfRangeException("pinStart < PinHead");
+                    if (pinEnd > PinTail) throw new ArgumentOutOfRangeException("pinEnd > PinTail");
                 }
 
-                GetOverlappedNodes(pin_start, pin_end,
-                    out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                    out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
-                    out int node_counts, out int lack_remain_length);
+                GetOverlappedNodes(pinStart, pinEnd,
+                    out FastLinkedListNode<Memory<T>> firstNode, out int firstNodeOffsetInSegment, out long firstNodePin,
+                    out FastLinkedListNode<Memory<T>> lastNode, out int lastNodeOffsetInSegment, out long lastNodePin,
+                    out int nodeCounts, out int lackRemainLength);
 
-                Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
+                Debug.Assert(lackRemainLength == 0, "lackRemainLength != 0");
 
-                if (first_node == last_node)
+                if (firstNode == lastNode)
                     return new FastBufferSegment<Memory<T>>[1]{ new FastBufferSegment<Memory<T>>(
-                    first_node.Value.Slice(first_node_offset_in_segment, last_node_offset_in_segment - first_node_offset_in_segment), pin_start, 0) };
+                    firstNode.Value.Slice(firstNodeOffsetInSegment, lastNodeOffsetInSegment - firstNodeOffsetInSegment), pinStart, 0) };
 
-                FastBufferSegment<Memory<T>>[] ret = new FastBufferSegment<Memory<T>>[node_counts];
+                FastBufferSegment<Memory<T>>[] ret = new FastBufferSegment<Memory<T>>[nodeCounts];
 
-                FastLinkedListNode<Memory<T>> prev_node = first_node.Previous;
-                FastLinkedListNode<Memory<T>> next_node = last_node.Next;
+                FastLinkedListNode<Memory<T>> prevNode = firstNode.Previous;
+                FastLinkedListNode<Memory<T>> nextNode = lastNode.Next;
 
-                FastLinkedListNode<Memory<T>> node = first_node;
+                FastLinkedListNode<Memory<T>> node = firstNode;
                 int count = 0;
-                long current_offset = 0;
+                long currentOffset = 0;
 
                 while (true)
                 {
                     Debug.Assert(node != null, "node == null");
 
-                    int slice_start = (node == first_node) ? first_node_offset_in_segment : 0;
-                    int slice_length = (node == last_node) ? last_node_offset_in_segment : node.Value.Length - slice_start;
+                    int sliceStart = (node == firstNode) ? firstNodeOffsetInSegment : 0;
+                    int sliceLength = (node == lastNode) ? lastNodeOffsetInSegment : node.Value.Length - sliceStart;
 
-                    ret[count] = new FastBufferSegment<Memory<T>>(node.Value.Slice(slice_start, slice_length), current_offset + pin_start, current_offset);
+                    ret[count] = new FastBufferSegment<Memory<T>>(node.Value.Slice(sliceStart, sliceLength), currentOffset + pinStart, currentOffset);
                     count++;
 
-                    Debug.Assert(count <= node_counts, "count > node_counts");
+                    Debug.Assert(count <= nodeCounts, "count > nodeCounts");
 
-                    current_offset += slice_length;
+                    currentOffset += sliceLength;
 
-                    if (node == last_node)
+                    if (node == lastNode)
                     {
                         Debug.Assert(count == ret.Length, "count != ret.Length");
                         break;
@@ -8735,52 +8735,52 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void Remove(long pin_start, long length)
+        public void Remove(long pinStart, long length)
         {
             checked
             {
                 if (length == 0) return;
                 if (length < 0) throw new ArgumentOutOfRangeException("length < 0");
-                long pin_end = checked(pin_start + length);
+                long pinEnd = checked(pinStart + length);
                 if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
-                if (pin_start < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
-                if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
+                if (pinStart < PinHead) throw new ArgumentOutOfRangeException("pinStart < PinHead");
+                if (pinEnd > PinTail) throw new ArgumentOutOfRangeException("pinEnd > PinTail");
 
-                GetOverlappedNodes(pin_start, pin_end,
-                    out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                    out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
-                    out int node_counts, out int lack_remain_length);
+                GetOverlappedNodes(pinStart, pinEnd,
+                    out FastLinkedListNode<Memory<T>> firstNode, out int firstNodeOffsetInSegment, out long firstNodePin,
+                    out FastLinkedListNode<Memory<T>> lastNode, out int lastNodeOffsetInSegment, out long lastNodePin,
+                    out int nodeCounts, out int lackRemainLength);
 
-                Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
+                Debug.Assert(lackRemainLength == 0, "lackRemainLength != 0");
 
-                if (first_node == last_node)
+                if (firstNode == lastNode)
                 {
-                    Debug.Assert(first_node_offset_in_segment < last_node_offset_in_segment);
-                    if (first_node_offset_in_segment == 0 && last_node_offset_in_segment == last_node.Value.Length)
+                    Debug.Assert(firstNodeOffsetInSegment < lastNodeOffsetInSegment);
+                    if (firstNodeOffsetInSegment == 0 && lastNodeOffsetInSegment == lastNode.Value.Length)
                     {
-                        Debug.Assert(first_node.Value.Length == length, "first_node.Value.Length != length");
-                        List.Remove(first_node);
+                        Debug.Assert(firstNode.Value.Length == length, "firstNode.Value.Length != length");
+                        List.Remove(firstNode);
                         PinTail -= length;
                         return;
                     }
                     else
                     {
-                        Debug.Assert((last_node_offset_in_segment - first_node_offset_in_segment) == length);
-                        Memory<T> slice1 = first_node.Value.Slice(0, first_node_offset_in_segment);
-                        Memory<T> slice2 = first_node.Value.Slice(last_node_offset_in_segment);
+                        Debug.Assert((lastNodeOffsetInSegment - firstNodeOffsetInSegment) == length);
+                        Memory<T> slice1 = firstNode.Value.Slice(0, firstNodeOffsetInSegment);
+                        Memory<T> slice2 = firstNode.Value.Slice(lastNodeOffsetInSegment);
                         Debug.Assert(slice1.Length != 0 || slice2.Length != 0);
                         if (slice1.Length == 0)
                         {
-                            first_node.Value = slice2;
+                            firstNode.Value = slice2;
                         }
                         else if (slice2.Length == 0)
                         {
-                            first_node.Value = slice1;
+                            firstNode.Value = slice1;
                         }
                         else
                         {
-                            first_node.Value = slice1;
-                            List.AddAfter(first_node, slice2);
+                            firstNode.Value = slice1;
+                            List.AddAfter(firstNode, slice2);
                         }
                         PinTail -= length;
                         return;
@@ -8788,25 +8788,25 @@ namespace SoftEther.WebSocket.Helper
                 }
                 else
                 {
-                    first_node.Value = first_node.Value.Slice(0, first_node_offset_in_segment);
-                    last_node.Value = last_node.Value.Slice(last_node_offset_in_segment);
+                    firstNode.Value = firstNode.Value.Slice(0, firstNodeOffsetInSegment);
+                    lastNode.Value = lastNode.Value.Slice(lastNodeOffsetInSegment);
 
-                    var node = first_node.Next;
-                    while (node != last_node)
+                    var node = firstNode.Next;
+                    while (node != lastNode)
                     {
-                        var node_to_delete = node;
+                        var nodeToDelete = node;
 
                         Debug.Assert(node.Next != null);
                         node = node.Next;
 
-                        List.Remove(node_to_delete);
+                        List.Remove(nodeToDelete);
                     }
 
-                    if (last_node.Value.Length == 0)
-                        List.Remove(last_node);
+                    if (lastNode.Value.Length == 0)
+                        List.Remove(lastNode);
 
-                    if (first_node.Value.Length == 0)
-                        List.Remove(first_node);
+                    if (firstNode.Value.Length == 0)
+                        List.Remove(firstNode);
 
                     PinTail -= length;
                     return;
@@ -8818,84 +8818,84 @@ namespace SoftEther.WebSocket.Helper
 
         public T[] ItemsSlow { get => ToArray(); }
 
-        Memory<T> GetContiguousMemory(long pin_start, long pin_end, bool append_if_overrun, bool no_replace)
+        Memory<T> GetContiguousMemory(long pinStart, long pinEnd, bool appendIfOverrun, bool noReplace)
         {
             checked
             {
-                if (pin_start == pin_end) return new Memory<T>();
-                if (pin_start > pin_end) throw new ArgumentOutOfRangeException("pin_start > pin_end");
+                if (pinStart == pinEnd) return new Memory<T>();
+                if (pinStart > pinEnd) throw new ArgumentOutOfRangeException("pinStart > pinEnd");
 
-                if (append_if_overrun)
+                if (appendIfOverrun)
                 {
                     if (List.First == null)
                     {
-                        InsertHead(new T[pin_end - pin_start]);
-                        PinHead = pin_start;
-                        PinTail = pin_end;
+                        InsertHead(new T[pinEnd - pinStart]);
+                        PinHead = pinStart;
+                        PinTail = pinEnd;
                     }
 
-                    if (pin_start < PinHead)
-                        InsertBefore(new T[PinHead - pin_start]);
+                    if (pinStart < PinHead)
+                        InsertBefore(new T[PinHead - pinStart]);
 
-                    if (pin_end > PinTail)
-                        InsertTail(new T[pin_end - PinTail]);
+                    if (pinEnd > PinTail)
+                        InsertTail(new T[pinEnd - PinTail]);
                 }
                 else
                 {
                     if (List.First == null) throw new ArgumentOutOfRangeException("Buffer is empty.");
-                    if (pin_start < PinHead) throw new ArgumentOutOfRangeException("pin_start < PinHead");
-                    if (pin_end > PinTail) throw new ArgumentOutOfRangeException("pin_end > PinTail");
+                    if (pinStart < PinHead) throw new ArgumentOutOfRangeException("pinStart < PinHead");
+                    if (pinEnd > PinTail) throw new ArgumentOutOfRangeException("pinEnd > PinTail");
                 }
 
-                GetOverlappedNodes(pin_start, pin_end,
-                    out FastLinkedListNode<Memory<T>> first_node, out int first_node_offset_in_segment, out long first_node_pin,
-                    out FastLinkedListNode<Memory<T>> last_node, out int last_node_offset_in_segment, out long last_node_pin,
-                    out int node_counts, out int lack_remain_length);
+                GetOverlappedNodes(pinStart, pinEnd,
+                    out FastLinkedListNode<Memory<T>> firstNode, out int firstNodeOffsetInSegment, out long firstNodePin,
+                    out FastLinkedListNode<Memory<T>> lastNode, out int lastNodeOffsetInSegment, out long lastNodePin,
+                    out int nodeCounts, out int lackRemainLength);
 
-                Debug.Assert(lack_remain_length == 0, "lack_remain_length != 0");
+                Debug.Assert(lackRemainLength == 0, "lackRemainLength != 0");
 
-                if (first_node == last_node)
-                    return first_node.Value.Slice(first_node_offset_in_segment, last_node_offset_in_segment - first_node_offset_in_segment);
+                if (firstNode == lastNode)
+                    return firstNode.Value.Slice(firstNodeOffsetInSegment, lastNodeOffsetInSegment - firstNodeOffsetInSegment);
 
-                FastLinkedListNode<Memory<T>> prev_node = first_node.Previous;
-                FastLinkedListNode<Memory<T>> next_node = last_node.Next;
+                FastLinkedListNode<Memory<T>> prevNode = firstNode.Previous;
+                FastLinkedListNode<Memory<T>> nextNode = lastNode.Next;
 
-                Memory<T> new_memory = new T[last_node_pin + last_node.Value.Length - first_node_pin];
-                FastLinkedListNode<Memory<T>> node = first_node;
-                int current_write_pointer = 0;
+                Memory<T> newMemory = new T[lastNodePin + lastNode.Value.Length - firstNodePin];
+                FastLinkedListNode<Memory<T>> node = firstNode;
+                int currentWritePointer = 0;
 
                 while (true)
                 {
                     Debug.Assert(node != null, "node == null");
 
                     bool finish = false;
-                    node.Value.CopyTo(new_memory.Slice(current_write_pointer));
+                    node.Value.CopyTo(newMemory.Slice(currentWritePointer));
 
-                    if (node == last_node) finish = true;
+                    if (node == lastNode) finish = true;
 
-                    FastLinkedListNode<Memory<T>> node_to_delete = node;
-                    current_write_pointer += node.Value.Length;
+                    FastLinkedListNode<Memory<T>> nodeToDelete = node;
+                    currentWritePointer += node.Value.Length;
 
                     node = node.Next;
 
-                    if (no_replace == false)
-                        List.Remove(node_to_delete);
+                    if (noReplace == false)
+                        List.Remove(nodeToDelete);
 
                     if (finish) break;
                 }
 
-                if (no_replace == false)
+                if (noReplace == false)
                 {
-                    if (prev_node != null)
-                        List.AddAfter(prev_node, new_memory);
-                    else if (next_node != null)
-                        List.AddBefore(next_node, new_memory);
+                    if (prevNode != null)
+                        List.AddAfter(prevNode, newMemory);
+                    else if (nextNode != null)
+                        List.AddBefore(nextNode, newMemory);
                     else
-                        List.AddFirst(new_memory);
+                        List.AddFirst(newMemory);
                 }
 
-                var ret = new_memory.Slice(first_node_offset_in_segment, new_memory.Length - (last_node.Value.Length - last_node_offset_in_segment) - first_node_offset_in_segment);
-                Debug.Assert(ret.Length == (pin_end - pin_start), "ret.Length");
+                var ret = newMemory.Slice(firstNodeOffsetInSegment, newMemory.Length - (lastNode.Value.Length - lastNodeOffsetInSegment) - firstNodeOffsetInSegment);
+                Debug.Assert(ret.Length == (pinEnd - pinStart), "ret.Length");
                 return ret;
             }
         }
@@ -8966,12 +8966,12 @@ namespace SoftEther.WebSocket.Helper
 
         public SharedExceptionQueue ExceptionQueue { get; } = new SharedExceptionQueue();
 
-        public FastDatagramBuffer(bool enable_events = false, long? threshold_length = null)
+        public FastDatagramBuffer(bool enableEvents = false, long? thresholdLength = null)
         {
-            if (threshold_length < 0) throw new ArgumentOutOfRangeException("threshold_length < 0");
+            if (thresholdLength < 0) throw new ArgumentOutOfRangeException("thresholdLength < 0");
 
-            Threshold = threshold_length ?? DefaultThreshold;
-            IsEventsEnabled = enable_events;
+            Threshold = thresholdLength ?? DefaultThreshold;
+            IsEventsEnabled = enableEvents;
             if (IsEventsEnabled)
             {
                 EventWriteReady = new AsyncAutoResetEvent();
@@ -9013,7 +9013,7 @@ namespace SoftEther.WebSocket.Helper
         {
             if (IsEventsEnabled)
             {
-                bool set_flag = false;
+                bool setFlag = false;
 
                 lock (LockObj)
                 {
@@ -9022,13 +9022,13 @@ namespace SoftEther.WebSocket.Helper
                     {
                         LastHeadPin = current;
                         if (IsReadyToWrite)
-                            set_flag = true;
+                            setFlag = true;
                     }
                     if (IsDisconnected)
-                        set_flag = true;
+                        setFlag = true;
                 }
 
-                if (set_flag)
+                if (setFlag)
                 {
                     EventWriteReady.Set();
                 }
@@ -9037,11 +9037,11 @@ namespace SoftEther.WebSocket.Helper
 
         long LastTailPin = long.MinValue;
 
-        public void CompleteWrite(bool check_disconnect = true)
+        public void CompleteWrite(bool checkDisconnect = true)
         {
             if (IsEventsEnabled)
             {
-                bool set_flag = false;
+                bool setFlag = false;
 
                 lock (LockObj)
                 {
@@ -9049,16 +9049,16 @@ namespace SoftEther.WebSocket.Helper
                     if (LastTailPin != current)
                     {
                         LastTailPin = current;
-                        set_flag = true;
+                        setFlag = true;
                     }
                 }
 
-                if (set_flag)
+                if (setFlag)
                 {
                     EventReadReady.Set();
                 }
             }
-            if (check_disconnect)
+            if (checkDisconnect)
                 CheckDisconnected();
         }
 
@@ -9076,73 +9076,73 @@ namespace SoftEther.WebSocket.Helper
             CheckDisconnected();
             checked
             {
-                long old_len = Length;
+                long oldLen = Length;
                 Fifo.Write(item);
                 PinTail++;
                 EventListeners.Fire(this, FastBufferCallbackEventType.Written);
-                if (Length != 0 && old_len == 0)
+                if (Length != 0 && oldLen == 0)
                     EventListeners.Fire(this, FastBufferCallbackEventType.EmptyToNonEmpty);
             }
         }
 
-        public void EnqueueAllWithLock(Span<T> item_list)
+        public void EnqueueAllWithLock(Span<T> itemList)
         {
             lock (LockObj)
-                EnqueueAll(item_list);
+                EnqueueAll(itemList);
         }
 
-        public void EnqueueAll(Span<T> item_list)
+        public void EnqueueAll(Span<T> itemList)
         {
             CheckDisconnected();
             checked
             {
-                long old_len = Length;
-                Fifo.Write(item_list);
-                PinTail += item_list.Length;
+                long oldLen = Length;
+                Fifo.Write(itemList);
+                PinTail += itemList.Length;
                 EventListeners.Fire(this, FastBufferCallbackEventType.Written);
-                if (Length != 0 && old_len == 0)
+                if (Length != 0 && oldLen == 0)
                     EventListeners.Fire(this, FastBufferCallbackEventType.EmptyToNonEmpty);
             }
         }
 
-        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true)
+        public List<T> Dequeue(long minReadSize, out long totalReadSize, bool allowSplitSegments = true)
         {
             if (IsDisconnected && this.Length == 0) CheckDisconnected();
             checked
             {
-                if (min_read_size < 1) throw new ArgumentOutOfRangeException("size < 1");
-                if (min_read_size >= int.MaxValue) min_read_size = int.MaxValue;
+                if (minReadSize < 1) throw new ArgumentOutOfRangeException("size < 1");
+                if (minReadSize >= int.MaxValue) minReadSize = int.MaxValue;
 
-                long old_len = Length;
+                long oldLen = Length;
 
-                total_read_size = 0;
+                totalReadSize = 0;
                 if (Fifo.Size == 0)
                 {
                     return new List<T>();
                 }
 
-                T[] tmp = Fifo.Read((int)min_read_size);
+                T[] tmp = Fifo.Read((int)minReadSize);
 
-                total_read_size = tmp.Length;
+                totalReadSize = tmp.Length;
                 List<T> ret = new List<T>(tmp);
 
-                PinHead += total_read_size;
+                PinHead += totalReadSize;
 
                 EventListeners.Fire(this, FastBufferCallbackEventType.Read);
 
-                if (Length == 0 && old_len != 0)
+                if (Length == 0 && oldLen != 0)
                     EventListeners.Fire(this, FastBufferCallbackEventType.NonEmptyToEmpty);
 
                 return ret;
             }
         }
 
-        public List<T> DequeueAll(out long total_read_size) => Dequeue(long.MaxValue, out total_read_size);
+        public List<T> DequeueAll(out long totalReadSize) => Dequeue(long.MaxValue, out totalReadSize);
 
-        public List<T> DequeueAllWithLock(out long total_read_size)
+        public List<T> DequeueAllWithLock(out long totalReadSize)
         {
             lock (LockObj)
-                return DequeueAll(out total_read_size);
+                return DequeueAll(out totalReadSize);
         }
 
         public long DequeueAllAndEnqueueToOther(IFastBuffer<T> other) => DequeueAllAndEnqueueToOther((FastDatagramBuffer<T>)other);
@@ -9163,7 +9163,7 @@ namespace SoftEther.WebSocket.Helper
 
                 if (other.Length == 0)
                 {
-                    long old_len = Length;
+                    long oldLen = Length;
                     long length = this.Length;
                     Debug.Assert(other.Fifo.Size == 0);
                     other.Fifo = this.Fifo;
@@ -9172,13 +9172,13 @@ namespace SoftEther.WebSocket.Helper
                     other.PinTail += length;
                     EventListeners.Fire(this, FastBufferCallbackEventType.Read);
                     other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
-                    if (Length != 0 && old_len == 0)
+                    if (Length != 0 && oldLen == 0)
                         EventListeners.Fire(this, FastBufferCallbackEventType.EmptyToNonEmpty);
                     return length;
                 }
                 else
                 {
-                    long old_len = Length;
+                    long oldLen = Length;
                     long length = this.Length;
                     var data = this.Fifo.Read();
                     other.Fifo.Write(data);
@@ -9186,7 +9186,7 @@ namespace SoftEther.WebSocket.Helper
                     other.PinTail += length;
                     EventListeners.Fire(this, FastBufferCallbackEventType.Read);
                     other.EventListeners.Fire(other, FastBufferCallbackEventType.Written);
-                    if (Length != 0 && old_len == 0)
+                    if (Length != 0 && oldLen == 0)
                         EventListeners.Fire(this, FastBufferCallbackEventType.EmptyToNonEmpty);
                     return length;
                 }
@@ -9201,14 +9201,14 @@ namespace SoftEther.WebSocket.Helper
 
     public class FastStreamFifo : FastStreamBuffer<byte>
     {
-        public FastStreamFifo(bool enable_events = false, long? threshold_length = null)
-            : base(enable_events, threshold_length) { }
+        public FastStreamFifo(bool enableEvents = false, long? thresholdLength = null)
+            : base(enableEvents, thresholdLength) { }
     }
 
     public class FastDatagramFifo : FastDatagramBuffer<Datagram>
     {
-        public FastDatagramFifo(bool enable_events = false, long? threshold_length = null)
-            : base(enable_events, threshold_length) { }
+        public FastDatagramFifo(bool enableEvents = false, long? thresholdLength = null)
+            : base(enableEvents, thresholdLength) { }
     }
 
     public static class FastPipeHelper
@@ -9218,11 +9218,11 @@ namespace SoftEther.WebSocket.Helper
             LocalTimer timer = new LocalTimer();
 
             timer.AddTimeout(FastPipeGlobalConfig.PollingTimeout);
-            long timeout_tick = timer.AddTimeout(timeout);
+            long timeoutTick = timer.AddTimeout(timeout);
 
             while (writer.IsReadyToWrite == false)
             {
-                if (FastTick64.Now >= timeout_tick) throw new TimeoutException();
+                if (FastTick64.Now >= timeoutTick) throw new TimeoutException();
                 cancel.ThrowIfCancellationRequested();
 
                 await WebSocketHelper.WaitObjectsAsync(
@@ -9240,11 +9240,11 @@ namespace SoftEther.WebSocket.Helper
             LocalTimer timer = new LocalTimer();
 
             timer.AddTimeout(FastPipeGlobalConfig.PollingTimeout);
-            long timeout_tick = timer.AddTimeout(timeout);
+            long timeoutTick = timer.AddTimeout(timeout);
 
             while (reader.IsReadyToRead == false)
             {
-                if (FastTick64.Now >= timeout_tick) throw new TimeoutException();
+                if (FastTick64.Now >= timeoutTick) throw new TimeoutException();
                 cancel.ThrowIfCancellationRequested();
 
                 await WebSocketHelper.WaitObjectsAsync(
@@ -9304,18 +9304,18 @@ namespace SoftEther.WebSocket.Helper
         Once InternalDisconnectedFlag;
         public bool IsDisconnected { get => InternalDisconnectedFlag.IsSet; }
 
-        public FastPipe(CancellationToken cancel = default(CancellationToken), long? threshold_length_stream = null, long? threshold_length_datagram = null)
+        public FastPipe(CancellationToken cancel = default(CancellationToken), long? thresholdLengthStream = null, long? thresholdLengthDatagram = null)
         {
             CancelWatcher = new CancelWatcher(cancel);
 
-            if (threshold_length_stream == null) threshold_length_stream = FastPipeGlobalConfig.MaxStreamBufferLength;
-            if (threshold_length_datagram == null) threshold_length_datagram = FastPipeGlobalConfig.MaxDatagramQueueLength;
+            if (thresholdLengthStream == null) thresholdLengthStream = FastPipeGlobalConfig.MaxStreamBufferLength;
+            if (thresholdLengthDatagram == null) thresholdLengthDatagram = FastPipeGlobalConfig.MaxDatagramQueueLength;
 
-            StreamAtoB = new FastStreamFifo(true, threshold_length_stream);
-            StreamBtoA = new FastStreamFifo(true, threshold_length_stream);
+            StreamAtoB = new FastStreamFifo(true, thresholdLengthStream);
+            StreamBtoA = new FastStreamFifo(true, thresholdLengthStream);
 
-            DatagramAtoB = new FastDatagramFifo(true, threshold_length_datagram);
-            DatagramBtoA = new FastDatagramFifo(true, threshold_length_datagram);
+            DatagramAtoB = new FastDatagramFifo(true, thresholdLengthDatagram);
+            DatagramBtoA = new FastDatagramFifo(true, thresholdLengthDatagram);
 
             StreamAtoB.ExceptionQueue.Encounter(ExceptionQueue);
             StreamBtoA.ExceptionQueue.Encounter(ExceptionQueue);
@@ -9347,11 +9347,11 @@ namespace SoftEther.WebSocket.Helper
                     ExceptionQueue.Add(ex);
                 }
 
-                Action[] ev_list;
+                Action[] evList;
                 lock (OnDisconnected)
-                    ev_list = OnDisconnected.ToArray();
+                    evList = OnDisconnected.ToArray();
 
-                foreach (var ev in ev_list)
+                foreach (var ev in evList)
                 {
                     try
                     {
@@ -9370,11 +9370,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (dispose_flag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Disconnect();
                 CancelWatcher.DisposeSafe();
@@ -9403,16 +9403,16 @@ namespace SoftEther.WebSocket.Helper
         }
 
         internal FastPipeEnd(FastPipe pipe,
-            CancelWatcher cancel_watcher,
-            FastStreamFifo stream_to_write, FastStreamFifo stream_to_read,
-            FastDatagramFifo datagram_write, FastDatagramFifo datagram_read)
+            CancelWatcher cancelWatcher,
+            FastStreamFifo streamToWrite, FastStreamFifo streamToRead,
+            FastDatagramFifo datagramToWrite, FastDatagramFifo datagramToRead)
         {
             this.Pipe = pipe;
-            this.CancelWatcher = cancel_watcher;
-            this.StreamWriter = stream_to_write;
-            this.StreamReader = stream_to_read;
-            this.DatagramWriter = datagram_write;
-            this.DatagramReader = datagram_read;
+            this.CancelWatcher = cancelWatcher;
+            this.StreamWriter = streamToWrite;
+            this.StreamReader = streamToRead;
+            this.DatagramWriter = datagramToWrite;
+            this.DatagramReader = datagramToRead;
         }
 
         public sealed class FastPipeEndAttachHandle : IDisposable
@@ -9422,14 +9422,14 @@ namespace SoftEther.WebSocket.Helper
             LeakChecker.Holder Leak;
             object LockObj = new object();
 
-            public FastPipeEndAttachHandle(FastPipeEnd end, object user_state = null)
+            public FastPipeEndAttachHandle(FastPipeEnd end, object userState = null)
             {
                 lock (end.AttachHandleLock)
                 {
                     if (end.CurrentAttachHandle != null)
                         throw new ApplicationException("The FastPipeEnd is already attached.");
 
-                    this.UserState = user_state;
+                    this.UserState = userState;
                     this.PipeEnd = end;
                     this.PipeEnd.CurrentAttachHandle = this;
 
@@ -9437,13 +9437,13 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            int receive_timeout_proc_id = 0;
-            TimeoutDetector receive_timeout_detector = null;
+            int receiveTimeoutProcId = 0;
+            TimeoutDetector receiveTimeoutDetector = null;
 
-            public void SetStreamTimeout(int recv_timeout = Timeout.Infinite, int send_timeout = Timeout.Infinite)
+            public void SetStreamTimeout(int recvTimeout = Timeout.Infinite, int sendTimeout = Timeout.Infinite)
             {
-                SetStreamReceiveTimeout(recv_timeout);
-                SetStreamSendTimeout(send_timeout);
+                SetStreamReceiveTimeout(recvTimeout);
+                SetStreamSendTimeout(sendTimeout);
             }
 
             public void SetStreamReceiveTimeout(int timeout = Timeout.Infinite)
@@ -9452,16 +9452,16 @@ namespace SoftEther.WebSocket.Helper
                 {
                     if (timeout < 0 || timeout == int.MaxValue)
                     {
-                        if (receive_timeout_proc_id != 0)
+                        if (receiveTimeoutProcId != 0)
                         {
-                            PipeEnd.StreamReader.EventListeners.UnregisterCallback(receive_timeout_proc_id);
-                            receive_timeout_proc_id = 0;
-                            receive_timeout_detector.DisposeSafe();
+                            PipeEnd.StreamReader.EventListeners.UnregisterCallback(receiveTimeoutProcId);
+                            receiveTimeoutProcId = 0;
+                            receiveTimeoutDetector.DisposeSafe();
                         }
                     }
                     else
                     {
-                        receive_timeout_detector = new TimeoutDetector(timeout, callback: (x) =>
+                        receiveTimeoutDetector = new TimeoutDetector(timeout, callback: (x) =>
                         {
                             if (PipeEnd.StreamReader.IsReadyToWrite == false)
                                 return true;
@@ -9469,17 +9469,17 @@ namespace SoftEther.WebSocket.Helper
                             return false;
                         });
 
-                        receive_timeout_proc_id = PipeEnd.StreamReader.EventListeners.RegisterCallback((buffer, type, state) =>
+                        receiveTimeoutProcId = PipeEnd.StreamReader.EventListeners.RegisterCallback((buffer, type, state) =>
                         {
                             if (type == FastBufferCallbackEventType.Written || type == FastBufferCallbackEventType.NonEmptyToEmpty)
-                                receive_timeout_detector.Keep();
+                                receiveTimeoutDetector.Keep();
                         });
                     }
                 }
             }
 
-            int send_timeout_proc_id = 0;
-            TimeoutDetector send_timeout_detector = null;
+            int sendTimeoutProcId = 0;
+            TimeoutDetector sendTimeoutDetector = null;
 
             public void SetStreamSendTimeout(int timeout = Timeout.Infinite)
             {
@@ -9487,16 +9487,16 @@ namespace SoftEther.WebSocket.Helper
                 {
                     if (timeout < 0 || timeout == int.MaxValue)
                     {
-                        if (send_timeout_proc_id != 0)
+                        if (sendTimeoutProcId != 0)
                         {
-                            PipeEnd.StreamWriter.EventListeners.UnregisterCallback(send_timeout_proc_id);
-                            send_timeout_proc_id = 0;
-                            send_timeout_detector.DisposeSafe();
+                            PipeEnd.StreamWriter.EventListeners.UnregisterCallback(sendTimeoutProcId);
+                            sendTimeoutProcId = 0;
+                            sendTimeoutDetector.DisposeSafe();
                         }
                     }
                     else
                     {
-                        send_timeout_detector = new TimeoutDetector(timeout, callback: (x) =>
+                        sendTimeoutDetector = new TimeoutDetector(timeout, callback: (x) =>
                         {
                             if (PipeEnd.StreamWriter.IsReadyToRead == false)
                                 return true;
@@ -9505,20 +9505,20 @@ namespace SoftEther.WebSocket.Helper
                             return false;
                         });
 
-                        send_timeout_proc_id = PipeEnd.StreamWriter.EventListeners.RegisterCallback((buffer, type, state) =>
+                        sendTimeoutProcId = PipeEnd.StreamWriter.EventListeners.RegisterCallback((buffer, type, state) =>
                         {
 //                            WriteLine($"{type}  {buffer.Length}  {buffer.IsReadyToWrite}");
                             if (type == FastBufferCallbackEventType.Read || type == FastBufferCallbackEventType.EmptyToNonEmpty || type == FastBufferCallbackEventType.PartialProcessReadData)
-                                send_timeout_detector.Keep();
+                                sendTimeoutDetector.Keep();
                         });
                     }
                 }
             }
 
-            Once dispose_flag;
+            Once DisposeFlag;
             public void Dispose()
             {
-                if (dispose_flag.IsFirstCall())
+                if (DisposeFlag.IsFirstCall())
                 {
                     lock (LockObj)
                     {
@@ -9531,8 +9531,8 @@ namespace SoftEther.WebSocket.Helper
                         PipeEnd.CurrentAttachHandle = null;
                     }
 
-                    receive_timeout_detector.DisposeSafe();
-                    send_timeout_detector.DisposeSafe();
+                    receiveTimeoutDetector.DisposeSafe();
+                    sendTimeoutDetector.DisposeSafe();
 
                     Leak.Dispose();
                 }
@@ -9542,9 +9542,9 @@ namespace SoftEther.WebSocket.Helper
         object AttachHandleLock = new object();
         FastPipeEndAttachHandle CurrentAttachHandle = null;
 
-        public FastPipeEndAttachHandle Attach(object user_state = null) => new FastPipeEndAttachHandle(this, user_state);
+        public FastPipeEndAttachHandle Attach(object userState = null) => new FastPipeEndAttachHandle(this, userState);
 
-        public FastPipeEndStream GetStream(bool auto_flush = true) => FastPipeEndStream.InternalNew(this, auto_flush);
+        public FastPipeEndStream GetStream(bool autoFlush = true) => FastPipeEndStream.InternalNew(this, autoFlush);
     }
 
     public sealed class FastPipeEndStream : NetworkStream, IDisposable
@@ -9555,10 +9555,10 @@ namespace SoftEther.WebSocket.Helper
 
         private FastPipeEndStream() : base(null) { }
 
-        internal void InternalInit(FastPipeEnd end, bool auto_flush = true)
+        internal void InternalInit(FastPipeEnd end, bool autoFlush = true)
         {
             End = end;
-            AutoFlush = auto_flush;
+            AutoFlush = autoFlush;
 
             ReadTimeout = Timeout.Infinite;
             WriteTimeout = Timeout.Infinite;
@@ -9566,11 +9566,11 @@ namespace SoftEther.WebSocket.Helper
             AttachHandle = end.Attach();
         }
 
-        internal static FastPipeEndStream InternalNew(FastPipeEnd end, bool auto_flush = true)
+        internal static FastPipeEndStream InternalNew(FastPipeEnd end, bool autoFlush = true)
         {
             FastPipeEndStream ret = WebSocketHelper.NewWithoutConstructor<FastPipeEndStream>();
 
-            ret.InternalInit(end, auto_flush);
+            ret.InternalInit(end, autoFlush);
 
             return ret;
         }
@@ -9630,9 +9630,9 @@ namespace SoftEther.WebSocket.Helper
 
         public async Task SendAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancel = default(CancellationToken))
         {
-            Memory<byte> send_data = buffer.ToArray();
+            Memory<byte> sendData = buffer.ToArray();
 
-            await FastSendAsync(send_data, cancel);
+            await FastSendAsync(sendData, cancel);
 
             if (AutoFlush) FastFlush(true, false);
         }
@@ -9691,7 +9691,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public async Task<Memory<byte>> ReceiveAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
+        public async Task<Memory<byte>> ReceiveAsync(int maxSize = int.MaxValue, CancellationToken cancel = default(CancellationToken))
         {
             try
             {
@@ -9701,7 +9701,7 @@ namespace SoftEther.WebSocket.Helper
                 Memory<byte> ret;
 
                 lock (End.StreamReader.LockObj)
-                    ret = End.StreamReader.DequeueContiguousSlow(max_size);
+                    ret = End.StreamReader.DequeueContiguousSlow(maxSize);
 
                 if (ret.Length == 0)
                 {
@@ -9728,22 +9728,22 @@ namespace SoftEther.WebSocket.Helper
         public int Receive(Memory<byte> buffer, CancellationToken cancel = default(CancellationToken))
             => ReceiveAsync(buffer, cancel).Result;
 
-        public Memory<byte> Receive(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
-            => ReceiveAsync(max_size, cancel).Result;
+        public Memory<byte> Receive(int maxSize = int.MaxValue, CancellationToken cancel = default(CancellationToken))
+            => ReceiveAsync(maxSize, cancel).Result;
 
-        public async Task<List<Memory<byte>>> FastReceiveAsync(CancellationToken cancel = default(CancellationToken), RefInt total_recv_size = null)
+        public async Task<List<Memory<byte>>> FastReceiveAsync(CancellationToken cancel = default(CancellationToken), RefInt totalRecvSize = null)
         {
             try
             {
                 LABEL_RETRY:
                 await WaitReadyToReceiveAsync(cancel, ReadTimeout);
 
-                var ret = End.StreamReader.DequeueAllWithLock(out long total_read_size);
+                var ret = End.StreamReader.DequeueAllWithLock(out long totalReadSize);
 
-                if (total_recv_size != null)
-                    total_recv_size.Set((int)total_read_size);
+                if (totalRecvSize != null)
+                    totalRecvSize.Set((int)totalReadSize);
 
-                if (total_read_size == 0)
+                if (totalReadSize == 0)
                 {
                     await Task.Yield();
                     goto LABEL_RETRY;
@@ -9759,24 +9759,24 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public async Task<List<Memory<byte>>> FastPeekAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken), RefInt total_recv_size = null)
+        public async Task<List<Memory<byte>>> FastPeekAsync(int maxSize = int.MaxValue, CancellationToken cancel = default(CancellationToken), RefInt totalRecvSize = null)
         {
             LABEL_RETRY:
             CheckDisconnect();
             await WaitReadyToReceiveAsync(cancel, ReadTimeout);
             CheckDisconnect();
 
-            long total_read_size;
+            long totalReadSize;
             FastBufferSegment<Memory<byte>>[] tmp;
             lock (End.StreamReader.LockObj)
             {
-                tmp = End.StreamReader.GetSegmentsFast(End.StreamReader.PinHead, max_size, out total_read_size, true);
+                tmp = End.StreamReader.GetSegmentsFast(End.StreamReader.PinHead, maxSize, out totalReadSize, true);
             }
 
-            if (total_recv_size != null)
-                total_recv_size.Set((int)total_read_size);
+            if (totalRecvSize != null)
+                totalRecvSize.Set((int)totalReadSize);
 
-            if (total_read_size == 0)
+            if (totalReadSize == 0)
             {
                 await Task.Yield();
                 goto LABEL_RETRY;
@@ -9789,7 +9789,7 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        public async Task<Memory<byte>> FastPeekContiguousAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
+        public async Task<Memory<byte>> FastPeekContiguousAsync(int maxSize = int.MaxValue, CancellationToken cancel = default(CancellationToken))
         {
             LABEL_RETRY:
             CheckDisconnect();
@@ -9800,7 +9800,7 @@ namespace SoftEther.WebSocket.Helper
 
             lock (End.StreamReader.LockObj)
             {
-                 ret = End.StreamReader.GetContiguous(End.StreamReader.PinHead, max_size, true);
+                 ret = End.StreamReader.GetContiguous(End.StreamReader.PinHead, maxSize, true);
             }
 
             if (ret.Length == 0)
@@ -9812,8 +9812,8 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        public async Task<Memory<byte>> PeekAsync(int max_size = int.MaxValue, CancellationToken cancel = default(CancellationToken))
-            => (await FastPeekContiguousAsync(max_size, cancel)).ToArray();
+        public async Task<Memory<byte>> PeekAsync(int maxSize = int.MaxValue, CancellationToken cancel = default(CancellationToken))
+            => (await FastPeekContiguousAsync(maxSize, cancel)).ToArray();
 
         public async Task<int> PeekAsync(Memory<byte> buffer, CancellationToken cancel = default(CancellationToken))
         {
@@ -9865,25 +9865,25 @@ namespace SoftEther.WebSocket.Helper
             if (flush) FastFlush(false, true);
         }
 
-        public async Task SendToAsync(ReadOnlyMemory<byte> buffer, EndPoint remote_endpoint, CancellationToken cancel = default(CancellationToken))
+        public async Task SendToAsync(ReadOnlyMemory<byte> buffer, EndPoint remoteEndPoint, CancellationToken cancel = default(CancellationToken))
         {
-            Datagram send_data = new Datagram(buffer.Span.ToArray(), remote_endpoint);
+            Datagram sendData = new Datagram(buffer.Span.ToArray(), remoteEndPoint);
 
-            await FastSendToAsync(send_data, cancel);
+            await FastSendToAsync(sendData, cancel);
 
             if (AutoFlush) FastFlush(false, true);
         }
 
-        public void SendTo(ReadOnlyMemory<byte> buffer, EndPoint remote_endpoint, CancellationToken cancel = default(CancellationToken))
-            => SendToAsync(buffer, remote_endpoint, cancel).Wait();
+        public void SendTo(ReadOnlyMemory<byte> buffer, EndPoint remoteEndPoint, CancellationToken cancel = default(CancellationToken))
+            => SendToAsync(buffer, remoteEndPoint, cancel).Wait();
 
         public async Task<List<Datagram>> FastReceiveFromAsync(CancellationToken cancel = default(CancellationToken))
         {
             LABEL_RETRY:
             await WaitReadyToReceiveFromAsync(cancel, ReadTimeout);
 
-            var ret = End.DatagramReader.DequeueAllWithLock(out long total_read_size);
-            if (total_read_size == 0)
+            var ret = End.DatagramReader.DequeueAllWithLock(out long totalReadSize);
+            if (totalReadSize == 0)
             {
                 await Task.Yield();
                 goto LABEL_RETRY;
@@ -9899,26 +9899,26 @@ namespace SoftEther.WebSocket.Helper
             LABEL_RETRY:
             await WaitReadyToReceiveFromAsync(cancel, ReadTimeout);
 
-            List<Datagram> data_list;
+            List<Datagram> dataList;
 
-            long total_read_size;
+            long totalReadSize;
 
             lock (End.DatagramReader.LockObj)
             {
-                data_list = End.DatagramReader.Dequeue(1, out total_read_size);
+                dataList = End.DatagramReader.Dequeue(1, out totalReadSize);
             }
 
-            if (total_read_size == 0)
+            if (totalReadSize == 0)
             {
                 await Task.Yield();
                 goto LABEL_RETRY;
             }
 
-            Debug.Assert(data_list.Count == 1);
+            Debug.Assert(dataList.Count == 1);
 
             End.DatagramReader.CompleteRead();
 
-            return data_list[0];
+            return dataList[0];
         }
 
         public async Task<SocketReceiveFromResult> ReceiveFromAsync(Memory<byte> buffer, CancellationToken cancel = default(CancellationToken))
@@ -9932,11 +9932,11 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        public int ReceiveFrom(Memory<byte> buffer, out EndPoint remote_endpoint, CancellationToken cancel = default(CancellationToken))
+        public int ReceiveFrom(Memory<byte> buffer, out EndPoint remoteEndPoint, CancellationToken cancel = default(CancellationToken))
         {
             SocketReceiveFromResult r = ReceiveFromAsync(buffer, cancel).Result;
 
-            remote_endpoint = r.RemoteEndPoint;
+            remoteEndPoint = r.RemoteEndPoint;
 
             return r.ReceivedBytes;
         }
@@ -9996,10 +9996,10 @@ namespace SoftEther.WebSocket.Helper
         public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
 
-        Once dispose_flag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (dispose_flag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 AttachHandle.Dispose();
             }
@@ -10188,10 +10188,10 @@ namespace SoftEther.WebSocket.Helper
 
         public bool IsStateChanged(int salt = 0)
         {
-            byte[] new_state = SnapshotState(salt);
-            if (LastState.SequenceEqual(new_state))
+            byte[] newState = SnapshotState(salt);
+            if (LastState.SequenceEqual(newState))
                 return false;
-            LastState = new_state;
+            LastState = newState;
             return true;
         }
 
@@ -10226,16 +10226,16 @@ namespace SoftEther.WebSocket.Helper
 
         public SharedExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
 
-        public FastPipeEndAsyncObjectWrapper(FastPipeEnd pipe_end, CancellationToken cancel = default(CancellationToken))
+        public FastPipeEndAsyncObjectWrapper(FastPipeEnd pipeEnd, CancellationToken cancel = default(CancellationToken))
         {
-            PipeEnd = pipe_end;
+            PipeEnd = pipeEnd;
             CancelWatcher = new CancelWatcher(cancel);
         }
 
-        Once connect_flag;
+        Once ConnectedFlag;
         public Task StartLoopAsync()
         {
-            if (connect_flag.IsFirstCall())
+            if (ConnectedFlag.IsFirstCall())
             {
                 LoopCompletedTask = ConnectAndWaitAsync();
             }
@@ -10290,20 +10290,20 @@ namespace SoftEther.WebSocket.Helper
                     var reader = PipeEnd.StreamReader;
                     while (true)
                     {
-                        bool state_changed;
+                        bool stateChanged;
                         do
                         {
-                            state_changed = false;
+                            stateChanged = false;
 
                             CancelWatcher.CancelToken.ThrowIfCancellationRequested();
 
                             while (reader.IsReadyToRead)
                             {
                                 await StreamWriteToObject(reader, CancelWatcher.CancelToken);
-                                state_changed = true;
+                                stateChanged = true;
                             }
                         }
-                        while (state_changed);
+                        while (stateChanged);
 
                         await WebSocketHelper.WaitObjectsAsync(
                             events: new AsyncAutoResetEvent[] { reader.EventReadReady },
@@ -10333,25 +10333,25 @@ namespace SoftEther.WebSocket.Helper
                     var writer = PipeEnd.StreamWriter;
                     while (true)
                     {
-                        bool state_changed;
+                        bool stateChanged;
                         do
                         {
-                            state_changed = false;
+                            stateChanged = false;
 
                             CancelWatcher.CancelToken.ThrowIfCancellationRequested();
 
                             if (writer.IsReadyToWrite)
                             {
-                                long last_tail = writer.PinTail;
+                                long lastTail = writer.PinTail;
                                 await StreamReadFromObject(writer, CancelWatcher.CancelToken);
-                                if (writer.PinTail != last_tail)
+                                if (writer.PinTail != lastTail)
                                 {
-                                    state_changed = true;
+                                    stateChanged = true;
                                 }
                             }
 
                         }
-                        while (state_changed);
+                        while (stateChanged);
 
                         await WebSocketHelper.WaitObjectsAsync(
                             events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
@@ -10380,20 +10380,20 @@ namespace SoftEther.WebSocket.Helper
                     var reader = PipeEnd.DatagramReader;
                     while (true)
                     {
-                        bool state_changed;
+                        bool stateChanged;
                         do
                         {
-                            state_changed = false;
+                            stateChanged = false;
 
                             CancelWatcher.CancelToken.ThrowIfCancellationRequested();
 
                             while (reader.IsReadyToRead)
                             {
                                 await DatagramWriteToObject(reader, CancelWatcher.CancelToken);
-                                state_changed = true;
+                                stateChanged = true;
                             }
                         }
-                        while (state_changed);
+                        while (stateChanged);
 
                         await WebSocketHelper.WaitObjectsAsync(
                             events: new AsyncAutoResetEvent[] { reader.EventReadReady },
@@ -10423,25 +10423,25 @@ namespace SoftEther.WebSocket.Helper
                     var writer = PipeEnd.DatagramWriter;
                     while (true)
                     {
-                        bool state_changed;
+                        bool stateChanged;
                         do
                         {
-                            state_changed = false;
+                            stateChanged = false;
 
                             CancelWatcher.CancelToken.ThrowIfCancellationRequested();
 
                             if (writer.IsReadyToWrite)
                             {
-                                long last_tail = writer.PinTail;
+                                long lastTail = writer.PinTail;
                                 await DatagramReadFromObject(writer, CancelWatcher.CancelToken);
-                                if (writer.PinTail != last_tail)
+                                if (writer.PinTail != lastTail)
                                 {
-                                    state_changed = true;
+                                    stateChanged = true;
                                 }
                             }
 
                         }
-                        while (state_changed);
+                        while (stateChanged);
 
                         await WebSocketHelper.WaitObjectsAsync(
                             events: new AsyncAutoResetEvent[] { writer.EventWriteReady },
@@ -10461,10 +10461,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disconnect_flag;
+        Once DisconnectedFlag;
         public void Disconnect()
         {
-            if (disconnect_flag.IsFirstCall())
+            if (DisconnectedFlag.IsFirstCall())
             {
                 this.PipeEnd.Disconnect();
                 CancelWatcher.Cancel();
@@ -10473,11 +10473,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (dispose_flag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Disconnect();
                 CancelWatcher.DisposeSafe();
@@ -10493,7 +10493,7 @@ namespace SoftEther.WebSocket.Helper
 
         static bool UseDontLingerOption = true;
 
-        public FastPipeEndSocketWrapper(FastPipeEnd pipe_end, Socket socket, CancellationToken cancel = default(CancellationToken)) : base(pipe_end, cancel)
+        public FastPipeEndSocketWrapper(FastPipeEnd pipeEnd, Socket socket, CancellationToken cancel = default(CancellationToken)) : base(pipeEnd, cancel)
         {
             this.Socket = socket;
             SupportedDataTypes = (Socket.SocketType == SocketType.Stream) ? PipeSupportedDataTypes.Stream : PipeSupportedDataTypes.Datagram;
@@ -10519,15 +10519,15 @@ namespace SoftEther.WebSocket.Helper
         {
             if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
-            List<Memory<byte>> send_array;
+            List<Memory<byte>> sendArray;
 
-            send_array = fifo.DequeueAllWithLock(out long total_read_size);
+            sendArray = fifo.DequeueAllWithLock(out long totalReadSize);
             fifo.CompleteRead();
 
-            List<ArraySegment<byte>> send_array2 = new List<ArraySegment<byte>>();
-            foreach (Memory<byte> mem in send_array)
+            List<ArraySegment<byte>> sendArray2 = new List<ArraySegment<byte>>();
+            foreach (Memory<byte> mem in sendArray)
             {
-                send_array2.Add(mem.AsSegment());
+                sendArray2.Add(mem.AsSegment());
             }
 
             //List<List<ArraySegment<byte>>> send_array3 = MemoryHelper.SplitMemoryArrayToArraySegment(send_array, int.MaxValue);
@@ -10541,7 +10541,7 @@ namespace SoftEther.WebSocket.Helper
                     //    fifo.EventListeners.Fire(fifo, FastBufferCallbackEventType.PartialProcessReadData);
                     //}
 
-                    int ret = await Socket.SendAsync(send_array2, SocketFlags.None);
+                    int ret = await Socket.SendAsync(sendArray2, SocketFlags.None);
                     return 0;
                 },
                 cancel: cancel);
@@ -10570,16 +10570,16 @@ namespace SoftEther.WebSocket.Helper
         {
             if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
-            Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
+            Memory<byte>[] recvList = await StreamBulkReceiver.Recv(cancel, this);
 
-            if (recv_list == null)
+            if (recvList == null)
             {
                 // disconnected
                 fifo.Disconnect();
                 return;
             }
 
-            fifo.EnqueueAllWithLock(recv_list);
+            fifo.EnqueueAllWithLock(recvList);
 
             fifo.CompleteWrite();
         }
@@ -10588,15 +10588,15 @@ namespace SoftEther.WebSocket.Helper
         {
             if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Datagram) == false) throw new NotSupportedException();
 
-            List<Datagram> send_list;
+            List<Datagram> sendList;
 
-            send_list = fifo.DequeueAllWithLock(out _);
+            sendList = fifo.DequeueAllWithLock(out _);
             fifo.CompleteRead();
 
             await WebSocketHelper.DoAsyncWithTimeout(
                 async c =>
                 {
-                    foreach (Datagram data in send_list)
+                    foreach (Datagram data in sendList)
                     {
                         cancel.ThrowIfCancellationRequested();
                         await Socket.SendToSafeUdpErrorAsync(data.Data.AsSegment(), SocketFlags.None, data.EndPoint);
@@ -10631,10 +10631,10 @@ namespace SoftEther.WebSocket.Helper
             fifo.CompleteWrite();
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (dispose_flag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Socket.DisposeSafe();
             }
@@ -10653,8 +10653,8 @@ namespace SoftEther.WebSocket.Helper
         FastPipeEndSocketWrapper SocketWrapper;
         Task SocketWrapperLoopTask;
 
-        public FastTcpPipe(Socket socket, CancellationToken cancel = default(CancellationToken), long? threshold_length_stream = null)
-            : base(cancel, threshold_length_stream)
+        public FastTcpPipe(Socket socket, CancellationToken cancel = default(CancellationToken), long? thresholdLengthStream = null)
+            : base(cancel, thresholdLengthStream)
         {
             Socket = socket;
             LocalEndPoint = (IPEndPoint)Socket.LocalEndPoint;
@@ -10676,19 +10676,19 @@ namespace SoftEther.WebSocket.Helper
             catch { }
         }
 
-        public FastPipeEndStream GetStream(bool auto_flush = true) => LocalPipeEnd.GetStream(auto_flush);
+        public FastPipeEndStream GetStream(bool autoFlush = true) => LocalPipeEnd.GetStream(autoFlush);
 
-        public static async Task<FastTcpPipe> ConnectAsync(string host, int port, AddressFamily? address_family = null, CancellationToken cancel = default(CancellationToken), int timeout = DefaultConnectTimeout)
+        public static async Task<FastTcpPipe> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, CancellationToken cancel = default(CancellationToken), int timeout = DefaultConnectTimeout)
         {
-            return await ConnectAsync(await GetIPFromHostName(host, address_family, cancel, timeout), port, cancel, timeout);
+            return await ConnectAsync(await GetIPFromHostName(host, addressFamily, cancel, timeout), port, cancel, timeout);
         }
 
-        public static async Task<IPAddress> GetIPFromHostName(string host, AddressFamily? address_family = null, CancellationToken cancel = default(CancellationToken), int timeout = DefaultConnectTimeout)
+        public static async Task<IPAddress> GetIPFromHostName(string host, AddressFamily? addressFamily = null, CancellationToken cancel = default(CancellationToken), int timeout = DefaultConnectTimeout)
         {
             if (IPAddress.TryParse(host, out IPAddress ip))
             {
-                if (address_family != null && ip.AddressFamily != address_family)
-                    throw new ArgumentException("ip.AddressFamily != address_family");
+                if (addressFamily != null && ip.AddressFamily != addressFamily)
+                    throw new ArgumentException("ip.AddressFamily != addressFamily");
             }
             else
             {
@@ -10696,7 +10696,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     return (await Dns.GetHostAddressesAsync(host))
                         .Where(x => x.AddressFamily == AddressFamily.InterNetwork || x.AddressFamily == AddressFamily.InterNetworkV6)
-                        .Where(x => address_family == null || x.AddressFamily == address_family).First();
+                        .Where(x => addressFamily == null || x.AddressFamily == addressFamily).First();
                 },
                 timeout: timeout,
                 cancel: cancel);
@@ -10705,10 +10705,10 @@ namespace SoftEther.WebSocket.Helper
             return ip;
         }
 
-        public static Task<FastTcpPipe> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)
-            => ConnectAsync(new IPEndPoint(ip, port), cancel, connect_timeout);
+        public static Task<FastTcpPipe> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default(CancellationToken), int connectTimeout = DefaultConnectTimeout)
+            => ConnectAsync(new IPEndPoint(ip, port), cancel, connectTimeout);
 
-        public static async Task<FastTcpPipe> ConnectAsync(IPEndPoint endpoint, CancellationToken cancel = default(CancellationToken), int connect_timeout = DefaultConnectTimeout)
+        public static async Task<FastTcpPipe> ConnectAsync(IPEndPoint endpoint, CancellationToken cancel = default(CancellationToken), int connectTimeout = DefaultConnectTimeout)
         {
             if (!(endpoint.AddressFamily == AddressFamily.InterNetwork || endpoint.AddressFamily == AddressFamily.InterNetworkV6))
                 throw new ArgumentException("dest.AddressFamily");
@@ -10721,11 +10721,11 @@ namespace SoftEther.WebSocket.Helper
                     await s.ConnectAsync(endpoint);
                     return 0;
                 },
-                cancel_proc: () =>
+                cancelProc: () =>
                 {
                     s.DisposeSafe();
                 },
-                timeout: connect_timeout,
+                timeout: connectTimeout,
                 cancel: cancel);
             }
             catch
@@ -10738,10 +10738,10 @@ namespace SoftEther.WebSocket.Helper
             return pipe;
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (dispose_flag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Socket.DisposeSafe();
             }
@@ -10760,7 +10760,7 @@ namespace SoftEther.WebSocket.Helper
 
         //static bool UseDontLingerOption = true;
 
-        public FastPipeEndStreamWrapper(FastPipeEnd pipe_end, Stream stream, CancellationToken cancel = default(CancellationToken)) : base(pipe_end, cancel)
+        public FastPipeEndStreamWrapper(FastPipeEnd pipeEnd, Stream stream, CancellationToken cancel = default(CancellationToken)) : base(pipeEnd, cancel)
         {
             this.Stream = stream;
             SupportedDataTypes = PipeSupportedDataTypes.Stream;
@@ -10830,16 +10830,16 @@ namespace SoftEther.WebSocket.Helper
         {
             if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
 
-            Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
+            Memory<byte>[] recvList = await StreamBulkReceiver.Recv(cancel, this);
 
-            if (recv_list == null)
+            if (recvList == null)
             {
                 // disconnected
                 fifo.Disconnect();
                 return;
             }
 
-            fifo.EnqueueAllWithLock(recv_list);
+            fifo.EnqueueAllWithLock(recvList);
 
             fifo.CompleteWrite();
         }
@@ -10850,10 +10850,10 @@ namespace SoftEther.WebSocket.Helper
         protected override Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
             => throw new NotSupportedException();
 
-        Once dispose_flag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (dispose_flag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Stream.DisposeSafe();
             }
@@ -10873,10 +10873,10 @@ namespace SoftEther.WebSocket.Helper
 
         FastPipeTcpListenerAcceptProc AcceptProc;
 
-        public FastPipeTcpListener(FastPipeTcpListenerAcceptProc accept_proc, object user_state = null)
+        public FastPipeTcpListener(FastPipeTcpListenerAcceptProc acceptProc, object userState = null)
         {
-            this.UserState = user_state;
-            this.AcceptProc = accept_proc;
+            this.UserState = userState;
+            this.AcceptProc = acceptProc;
 
             ListenerManager = new TcpListenManager(ListenManagerAcceptProc);
         }
@@ -10905,10 +10905,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 CancelSource.TryCancel();
 
