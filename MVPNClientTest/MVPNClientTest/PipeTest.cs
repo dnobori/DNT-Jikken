@@ -56,7 +56,9 @@ namespace MVPNClientTest
             try
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
-                Test_Pipe_SslStream_Client(cancel.Token).Wait();
+                //Test_Pipe_SslStream_Client(cancel.Token).Wait();
+
+                Test_Pipe_SslStream_Client2(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
 
@@ -556,6 +558,15 @@ namespace MVPNClientTest
 
             Console.WriteLine("--- Result ---");
             Console.WriteLine(WebSocketHelper.ObjectToJson(result));
+        }
+
+        static async Task Test_Pipe_SslStream_Client2(CancellationToken cancel)
+        {
+            string hostname = "news.goo.ne.jp";
+
+            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
+            {
+            }
         }
 
         static async Task Test_Pipe_SslStream_Client(CancellationToken cancel)

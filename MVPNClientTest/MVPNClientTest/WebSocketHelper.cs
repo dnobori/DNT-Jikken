@@ -7697,6 +7697,7 @@ namespace SoftEther.WebSocket.Helper
     public class DisconnectedException : Exception { }
     public class FastBufferDisconnectedException : DisconnectedException { }
     public class SocketDisconnectedException : DisconnectedException { }
+    public class BaseStreamDisconnectedException : DisconnectedException { }
 
     public delegate void FastEventCallback<TCaller, TEventType>(TCaller buffer, TEventType type, object user_state);
 
@@ -7820,7 +7821,7 @@ namespace SoftEther.WebSocket.Helper
         void Enqueue(T item);
         void EnqueueAll(Span<T> item_list);
         void EnqueueAllWithLock(Span<T> item_list);
-        List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true);
+        List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true);
         List<T> DequeueAll(out long total_read_size);
         List<T> DequeueAllWithLock(out long total_read_size);
         long DequeueAllAndEnqueueToOther(IFastBuffer<T> other);
@@ -8528,7 +8529,7 @@ namespace SoftEther.WebSocket.Helper
                 return DequeueAll(out total_read_size);
         }
         public List<Memory<T>> DequeueAll(out long total_read_size) => Dequeue(long.MaxValue, out total_read_size);
-        public List<Memory<T>> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
+        public List<Memory<T>> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true)
         {
             if (IsDisconnected && this.Length == 0) CheckDisconnected();
             checked
@@ -8549,7 +8550,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     if ((total_read_size + node.Value.Length) >= min_read_size)
                     {
-                        if (allow_split_segments_slow && (total_read_size + node.Value.Length) > min_read_size)
+                        if (allow_split_segments && (total_read_size + node.Value.Length) > min_read_size)
                         {
                             int last_segment_read_size = (int)(min_read_size - total_read_size);
                             Debug.Assert(last_segment_read_size <= node.Value.Length);
@@ -9104,7 +9105,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments_slow = true)
+        public List<T> Dequeue(long min_read_size, out long total_read_size, bool allow_split_segments = true)
         {
             if (IsDisconnected && this.Length == 0) CheckDisconnected();
             checked
@@ -9546,7 +9547,7 @@ namespace SoftEther.WebSocket.Helper
         public FastPipeEndStream GetStream(bool auto_flush = true) => FastPipeEndStream.InternalNew(this, auto_flush);
     }
 
-    public class FastPipeEndStream : NetworkStream, IDisposable
+    public sealed class FastPipeEndStream : NetworkStream, IDisposable
     {
         public bool AutoFlush { get; set; }
         public FastPipeEnd End { get; private set; }
@@ -10743,6 +10744,118 @@ namespace SoftEther.WebSocket.Helper
             if (dispose_flag.IsFirstCall() && disposing)
             {
                 Socket.DisposeSafe();
+            }
+            base.Dispose(disposing);
+        }
+    }
+
+    public class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapper, IDisposable
+    {
+        public Stream Stream { get; }
+        public int RecvTmpBufferSize { get; private set; }
+        public const int SendTmpBufferSize = 65536;
+        public override PipeSupportedDataTypes SupportedDataTypes { get; }
+
+        Memory<byte> SendTmpBuffer = new byte[SendTmpBufferSize];
+
+        //static bool UseDontLingerOption = true;
+
+        public FastPipeEndStreamWrapper(FastPipeEnd pipe_end, Stream stream, CancellationToken cancel = default(CancellationToken)) : base(pipe_end, cancel)
+        {
+            this.Stream = stream;
+            SupportedDataTypes = PipeSupportedDataTypes.Stream;
+
+            NetworkStream net = Stream as NetworkStream;
+            if (net != null)
+            {
+                
+                //Socket socket = null;
+
+                //Stream.LingerState = new LingerOption(false, 0);
+                //try
+                //{
+                //    if (UseDontLingerOption)
+                //        Stream.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
+                //}
+                //catch
+                //{
+                //    UseDontLingerOption = false;
+                //}
+                //Stream.NoDelay = true;
+            }
+            Stream.ReadTimeout = Stream.WriteTimeout = Timeout.Infinite;
+            this.AddOnDisconnected(() => Stream.DisposeSafe());
+        }
+
+        protected override async Task StreamWriteToObject(FastStreamFifo fifo, CancellationToken cancel)
+        {
+            if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
+
+            await WebSocketHelper.DoAsyncWithTimeout(
+                async c =>
+                {
+                    while (true)
+                    {
+                        int size = fifo.DequeueContiguousSlow(SendTmpBuffer, SendTmpBuffer.Length);
+                        if (size == 0)
+                            break;
+
+                        await Stream.WriteAsync(SendTmpBuffer.Slice(0, size));
+                    }
+
+                    return 0;
+                },
+                cancel: cancel);
+        }
+
+        FastMemoryAllocator<byte> FastMemoryAllocatorForStream = new FastMemoryAllocator<byte>();
+
+        AsyncBulkReceiver<Memory<byte>, FastPipeEndStreamWrapper> StreamBulkReceiver = new AsyncBulkReceiver<Memory<byte>, FastPipeEndStreamWrapper>(async me =>
+        {
+            if (me.RecvTmpBufferSize == 0)
+            {
+                int i = 65536;
+                me.RecvTmpBufferSize = Math.Min(i, FastPipeGlobalConfig.MaxStreamBufferLength);
+            }
+
+            Memory<byte> tmp = me.FastMemoryAllocatorForStream.Reserve(me.RecvTmpBufferSize);
+            int r = await me.Stream.ReadAsync(tmp);
+            if (r < 0) throw new BaseStreamDisconnectedException();
+            me.FastMemoryAllocatorForStream.Commit(ref tmp, r);
+            if (r == 0) return new ValueOrClosed<Memory<byte>>();
+            return new ValueOrClosed<Memory<byte>>(tmp);
+        });
+
+        protected override async Task StreamReadFromObject(FastStreamFifo fifo, CancellationToken cancel)
+        {
+            if (SupportedDataTypes.Bit(PipeSupportedDataTypes.Stream) == false) throw new NotSupportedException();
+
+            Memory<byte>[] recv_list = await StreamBulkReceiver.Recv(cancel, this);
+
+            if (recv_list == null)
+            {
+                // disconnected
+                fifo.Disconnect();
+                return;
+            }
+
+            fifo.EnqueueAllWithLock(recv_list);
+
+            fifo.CompleteWrite();
+        }
+
+        protected override Task DatagramWriteToObject(FastDatagramFifo fifo, CancellationToken cancel)
+            => throw new NotSupportedException();
+
+        protected override Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
+            => throw new NotSupportedException();
+
+        Once dispose_flag;
+        protected override void Dispose(bool disposing)
+        {
+            if (dispose_flag.IsFirstCall() && disposing)
+            {
+                Stream.DisposeSafe();
             }
             base.Dispose(disposing);
         }
