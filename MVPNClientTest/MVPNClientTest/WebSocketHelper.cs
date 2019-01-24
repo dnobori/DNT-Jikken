@@ -3611,10 +3611,10 @@ namespace SoftEther.WebSocket.Helper
                 this.parent = parent;
             }
 
-            Once disposeFlag;
+            Once DisposeFlag;
             public void Dispose()
             {
-                if (disposeFlag.IsFirstCall())
+                if (DisposeFlag.IsFirstCall())
                 {
                     this.parent.Unlock();
                 }
@@ -3622,7 +3622,7 @@ namespace SoftEther.WebSocket.Helper
         }
 
         SemaphoreSlim semaphone = new SemaphoreSlim(1, 1);
-        Once disposeFlag;
+        Once DisposeFlag;
 
         public async Task<LockHolder> LockWithAwait()
         {
@@ -3636,7 +3636,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 semaphone.DisposeSafe();
                 semaphone = null;
@@ -4913,10 +4913,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 CancelSource.Cancel();
             }
@@ -5145,10 +5145,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 cancelWatcher.DisposeSafe();
                 halt.TryCancelAsync().LaissezFaire();
@@ -5274,11 +5274,11 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
 
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 this.halt = true;
                 this.Canceled = true;
@@ -5382,11 +5382,11 @@ namespace SoftEther.WebSocket.Helper
             this.DisposeProc = disposeProc;
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (disposeFlag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 DisposeProc(UserData);
             }
@@ -5473,10 +5473,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall() == false)
+            if (DisposeFlag.IsFirstCall() == false)
                 return;
 
             lock (LockObj)
@@ -5567,10 +5567,10 @@ namespace SoftEther.WebSocket.Helper
 
         public void Cancel() => Dispose();
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall() == false)
+            if (DisposeFlag.IsFirstCall() == false)
                 return;
 
             CancelSource.Cancel();
@@ -6703,10 +6703,10 @@ namespace SoftEther.WebSocket.Helper
                     LeakChecker.List.Add(Id, name);
             }
 
-            Once disposeFlag;
+            Once DisposeFlag;
             public void Dispose()
             {
-                if (disposeFlag.IsFirstCall())
+                if (DisposeFlag.IsFirstCall())
                 {
                     lock (LeakChecker.List)
                     {
@@ -7670,7 +7670,7 @@ namespace SoftEther.WebSocket.Helper
 
             lock (LockObj)
             {
-                if (disposeFlag.IsSet) throw new ObjectDisposedException("TcpListenManager");
+                if (DisposeFlag.IsSet) throw new ObjectDisposedException("TcpListenManager");
 
                 var s = Search(Listener.MakeHashKey((IPVersion)ipVer, addr, port));
                 if (s != null)
@@ -7737,10 +7737,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
             }
         }
@@ -9486,11 +9486,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (disposeFlag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Disconnect();
                 CancelWatcher.DisposeSafe();
@@ -9500,6 +9500,14 @@ namespace SoftEther.WebSocket.Helper
         public virtual async Task _InternalCleanupAsync()
         {
             await CancelWatcher.AsyncCleanuper;
+        }
+
+        public void CheckDisconnected()
+        {
+            StreamAtoB.CheckDisconnected();
+            StreamBtoA.CheckDisconnected();
+            DatagramAtoB.CheckDisconnected();
+            DatagramBtoA.CheckDisconnected();
         }
     }
 
@@ -9513,10 +9521,12 @@ namespace SoftEther.WebSocket.Helper
         public FastDatagramFifo DatagramWriter { get; }
         public FastDatagramFifo DatagramReader { get; }
 
+        public AsyncManualResetEvent OnDisconnectedEvent { get => Pipe.OnDisconnectedEvent; }
+
         public SharedExceptionQueue ExceptionQueue { get => Pipe.ExceptionQueue; }
 
         public bool IsDisconnected { get => this.Pipe.IsDisconnected; }
-        public void Disconnect() { this.Pipe.Disconnect(); }
+        public void Disconnect(Exception ex = null) { this.Pipe.Disconnect(ex); }
         public void AddOnDisconnected(Action action)
         {
             lock (Pipe.OnDisconnected)
@@ -9548,6 +9558,8 @@ namespace SoftEther.WebSocket.Helper
 
             public FastPipeEndAttachHandle(FastPipeEnd end, object userState = null)
             {
+                end.CheckDisconnected();
+
                 lock (end.AttachHandleLock)
                 {
                     if (end.CurrentAttachHandle != null)
@@ -9641,10 +9653,10 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            Once disposeFlag;
+            Once DisposeFlag;
             public void Dispose()
             {
-                if (disposeFlag.IsFirstCall())
+                if (DisposeFlag.IsFirstCall())
                 {
                     lock (LockObj)
                     {
@@ -9677,6 +9689,8 @@ namespace SoftEther.WebSocket.Helper
         public FastPipeEndAttachHandle Attach(object userState = null) => new FastPipeEndAttachHandle(this, userState);
 
         public FastPipeEndStream GetStream(bool autoFlush = true) => FastPipeEndStream._InternalNew(this, autoFlush);
+
+        public void CheckDisconnected() => Pipe.CheckDisconnected();
     }
 
     public sealed class FastPipeEndStream : NetworkStream, IDisposable, IAsyncCleanupable
@@ -10114,7 +10128,7 @@ namespace SoftEther.WebSocket.Helper
         public override int ReadTimeout { get; set; }
         public override int WriteTimeout { get; set; }
 
-        public override bool DataAvailable => base.DataAvailable;
+        public override bool DataAvailable => IsReadyToReceive;
 
         public AsyncCleanuper AsyncCleanuper { get; private set; }
 
@@ -10143,10 +10157,10 @@ namespace SoftEther.WebSocket.Helper
         public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
 
-        Once disposeFlag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (disposeFlag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 AttachHandle.Dispose();
             }
@@ -10639,11 +10653,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (disposeFlag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Disconnect();
                 CancelWatcher.DisposeSafe();
@@ -10799,10 +10813,10 @@ namespace SoftEther.WebSocket.Helper
             fifo.CompleteWrite();
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (disposeFlag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Socket.DisposeSafe();
             }
@@ -10913,16 +10927,221 @@ namespace SoftEther.WebSocket.Helper
         protected override Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
             => throw new NotSupportedException();
 
-        Once disposeFlag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (disposeFlag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 Stream.DisposeSafe();
             }
             base.Dispose(disposing);
         }
     }
+
+    public abstract class FastProtocolStackBase : IDisposable, IAsyncCleanupable
+    {
+        public virtual AsyncCleanuper AsyncCleanuper { get; }
+
+        public CancelWatcher CancelWatcher;
+
+        public AsyncManualResetEvent InitSuccessOrFailEvent = new AsyncManualResetEvent();
+
+        public FastProtocolStackBase(CancellationToken cancel = default(CancellationToken))
+        {
+            AsyncCleanuper = new AsyncCleanuper(this);
+            CancelWatcher = new CancelWatcher(cancel);
+        }
+
+        Task rootMainTask;
+
+        Once startLoopFlag;
+
+        protected void BaseStart()
+        {
+            if (startLoopFlag.IsFirstCall() == false) return;
+
+            rootMainTask = RootMain();
+        }
+
+        protected void CheckPointInitSuccessOrFail() => InitSuccessOrFailEvent.Set(true);
+
+        public Task WaitInitSuccessOrFailAsync() => InitSuccessOrFailEvent.WaitAsync();
+
+        async Task RootMain()
+        {
+            try
+            {
+                await MiddleMain();
+            }
+            finally
+            {
+                CheckPointInitSuccessOrFail();
+            }
+        }
+
+        protected abstract Task MiddleMain();
+
+        Once DisposeFlag;
+
+        public void Dispose() => Dispose(true);
+
+        protected virtual void Dispose(bool disposing)
+        {
+            if (DisposeFlag.IsFirstCall() && disposing)
+            {
+                // Here
+            }
+        }
+
+        public virtual async Task _InternalCleanupAsync()
+        {
+            await rootMainTask.TryWaitAsync(true);
+
+            await CancelWatcher.AsyncCleanuper;
+        }
+    }
+
+    public abstract class FastLinearMiddleProtocolStackBase : FastProtocolStackBase, IDisposable, IAsyncCleanupable
+    {
+        public override AsyncCleanuper AsyncCleanuper { get; }
+
+        public FastPipeEnd Lower { get; }
+        public FastPipeEnd Upper { get; }
+
+        public abstract Task ConnectLowerAndUpper(FastPipeEnd lower, FastPipeEnd upper);
+        public abstract Task DisconnectLowerAndUpper();
+
+        public FastLinearMiddleProtocolStackBase(FastPipeEnd lower, FastPipeEnd upper, CancellationToken cancel = default(CancellationToken)) : base(cancel)
+        {
+            AsyncCleanuper = new AsyncCleanuper(this);
+
+            Lower = lower;
+            Upper = upper;
+        }
+
+        Once DisposeFlag;
+
+        protected sealed override async Task MiddleMain()
+        {
+            try
+            {
+                Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
+                Lower.AddOnDisconnected(() => Upper.Disconnect());
+                Upper.AddOnDisconnected(() => Lower.Disconnect());
+
+                await ConnectLowerAndUpper(Lower, Upper);
+
+                CheckPointInitSuccessOrFail();
+
+                await WebSocketHelper.WaitObjectsAsync(
+                    cancels: CancelWatcher.CancelToken.ToSingleArray(),
+                    manualEvents: new AsyncManualResetEvent[] { Lower.OnDisconnectedEvent, Upper.OnDisconnectedEvent },
+                    exceptions: ExceptionWhen.CancelException
+                    );
+            }
+            catch (Exception ex)
+            {
+                Lower.Disconnect(ex);
+                Upper.Disconnect(ex);
+
+                CheckPointInitSuccessOrFail();
+
+                throw ex;
+            }
+            finally
+            {
+                Lower.Disconnect();
+                Upper.Disconnect();
+                await DisconnectLowerAndUpper();
+            }
+        }
+
+        protected override void Dispose(bool disposing)
+        {
+            if (DisposeFlag.IsFirstCall() && disposing)
+            {
+                // Here
+            }
+        }
+
+        public override async Task _InternalCleanupAsync()
+        {
+            await base._InternalCleanupAsync().TryWaitAsync(true);
+        }
+    }
+
+    public class FastSslProtocolStack : FastLinearMiddleProtocolStackBase, IDisposable, IAsyncCleanupable
+    {
+        public bool IsServerMode { get; } = false;
+
+        public override AsyncCleanuper AsyncCleanuper { get; }
+        public SslClientAuthenticationOptions SslClientOptions { get; }
+
+        FastPipeEndStream LowerStream;
+        FastPipeEndStreamWrapper UpperStreamWrapper;
+
+        SslStream Ssl;
+
+        public FastSslProtocolStack(FastPipeEnd lower, FastPipeEnd upper, SslClientAuthenticationOptions clientOptions,
+            CancellationToken cancel = default(CancellationToken)) : base(lower, upper, cancel)
+        {
+            AsyncCleanuper = new AsyncCleanuper(this);
+
+            SslClientOptions = clientOptions;
+            IsServerMode = false;
+
+            BaseStart();
+        }
+
+        public override async Task ConnectLowerAndUpper(FastPipeEnd lower, FastPipeEnd upper)
+        {
+            LowerStream = lower.GetStream(false);
+
+            try
+            {
+                Ssl = new SslStream(LowerStream, true);
+
+                await Ssl.AuthenticateAsClientAsync(SslClientOptions, CancelWatcher.CancelToken);
+
+                UpperStreamWrapper = new FastPipeEndStreamWrapper(upper, Ssl, CancelWatcher.CancelToken);
+            }
+            catch
+            {
+                LowerStream.DisposeSafe();
+                await LowerStream.AsyncCleanuper;
+                throw;
+            }
+        }
+
+        public override async Task DisconnectLowerAndUpper()
+        {
+            Ssl.DisposeSafe();
+            Ssl = null;
+
+            await LowerStream.AsyncCleanuper;
+            LowerStream = null;
+
+            UpperStreamWrapper.DisposeSafe();
+            UpperStreamWrapper = null;
+        }
+
+        Once DisposeFlag;
+
+        protected override void Dispose(bool disposing)
+        {
+            if (DisposeFlag.IsFirstCall() && disposing)
+            {
+                // Here
+            }
+        }
+
+        public override async Task _InternalCleanupAsync()
+        {
+            await base._InternalCleanupAsync().TryWaitAsync(true);
+        }
+
+    }
+
 
     public class FastTcpPipe : FastPipe, IDisposable, IAsyncCleanupable
     {
@@ -11017,10 +11236,10 @@ namespace SoftEther.WebSocket.Helper
             return pipe;
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (disposeFlag.IsFirstCall() && disposing)
+            if (DisposeFlag.IsFirstCall() && disposing)
             {
                 SocketWrapper.CancelWatcher.Cancel();
                 Socket.DisposeSafe();
@@ -11075,10 +11294,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once disposeFlag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (disposeFlag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 CancelSource.TryCancel();
 

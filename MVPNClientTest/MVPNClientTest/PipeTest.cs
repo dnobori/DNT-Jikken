@@ -56,9 +56,9 @@ namespace MVPNClientTest
             try
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
-                Test_Pipe_SslStream_Client(cancel.Token).Wait();
+                //Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
-                //Test_Pipe_SslStream_Client2(cancel.Token).Wait();
+                Test_Pipe_SslStream_Client2(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Both, cancel.Token).Wait();
                 //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
@@ -589,9 +589,59 @@ namespace MVPNClientTest
         static async Task Test_Pipe_SslStream_Client2(CancellationToken cancel)
         {
             string hostname = "news.goo.ne.jp";
-
-            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
+            CleanuperLady lady = new CleanuperLady();
+            try
             {
+                using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
+                {
+                    lady.Add(p);
+
+                    using (FastPipe p2 = new FastPipe(cancel))
+                    {
+                        lady.Add(p2);
+
+                        SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
+                        {
+                            TargetHost = hostname,
+                            AllowRenegotiation = true,
+                            RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return false; },
+                        };
+
+                        using (FastSslProtocolStack ssl = new FastSslProtocolStack(p.LocalPipeEnd, p2.A, opt, cancel))
+                        {
+                            lady.Add(ssl);
+
+                            await ssl.WaitInitSuccessOrFailAsync();
+
+                            using (var st = p2.B.GetStream())
+                            {
+                                lady.Add(st);
+
+                                WriteLine("Connected.");
+                                StreamWriter w = new StreamWriter(st);
+                                w.AutoFlush = true;
+
+                                await w.WriteAsync(
+                                    "GET / HTTP/1.0\r\n" +
+                                    $"HOST: {hostname}\r\n\r\n"
+                                    );
+
+                                StreamReader r = new StreamReader(st);
+                                while (true)
+                                {
+                                    string s = await r.ReadLineAsync();
+                                    if (s == null) break;
+                                    WriteLine(s);
+                                }
+                                Dbg.Where();
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                await lady.CleanupAsync();
             }
         }
 
