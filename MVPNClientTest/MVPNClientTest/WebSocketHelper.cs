@@ -3611,10 +3611,10 @@ namespace SoftEther.WebSocket.Helper
                 this.parent = parent;
             }
 
-            Once DisposeFlag;
+            Once disposeFlag;
             public void Dispose()
             {
-                if (DisposeFlag.IsFirstCall())
+                if (disposeFlag.IsFirstCall())
                 {
                     this.parent.Unlock();
                 }
@@ -3622,7 +3622,7 @@ namespace SoftEther.WebSocket.Helper
         }
 
         SemaphoreSlim semaphone = new SemaphoreSlim(1, 1);
-        Once DisposeFlag;
+        Once disposeFlag;
 
         public async Task<LockHolder> LockWithAwait()
         {
@@ -3636,7 +3636,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall())
+            if (disposeFlag.IsFirstCall())
             {
                 semaphone.DisposeSafe();
                 semaphone = null;
@@ -4913,10 +4913,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall())
+            if (disposeFlag.IsFirstCall())
             {
                 CancelSource.Cancel();
             }
@@ -5145,10 +5145,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall())
+            if (disposeFlag.IsFirstCall())
             {
                 cancelWatcher.DisposeSafe();
                 halt.TryCancelAsync().LaissezFaire();
@@ -5274,11 +5274,11 @@ namespace SoftEther.WebSocket.Helper
             return ret;
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
 
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall())
+            if (disposeFlag.IsFirstCall())
             {
                 this.halt = true;
                 this.Canceled = true;
@@ -5382,11 +5382,11 @@ namespace SoftEther.WebSocket.Helper
             this.DisposeProc = disposeProc;
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposeFlag.IsFirstCall() && disposing)
             {
                 DisposeProc(UserData);
             }
@@ -5473,10 +5473,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall() == false)
+            if (disposeFlag.IsFirstCall() == false)
                 return;
 
             lock (LockObj)
@@ -5567,10 +5567,10 @@ namespace SoftEther.WebSocket.Helper
 
         public void Cancel() => Dispose();
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall() == false)
+            if (disposeFlag.IsFirstCall() == false)
                 return;
 
             CancelSource.Cancel();
@@ -6703,10 +6703,10 @@ namespace SoftEther.WebSocket.Helper
                     LeakChecker.List.Add(Id, name);
             }
 
-            Once DisposeFlag;
+            Once disposeFlag;
             public void Dispose()
             {
-                if (DisposeFlag.IsFirstCall())
+                if (disposeFlag.IsFirstCall())
                 {
                     lock (LeakChecker.List)
                     {
@@ -7506,10 +7506,10 @@ namespace SoftEther.WebSocket.Helper
             public ListenStatus Status { get; internal set; }
             public Exception LastError { get; internal set; }
 
-            internal Task InternalTask { get; }
+            internal Task _InternalTask { get; }
 
-            internal CancellationTokenSource InternalSelfCancelSource { get; }
-            internal CancellationToken InternalSelfCancelToken { get => InternalSelfCancelSource.Token; }
+            internal CancellationTokenSource _InternalSelfCancelSource { get; }
+            internal CancellationToken _InternalSelfCancelToken { get => _InternalSelfCancelSource.Token; }
 
             public TcpListenManager Manager { get; }
 
@@ -7524,9 +7524,9 @@ namespace SoftEther.WebSocket.Helper
                 Port = port;
                 LastError = null;
                 Status = ListenStatus.Trying;
-                InternalSelfCancelSource = new CancellationTokenSource();
+                _InternalSelfCancelSource = new CancellationTokenSource();
 
-                InternalTask = ListenLoop();
+                _InternalTask = ListenLoop();
             }
 
             static internal string MakeHashKey(IPVersion ipVer, IPAddress ipAddress, int port)
@@ -7546,16 +7546,16 @@ namespace SoftEther.WebSocket.Helper
 
                 try
                 {
-                    while (InternalSelfCancelToken.IsCancellationRequested == false)
+                    while (_InternalSelfCancelToken.IsCancellationRequested == false)
                     {
                         Status = ListenStatus.Trying;
-                        InternalSelfCancelToken.ThrowIfCancellationRequested();
+                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
 
                         int sleepDelay = (int)Math.Min(RetryIntervalStandard * numRetry, RetryIntervalMax);
                         if (sleepDelay >= 1)
                             sleepDelay = WebSocketHelper.RandSInt31() % sleepDelay;
                         await WebSocketHelper.WaitObjectsAsync(timeout: sleepDelay,
-                            cancels: new CancellationToken[] { InternalSelfCancelToken },
+                            cancels: new CancellationToken[] { _InternalSelfCancelToken },
                             events: new AsyncAutoResetEvent[] { networkChangedEvent } );
                         numRetry++;
 
@@ -7566,7 +7566,7 @@ namespace SoftEther.WebSocket.Helper
                             numRetry = 0;
                         }
 
-                        InternalSelfCancelToken.ThrowIfCancellationRequested();
+                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
 
                         try
                         {
@@ -7574,7 +7574,7 @@ namespace SoftEther.WebSocket.Helper
                             listener.ExclusiveAddressUse = true;
                             listener.Start();
 
-                            var reg = InternalSelfCancelToken.Register(() =>
+                            var reg = _InternalSelfCancelToken.Register(() =>
                             {
                                 try { listener.Stop(); } catch { };
                             });
@@ -7587,7 +7587,7 @@ namespace SoftEther.WebSocket.Helper
                                 {
                                     while (true)
                                     {
-                                        InternalSelfCancelToken.ThrowIfCancellationRequested();
+                                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
 
                                         var socket = await listener.AcceptSocketAsync();
 
@@ -7617,12 +7617,12 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            internal async Task InternalStopAsync()
+            internal async Task _InternalStopAsync()
             {
-                await InternalSelfCancelSource.TryCancelAsync();
+                await _InternalSelfCancelSource.TryCancelAsync();
                 try
                 {
-                    await InternalTask;
+                    await _InternalTask;
                 }
                 catch { }
             }
@@ -7670,7 +7670,7 @@ namespace SoftEther.WebSocket.Helper
 
             lock (LockObj)
             {
-                if (DisposeFlag.IsSet) throw new ObjectDisposedException("TcpListenManager");
+                if (disposeFlag.IsSet) throw new ObjectDisposedException("TcpListenManager");
 
                 var s = Search(Listener.MakeHashKey((IPVersion)ipVer, addr, port));
                 if (s != null)
@@ -7692,7 +7692,7 @@ namespace SoftEther.WebSocket.Helper
                     return false;
                 List.Remove(hashKey);
             }
-            await s.InternalStopAsync();
+            await s._InternalStopAsync();
             return true;
         }
 
@@ -7737,10 +7737,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall())
+            if (disposeFlag.IsFirstCall())
             {
             }
         }
@@ -7755,7 +7755,7 @@ namespace SoftEther.WebSocket.Helper
             }
 
             foreach (Listener s in o)
-                await s.InternalStopAsync().TryWaitAsync();
+                await s._InternalStopAsync().TryWaitAsync();
 
             List<Task> waitTasks = new List<Task>();
             List<Socket> disconnectSockets = new List<Socket>();
@@ -8088,8 +8088,8 @@ namespace SoftEther.WebSocket.Helper
 
     static internal class FastBufferGlobalIdCounter
     {
-        static long id = 0;
-        public static long NewId() => Interlocked.Increment(ref id);
+        static long Id = 0;
+        public static long NewId() => Interlocked.Increment(ref Id);
     }
 
     public class FastStreamBuffer<T> : IFastBuffer<Memory<T>>
@@ -8127,8 +8127,8 @@ namespace SoftEther.WebSocket.Helper
         }
         public bool IsEventsEnabled { get; }
 
-        Once InternalDisconnectedFlag;
-        public bool IsDisconnected { get => InternalDisconnectedFlag.IsSet; }
+        Once internalDisconnectedFlag;
+        public bool IsDisconnected { get => internalDisconnectedFlag.IsSet; }
 
         public AsyncAutoResetEvent EventWriteReady { get; } = null;
         public AsyncAutoResetEvent EventReadReady { get; } = null;
@@ -8178,7 +8178,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void Disconnect()
         {
-            if (InternalDisconnectedFlag.IsFirstCall())
+            if (internalDisconnectedFlag.IsFirstCall())
             {
                 foreach (var ev in OnDisconnected)
                 {
@@ -9056,8 +9056,8 @@ namespace SoftEther.WebSocket.Helper
         public AsyncAutoResetEvent EventWriteReady { get; } = null;
         public AsyncAutoResetEvent EventReadReady { get; } = null;
 
-        Once InternalDisconnectedFlag;
-        public bool IsDisconnected { get => InternalDisconnectedFlag.IsSet; }
+        Once internalDisconnectedFlag;
+        public bool IsDisconnected { get => internalDisconnectedFlag.IsSet; }
 
         public List<Action> OnDisconnected { get; } = new List<Action>();
 
@@ -9102,7 +9102,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void Disconnect()
         {
-            if (InternalDisconnectedFlag.IsFirstCall())
+            if (internalDisconnectedFlag.IsFirstCall())
             {
                 foreach (var ev in OnDisconnected)
                 {
@@ -9413,8 +9413,8 @@ namespace SoftEther.WebSocket.Helper
 
         public AsyncManualResetEvent OnDisconnectedEvent { get; } = new AsyncManualResetEvent();
 
-        Once InternalDisconnectedFlag;
-        public bool IsDisconnected { get => InternalDisconnectedFlag.IsSet; }
+        Once internalDisconnectedFlag;
+        public bool IsDisconnected { get => internalDisconnectedFlag.IsSet; }
 
         public virtual AsyncCleanuper AsyncCleanuper { get; }
 
@@ -9456,7 +9456,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void Disconnect(Exception ex = null)
         {
-            if (InternalDisconnectedFlag.IsFirstCall())
+            if (internalDisconnectedFlag.IsFirstCall())
             {
                 if (ex != null)
                 {
@@ -9486,11 +9486,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposeFlag.IsFirstCall() && disposing)
             {
                 Disconnect();
                 CancelWatcher.DisposeSafe();
@@ -9641,10 +9641,10 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            Once DisposeFlag;
+            Once disposeFlag;
             public void Dispose()
             {
-                if (DisposeFlag.IsFirstCall())
+                if (disposeFlag.IsFirstCall())
                 {
                     lock (LockObj)
                     {
@@ -9676,7 +9676,7 @@ namespace SoftEther.WebSocket.Helper
 
         public FastPipeEndAttachHandle Attach(object userState = null) => new FastPipeEndAttachHandle(this, userState);
 
-        public FastPipeEndStream GetStream(bool autoFlush = true) => FastPipeEndStream.InternalNew(this, autoFlush);
+        public FastPipeEndStream GetStream(bool autoFlush = true) => FastPipeEndStream._InternalNew(this, autoFlush);
     }
 
     public sealed class FastPipeEndStream : NetworkStream, IDisposable, IAsyncCleanupable
@@ -9687,7 +9687,7 @@ namespace SoftEther.WebSocket.Helper
 
         private FastPipeEndStream() : base(null) { }
 
-        internal void InternalInit(FastPipeEnd end, bool autoFlush = true)
+        internal void _InternalInit(FastPipeEnd end, bool autoFlush = true)
         {
             End = end;
             AutoFlush = autoFlush;
@@ -9700,11 +9700,11 @@ namespace SoftEther.WebSocket.Helper
             AttachHandle = end.Attach();
         }
 
-        internal static FastPipeEndStream InternalNew(FastPipeEnd end, bool autoFlush = true)
+        internal static FastPipeEndStream _InternalNew(FastPipeEnd end, bool autoFlush = true)
         {
             FastPipeEndStream ret = WebSocketHelper.NewWithoutConstructor<FastPipeEndStream>();
 
-            ret.InternalInit(end, autoFlush);
+            ret._InternalInit(end, autoFlush);
 
             return ret;
         }
@@ -10143,10 +10143,10 @@ namespace SoftEther.WebSocket.Helper
         public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
 
-        Once DisposeFlag;
+        Once disposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposeFlag.IsFirstCall() && disposing)
             {
                 AttachHandle.Dispose();
             }
@@ -10639,11 +10639,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposeFlag.IsFirstCall() && disposing)
             {
                 Disconnect();
                 CancelWatcher.DisposeSafe();
@@ -10799,10 +10799,10 @@ namespace SoftEther.WebSocket.Helper
             fifo.CompleteWrite();
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposeFlag.IsFirstCall() && disposing)
             {
                 Socket.DisposeSafe();
             }
@@ -10913,10 +10913,10 @@ namespace SoftEther.WebSocket.Helper
         protected override Task DatagramReadFromObject(FastDatagramFifo fifo, CancellationToken cancel)
             => throw new NotSupportedException();
 
-        Once DisposeFlag;
+        Once disposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposeFlag.IsFirstCall() && disposing)
             {
                 Stream.DisposeSafe();
             }
@@ -11017,10 +11017,10 @@ namespace SoftEther.WebSocket.Helper
             return pipe;
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposeFlag.IsFirstCall() && disposing)
             {
                 SocketWrapper.CancelWatcher.Cancel();
                 Socket.DisposeSafe();
@@ -11075,10 +11075,10 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        Once DisposeFlag;
+        Once disposeFlag;
         public void Dispose()
         {
-            if (DisposeFlag.IsFirstCall())
+            if (disposeFlag.IsFirstCall())
             {
                 CancelSource.TryCancel();
 
