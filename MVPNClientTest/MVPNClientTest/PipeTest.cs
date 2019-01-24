@@ -589,10 +589,12 @@ namespace MVPNClientTest
         static async Task Test_Pipe_SslStream_Client2(CancellationToken cancel)
         {
             string hostname = "news.goo.ne.jp";
+            int port = 443;
+
             CleanuperLady lady = new CleanuperLady();
             try
             {
-                using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
+                using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, port, null, cancel))
                 {
                     lady.Add(p);
 
@@ -600,11 +602,15 @@ namespace MVPNClientTest
                     {
                         lady.Add(p2);
 
-                        SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
+                        FastSslProtocolOptions opt = new FastSslProtocolOptions()
                         {
-                            TargetHost = hostname,
-                            AllowRenegotiation = true,
-                            RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return false; },
+                            IsServerMode = false,
+                            SslClientOptions = new SslClientAuthenticationOptions()
+                            {
+                                TargetHost = hostname,
+                                AllowRenegotiation = true,
+                                RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
+                            },
                         };
 
                         using (FastSslProtocolStack ssl = new FastSslProtocolStack(p.LocalPipeEnd, p2.A, opt, cancel))
@@ -660,7 +666,7 @@ namespace MVPNClientTest
                         lady.Add(st);
                         using (SslStream ssl = new SslStream(st))
                         {
-                            st.AttachHandle.SetStreamReceiveTimeout(3000);
+                            //st.AttachHandle.SetStreamReceiveTimeout(3000);
 
                             SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
                             {
@@ -675,7 +681,7 @@ namespace MVPNClientTest
                             w.AutoFlush = true;
 
                             await w.WriteAsync(
-                                "GET / HTTP/1.0\r\n" +
+                                "GET / HTTP/1.1\r\n" +
                                 $"HOST: {hostname}\r\n\r\n"
                                 );
 

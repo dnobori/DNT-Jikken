@@ -5158,7 +5158,9 @@ namespace SoftEther.WebSocket.Helper
         public async Task _InternalCleanupAsync()
         {
             await mainLoop.TryWaitAsync(true);
-            await cancelWatcher.AsyncCleanuper;
+
+            if (cancelWatcher != null)
+                await cancelWatcher.AsyncCleanuper;
         }
     }
 
@@ -5521,9 +5523,9 @@ namespace SoftEther.WebSocket.Helper
             this.Action = action;
             this.UserState = userState;
 
-            this.AsyncCleanuper = new AsyncCleanuper(this);
-
             this.MainTask = MainTaskProc();
+
+            this.AsyncCleanuper = new AsyncCleanuper(this);
         }
 
         void InternalInvokeAction()
@@ -6647,11 +6649,11 @@ namespace SoftEther.WebSocket.Helper
 
     public static class LeakChecker
     {
-        static Dictionary<long, string> List = new Dictionary<long, string>();
+        static Dictionary<long, Holder> List = new Dictionary<long, Holder>();
         static long CurrentId = 0;
 
         public static Holder Enter([CallerFilePath] string filename = "", [CallerLineNumber] int line = 0, [CallerMemberName] string caller = null)
-            => new Holder($"{caller}() - {Path.GetFileName(filename)}:{line}");
+            => new Holder($"{caller}() - {Path.GetFileName(filename)}:{line}", Environment.StackTrace);
 
         public static int Count
         {
@@ -6672,10 +6674,10 @@ namespace SoftEther.WebSocket.Helper
                 }
                 else
                 {
-                    Console.WriteLine("*** Leaked !!! ***");
-                    Console.WriteLine("--- Leaked list ---");
+                    Console.WriteLine($"*** Leaked !!! count = {Count} ***");
+                    Console.WriteLine($"--- Leaked list  count = {Count} ---");
                     Console.Write(GetString());
-                    Console.WriteLine("--- End of leaked list --");
+                    Console.WriteLine($"--- End of leaked list  count = {Count} --");
                 }
             }
         }
@@ -6683,10 +6685,19 @@ namespace SoftEther.WebSocket.Helper
         public static string GetString()
         {
             StringWriter w = new StringWriter();
+            int num = 0;
             lock (List)
             {
                 foreach (var v in List.OrderBy(x => x.Key))
-                    w.WriteLine($"{v.Key}: {v.Value}");
+                {
+                    num++;
+                    w.WriteLine($"#{num}: {v.Key}: {v.Value.Name}");
+                    if (string.IsNullOrEmpty(v.Value.StackTrace) == false)
+                    {
+                        w.WriteLine(v.Value.StackTrace);
+                        w.WriteLine("---");
+                    }
+                }
             }
             return w.ToString();
         }
@@ -6694,13 +6705,21 @@ namespace SoftEther.WebSocket.Helper
         public sealed class Holder : IDisposable
         {
             long Id;
+            public string Name { get; }
+            public string StackTrace { get; }
 
-            internal Holder(string name)
+            internal Holder(string name, string stackTrace)
             {
+                //stackTrace = "";
+
                 if (string.IsNullOrEmpty(name)) name = "<untitled>";
+
                 Id = Interlocked.Increment(ref LeakChecker.CurrentId);
+                Name = name;
+                StackTrace = string.IsNullOrEmpty(stackTrace) ? "" : stackTrace;
+
                 lock (LeakChecker.List)
-                    LeakChecker.List.Add(Id, name);
+                    LeakChecker.List.Add(Id, this);
             }
 
             Once DisposeFlag;
@@ -9420,8 +9439,6 @@ namespace SoftEther.WebSocket.Helper
 
         public FastPipe(CancellationToken cancel = default(CancellationToken), long? thresholdLengthStream = null, long? thresholdLengthDatagram = null)
         {
-            AsyncCleanuper = new AsyncCleanuper(this);
-
             CancelWatcher = new CancelWatcher(cancel);
 
             if (thresholdLengthStream == null) thresholdLengthStream = FastPipeGlobalConfig.MaxStreamBufferLength;
@@ -9452,6 +9469,8 @@ namespace SoftEther.WebSocket.Helper
             {
                 Disconnect(new OperationCanceledException());
             });
+
+            AsyncCleanuper = new AsyncCleanuper(this);
         }
 
         public void Disconnect(Exception ex = null)
@@ -9568,11 +9587,11 @@ namespace SoftEther.WebSocket.Helper
                     this.UserState = userState;
                     this.PipeEnd = end;
                     this.PipeEnd.CurrentAttachHandle = this;
-
-                    AsyncCleanuper = new AsyncCleanuper(this);
-
-                    Leak = LeakChecker.Enter();
                 }
+
+                Leak = LeakChecker.Enter();
+
+                AsyncCleanuper = new AsyncCleanuper(this);
             }
 
             int receiveTimeoutProcId = 0;
@@ -9588,6 +9607,8 @@ namespace SoftEther.WebSocket.Helper
             {
                 lock (LockObj)
                 {
+                    if (DisposeFlag.IsSet) return;
+
                     if (timeout < 0 || timeout == int.MaxValue)
                     {
                         if (receiveTimeoutProcId != 0)
@@ -9599,6 +9620,8 @@ namespace SoftEther.WebSocket.Helper
                     }
                     else
                     {
+                        SetStreamReceiveTimeout(Timeout.Infinite);
+
                         receiveTimeoutDetector = new TimeoutDetector(timeout, callback: (x) =>
                         {
                             if (PipeEnd.StreamReader.IsReadyToWrite == false)
@@ -9623,6 +9646,8 @@ namespace SoftEther.WebSocket.Helper
             {
                 lock (LockObj)
                 {
+                    if (DisposeFlag.IsSet) return;
+
                     if (timeout < 0 || timeout == int.MaxValue)
                     {
                         if (sendTimeoutProcId != 0)
@@ -9634,6 +9659,8 @@ namespace SoftEther.WebSocket.Helper
                     }
                     else
                     {
+                        SetStreamSendTimeout(Timeout.Infinite);
+
                         sendTimeoutDetector = new TimeoutDetector(timeout, callback: (x) =>
                         {
                             if (PipeEnd.StreamWriter.IsReadyToRead == false)
@@ -9709,9 +9736,9 @@ namespace SoftEther.WebSocket.Helper
             ReadTimeout = Timeout.Infinite;
             WriteTimeout = Timeout.Infinite;
 
-            AsyncCleanuper = new AsyncCleanuper(this);
-
             AttachHandle = end.Attach();
+
+            AsyncCleanuper = new AsyncCleanuper(this);
         }
 
         internal static FastPipeEndStream _InternalNew(FastPipeEnd end, bool autoFlush = true)
@@ -10948,8 +10975,8 @@ namespace SoftEther.WebSocket.Helper
 
         public FastProtocolStackBase(CancellationToken cancel = default(CancellationToken))
         {
-            AsyncCleanuper = new AsyncCleanuper(this);
             CancelWatcher = new CancelWatcher(cancel);
+            AsyncCleanuper = new AsyncCleanuper(this);
         }
 
         Task rootMainTask;
@@ -10969,13 +10996,16 @@ namespace SoftEther.WebSocket.Helper
 
         async Task RootMain()
         {
-            try
+            using (LeakChecker.Enter())
             {
-                await MiddleMain();
-            }
-            finally
-            {
-                CheckPointInitSuccessOrFail();
+                try
+                {
+                    await MiddleMain();
+                }
+                finally
+                {
+                    CheckPointInitSuccessOrFail();
+                }
             }
         }
 
@@ -11001,6 +11031,15 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class FastLinearMiddleProtocolOptions
+    {
+        public int ReceiveTimeoutOnInit { get; set; } = 5 * 1000;
+        public int SendTimeoutOnInit { get; set; } = 60 * 1000;
+
+        public int ReceiveTimeoutAfterInit { get; set; } = Timeout.Infinite;
+        public int SendTimeoutAfterInit { get; set; } = Timeout.Infinite;
+    }
+
     public abstract class FastLinearMiddleProtocolStackBase : FastProtocolStackBase, IDisposable, IAsyncCleanupable
     {
         public override AsyncCleanuper AsyncCleanuper { get; }
@@ -11008,15 +11047,20 @@ namespace SoftEther.WebSocket.Helper
         public FastPipeEnd Lower { get; }
         public FastPipeEnd Upper { get; }
 
-        public abstract Task ConnectLowerAndUpper(FastPipeEnd lower, FastPipeEnd upper);
+        public FastPipeEndStream LowerStream { get; private set; }
+
+        public FastLinearMiddleProtocolOptions MiddleOptions { get; }
+
+        public abstract Task ConnectLowerAndUpper(FastPipeEndStream lowerStream, FastPipeEnd upper);
         public abstract Task DisconnectLowerAndUpper();
 
-        public FastLinearMiddleProtocolStackBase(FastPipeEnd lower, FastPipeEnd upper, CancellationToken cancel = default(CancellationToken)) : base(cancel)
+        public FastLinearMiddleProtocolStackBase(FastPipeEnd lower, FastPipeEnd upper, FastLinearMiddleProtocolOptions options, CancellationToken cancel = default(CancellationToken)) : base(cancel)
         {
-            AsyncCleanuper = new AsyncCleanuper(this);
-
+            MiddleOptions = options;
             Lower = lower;
             Upper = upper;
+
+            AsyncCleanuper = new AsyncCleanuper(this);
         }
 
         Once DisposeFlag;
@@ -11029,15 +11073,32 @@ namespace SoftEther.WebSocket.Helper
                 Lower.AddOnDisconnected(() => Upper.Disconnect());
                 Upper.AddOnDisconnected(() => Lower.Disconnect());
 
-                await ConnectLowerAndUpper(Lower, Upper);
+                using (LowerStream = Lower.GetStream(false))
+                {
+                    try
+                    {
+                        var attachHandle = LowerStream.AttachHandle;
 
-                CheckPointInitSuccessOrFail();
+                        attachHandle.SetStreamTimeout(MiddleOptions.ReceiveTimeoutOnInit, MiddleOptions.SendTimeoutOnInit);
 
-                await WebSocketHelper.WaitObjectsAsync(
-                    cancels: CancelWatcher.CancelToken.ToSingleArray(),
-                    manualEvents: new AsyncManualResetEvent[] { Lower.OnDisconnectedEvent, Upper.OnDisconnectedEvent },
-                    exceptions: ExceptionWhen.CancelException
-                    );
+                        await ConnectLowerAndUpper(LowerStream, Upper);
+
+                        attachHandle.SetStreamTimeout(MiddleOptions.ReceiveTimeoutAfterInit, MiddleOptions.SendTimeoutAfterInit);
+
+                        CheckPointInitSuccessOrFail();
+
+                        await WebSocketHelper.WaitObjectsAsync(
+                            cancels: CancelWatcher.CancelToken.ToSingleArray(),
+                            manualEvents: new AsyncManualResetEvent[] { Lower.OnDisconnectedEvent, Upper.OnDisconnectedEvent },
+                            exceptions: ExceptionWhen.CancelException
+                            );
+                    }
+                    finally
+                    {
+                        await LowerStream.AsyncCleanuper;
+                        LowerStream = null;
+                    }
+                }
             }
             catch (Exception ex)
             {
@@ -11052,6 +11113,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 Lower.Disconnect();
                 Upper.Disconnect();
+
                 await DisconnectLowerAndUpper();
             }
         }
@@ -11070,47 +11132,40 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class FastSslProtocolOptions : FastLinearMiddleProtocolOptions
+    {
+        public bool IsServerMode { get; set; } = false;
+        public SslClientAuthenticationOptions SslClientOptions { get; set; } = new SslClientAuthenticationOptions();
+    }
+
     public class FastSslProtocolStack : FastLinearMiddleProtocolStackBase, IDisposable, IAsyncCleanupable
     {
-        public bool IsServerMode { get; } = false;
+        public bool IsServerMode { get => SslOptions.IsServerMode; }
 
         public override AsyncCleanuper AsyncCleanuper { get; }
-        public SslClientAuthenticationOptions SslClientOptions { get; }
+        public FastSslProtocolOptions SslOptions { get; }
 
-        FastPipeEndStream LowerStream;
         FastPipeEndStreamWrapper UpperStreamWrapper;
 
         SslStream Ssl;
 
-        public FastSslProtocolStack(FastPipeEnd lower, FastPipeEnd upper, SslClientAuthenticationOptions clientOptions,
-            CancellationToken cancel = default(CancellationToken)) : base(lower, upper, cancel)
+        public FastSslProtocolStack(FastPipeEnd lower, FastPipeEnd upper, FastSslProtocolOptions options,
+            CancellationToken cancel = default(CancellationToken)) : base(lower, upper, options, cancel)
         {
-            AsyncCleanuper = new AsyncCleanuper(this);
-
-            SslClientOptions = clientOptions;
-            IsServerMode = false;
+            SslOptions = options;
 
             BaseStart();
+
+            AsyncCleanuper = new AsyncCleanuper(this);
         }
 
-        public override async Task ConnectLowerAndUpper(FastPipeEnd lower, FastPipeEnd upper)
+        public override async Task ConnectLowerAndUpper(FastPipeEndStream lowerStream, FastPipeEnd upper)
         {
-            LowerStream = lower.GetStream(false);
+            Ssl = new SslStream(lowerStream, true);
 
-            try
-            {
-                Ssl = new SslStream(LowerStream, true);
+            await Ssl.AuthenticateAsClientAsync(SslOptions.SslClientOptions, CancelWatcher.CancelToken);
 
-                await Ssl.AuthenticateAsClientAsync(SslClientOptions, CancelWatcher.CancelToken);
-
-                UpperStreamWrapper = new FastPipeEndStreamWrapper(upper, Ssl, CancelWatcher.CancelToken);
-            }
-            catch
-            {
-                LowerStream.DisposeSafe();
-                await LowerStream.AsyncCleanuper;
-                throw;
-            }
+            UpperStreamWrapper = new FastPipeEndStreamWrapper(upper, Ssl, CancelWatcher.CancelToken);
         }
 
         public override async Task DisconnectLowerAndUpper()
@@ -11118,10 +11173,8 @@ namespace SoftEther.WebSocket.Helper
             Ssl.DisposeSafe();
             Ssl = null;
 
-            await LowerStream.AsyncCleanuper;
-            LowerStream = null;
-
             UpperStreamWrapper.DisposeSafe();
+            await UpperStreamWrapper.AsyncCleanuper;
             UpperStreamWrapper = null;
         }
 
@@ -11159,17 +11212,19 @@ namespace SoftEther.WebSocket.Helper
         public FastTcpPipe(Socket socket, CancellationToken cancel = default(CancellationToken), long? thresholdLengthStream = null)
             : base(cancel, thresholdLengthStream)
         {
-            AsyncCleanuper = new AsyncCleanuper(this);
             Socket = socket;
             LocalEndPoint = (IPEndPoint)Socket.LocalEndPoint;
             RemoteEndPoint = (IPEndPoint)Socket.RemoteEndPoint;
 
             SocketWrapper = new FastPipeEndSocketWrapper(this.A, this.Socket, cancel);
+
+            AsyncCleanuper = new AsyncCleanuper(this);
         }
 
         public override async Task _InternalCleanupAsync()
         {
-            await SocketWrapper.AsyncCleanuper;
+            if (SocketWrapper != null)
+                await SocketWrapper.AsyncCleanuper;
 
             await base._InternalCleanupAsync().TryWaitAsync(true);
         }
@@ -11267,9 +11322,10 @@ namespace SoftEther.WebSocket.Helper
         {
             this.UserState = userState;
             this.AcceptProc = acceptProc;
-            this.AsyncCleanuper = new AsyncCleanuper(this);
 
             ListenerManager = new TcpListenManager(ListenManagerAcceptProc);
+
+            this.AsyncCleanuper = new AsyncCleanuper(this);
         }
 
         async Task ListenManagerAcceptProc(TcpListenManager manager, TcpListenManager.Listener listener, Socket socket)
