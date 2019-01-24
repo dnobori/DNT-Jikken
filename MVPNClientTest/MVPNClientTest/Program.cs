@@ -20,7 +20,6 @@ using SoftEther.VpnClient;
 
 namespace MVPNClientTest
 {
-
     class Program
     {
         static async Task Task1()
@@ -154,7 +153,7 @@ namespace MVPNClientTest
 
             Console.WriteLine("Stopped.");
 
-            LeakChecker.Shared.Print();
+            LeakChecker.Print();
         }
 
         static async Task TestPipeTcpProc(Socket socket, CancellationToken cancel)
@@ -163,7 +162,6 @@ namespace MVPNClientTest
             {
                 using (var wrap = new FastPipeEndSocketWrapper(pipe.A, socket))
                 {
-                    Task loop = wrap.StartLoopAsync();
                     try
                     {
                         var end = pipe.B;
@@ -195,7 +193,7 @@ namespace MVPNClientTest
                     }
                     finally
                     {
-                        await loop;
+                        await wrap.AsyncCleanuper;
                     }
                 }
             }
@@ -215,7 +213,7 @@ namespace MVPNClientTest
                 cts.Cancel();
                 WriteLine("Cancelled.");
 
-                LeakChecker.Shared.Print();
+                LeakChecker.Print();
             }).Start();
 
             while (true)
@@ -794,7 +792,6 @@ namespace MVPNClientTest
 
                 using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.B, uc.Client))
                 {
-                    Task loop = w.StartLoopAsync();
                     try
                     {
                         long next_send = 0;
@@ -846,7 +843,7 @@ namespace MVPNClientTest
                     }
                     finally
                     {
-                        await loop;
+                        await w.AsyncCleanuper;
                     }
                 }
             }

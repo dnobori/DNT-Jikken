@@ -56,11 +56,12 @@ namespace MVPNClientTest
             try
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
-                //Test_Pipe_SslStream_Client(cancel.Token).Wait();
+                Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
-                Test_Pipe_SslStream_Client2(cancel.Token).Wait();
+                //Test_Pipe_SslStream_Client2(cancel.Token).Wait();
 
-                //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Both, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -83,7 +84,7 @@ namespace MVPNClientTest
             }
             finally
             {
-                LeakChecker.Shared.Print();
+                LeakChecker.Print();
             }
         }
 
@@ -118,8 +119,8 @@ namespace MVPNClientTest
             bool IsServerMode;
             Memory<byte> SendData;
 
-            IPAddress Ip;
-            int Port;
+            IPAddress ServerIP;
+            int ServerPort;
             int NumConnection;
             ModeFlag Mode;
             int TimeSpan;
@@ -134,8 +135,8 @@ namespace MVPNClientTest
             public SpeedTest(IPAddress ip, int port, int numConnection, int timespan, ModeFlag mode, CancellationToken cancel)
             {
                 this.IsServerMode = false;
-                this.Ip = ip;
-                this.Port = port;
+                this.ServerIP = ip;
+                this.ServerPort = port;
                 this.Cancel = cancel;
                 this.NumConnection = Math.Max(numConnection, 1);
                 this.TimeSpan = Math.Max(timespan, 1000);
@@ -152,7 +153,7 @@ namespace MVPNClientTest
             {
                 IsServerMode = true;
                 this.Cancel = cancel;
-                this.Port = port;
+                this.ServerPort = port;
                 InitSendData();
             }
 
@@ -196,12 +197,17 @@ namespace MVPNClientTest
                 {
                     FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, p, end) =>
                     {
+                        CleanuperLady lady = new CleanuperLady();
+
                         try
                         {
+
                             Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
                             using (var st = end.GetStream())
                             {
+                                lady.Add(st);
+
                                 st.AttachHandle.SetStreamReceiveTimeout(RecvTimeout);
 
                                 await st.SendAsync(Encoding.ASCII.GetBytes("TrafficServer\r\n\0"));
@@ -224,8 +230,9 @@ namespace MVPNClientTest
 
                                 using (var session = sessions.Enter(sessionId))
                                 {
-                                    using (new DelayAction((int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => p.Disconnect()))
+                                    using (var delay = new DelayAction((int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => p.Disconnect()))
                                     {
+                                        lady.Add(delay);
                                         if (dir == Direction.Recv)
                                         {
                                             RefInt refTmp = new RefInt();
@@ -275,7 +282,10 @@ namespace MVPNClientTest
                                                 }
                                                 else
                                                 {
-                                                    await st.ReceiveAsync();
+                                                    var recvMemory = await st.ReceiveAsync();
+
+                                                    if (recvMemory.Length == 0)
+                                                        break;
                                                 }
                                             }
                                         }
@@ -287,16 +297,28 @@ namespace MVPNClientTest
                         {
                             WriteLine(ex.GetSingleException().Message);
                         }
+                        finally
+                        {
+                            Dbg.Where();
+                            await lady.CleanupAsync();
+                            Dbg.Where();
+                        }
                     });
 
-                    listener.ListenerManager.Add(this.Port, IPVersion.IPv4);
-                    listener.ListenerManager.Add(this.Port, IPVersion.IPv6);
+                    try
+                    {
+                        listener.ListenerManager.Add(this.ServerPort, IPVersion.IPv4);
+                        listener.ListenerManager.Add(this.ServerPort, IPVersion.IPv6);
 
-                    WriteLine("Listening.");
+                        WriteLine("Listening.");
 
-                    await WebSocketHelper.WaitObjectsAsync(cancels: this.Cancel.ToSingleArray());
-
-                    listener.Dispose();
+                        await WebSocketHelper.WaitObjectsAsync(cancels: this.Cancel.ToSingleArray());
+                    }
+                    finally
+                    {
+                        listener.Dispose();
+                        await listener.AsyncCleanuper;
+                    }
                 }
             }
 
@@ -316,7 +338,7 @@ namespace MVPNClientTest
                 List<Task<Result>> tasks = new List<Task<Result>>();
                 List<AsyncManualResetEvent> readyEvents = new List<AsyncManualResetEvent>();
 
-                using (CancelWatcher cw = new CancelWatcher(this.Cancel))
+                using (CancelWatcher cancelWatcher = new CancelWatcher(this.Cancel))
                 {
                     for (int i = 0; i < NumConnection; i++)
                     {
@@ -329,7 +351,7 @@ namespace MVPNClientTest
                             dir = ((i % 2) == 0) ? Direction.Recv : Direction.Send;
 
                         AsyncManualResetEvent readyEvent = new AsyncManualResetEvent();
-                        var t = ClientSingleConnectionAsync(dir, readyEvent, cw.CancelToken);
+                        var t = ClientSingleConnectionAsync(dir, readyEvent, cancelWatcher.CancelToken);
                         ExceptionQueue.RegisterWatchedTask(t);
                         tasks.Add(t);
                         readyEvents.Add(readyEvent);
@@ -341,7 +363,7 @@ namespace MVPNClientTest
                         {
                             await WebSocketHelper.WaitObjectsAsync(
                                 tasks: tasks.Append(whenAllReady.WaitMe).ToArray(),
-                                cancels: cw.CancelToken.ToSingleArray(),
+                                cancels: cancelWatcher.CancelToken.ToSingleArray(),
                                 manualEvents: ExceptionQueue.WhenExceptionAdded.ToSingleArray());
                         }
 
@@ -350,12 +372,12 @@ namespace MVPNClientTest
 
                         ExceptionQueue.WhenExceptionAdded.CallbackList.AddSoftCallback(x =>
                         {
-                            cw.Cancel();
+                            cancelWatcher.Cancel();
                         });
 
                         using (new DelayAction(TimeSpan * 3 + 180 * 1000, x =>
                         {
-                            cw.Cancel();
+                            cancelWatcher.Cancel();
                         }))
                         {
                             ClientStartEvent.Set(true);
@@ -364,7 +386,7 @@ namespace MVPNClientTest
                             {
                                 await WebSocketHelper.WaitObjectsAsync(
                                     tasks: whenAllCompleted.WaitMe.ToSingleArray(),
-                                    cancels: cw.CancelToken.ToSingleArray()
+                                    cancels: cancelWatcher.CancelToken.ToSingleArray()
                                     );
 
                                 await whenAllCompleted.WaitMe;
@@ -396,7 +418,7 @@ namespace MVPNClientTest
                     }
                     finally
                     {
-                        cw.Cancel();
+                        cancelWatcher.Cancel();
                         try
                         {
                             await Task.WhenAll(tasks);
@@ -415,12 +437,16 @@ namespace MVPNClientTest
             async Task<Result> ClientSingleConnectionAsync(Direction dir, AsyncManualResetEvent fireMeWhenReady, CancellationToken cancel)
             {
                 Result ret = new Result();
-                using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(Ip, Port, cancel, ConnectTimeout))
+                CleanuperLady lady = new CleanuperLady();
+                try
                 {
-                    try
+                    using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout))
                     {
+                        lady.Add(p);
                         using (FastPipeEndStream st = p.GetStream())
                         {
+                            lady.Add(st);
+
                             if (dir == Direction.Recv)
                                 st.AttachHandle.SetStreamReceiveTimeout(RecvTimeout);
 
@@ -533,10 +559,10 @@ namespace MVPNClientTest
                             }
                         }
                     }
-                    finally
-                    {
-                        await p.WaitForLoopFinish(true);
-                    }
+                }
+                finally
+                {
+                    await lady.CleanupAsync();
                 }
             }
         }
@@ -573,32 +599,74 @@ namespace MVPNClientTest
         {
             string hostname = "news.goo.ne.jp";
 
-            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
+            CleanuperLady lady = new CleanuperLady();
+            try
             {
-                using (FastPipeEndStream st = p.GetStream())
+                using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
                 {
-                    using (SslStream ssl = new SslStream(st))
+                    lady.Add(p);
+                    using (FastPipeEndStream st = p.GetStream())
                     {
-                        st.AttachHandle.SetStreamReceiveTimeout(3000);
-
-                        SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
+                        lady.Add(st);
+                        using (SslStream ssl = new SslStream(st))
                         {
-                            TargetHost = hostname,
-                            AllowRenegotiation = true,
-                            RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
-                        };
+                            st.AttachHandle.SetStreamReceiveTimeout(3000);
 
-                        await ssl.AuthenticateAsClientAsync(opt, cancel);
+                            SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
+                            {
+                                TargetHost = hostname,
+                                AllowRenegotiation = true,
+                                RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
+                            };
+
+                            await ssl.AuthenticateAsClientAsync(opt, cancel);
+                            WriteLine("Connected.");
+                            StreamWriter w = new StreamWriter(ssl);
+                            w.AutoFlush = true;
+
+                            await w.WriteAsync(
+                                "GET / HTTP/1.0\r\n" +
+                                $"HOST: {hostname}\r\n\r\n"
+                                );
+
+                            StreamReader r = new StreamReader(ssl);
+                            while (true)
+                            {
+                                string s = await r.ReadLineAsync();
+                                if (s == null) break;
+                                WriteLine(s);
+                            }
+
+                            //WriteLine(await r.ReadToEndAsync());
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                await lady.CleanupAsync();
+            }
+        }
+
+        static async Task Test_Pipe_TCP_Client(CancellationToken cancel)
+        {
+            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync("www.google.com", 80, null, cancel))
+            {
+                try
+                {
+                    using (FastPipeEndStream st = p.GetStream())
+                    {
+                        st.AttachHandle.SetStreamTimeout(2000, -1);
                         WriteLine("Connected.");
-                        StreamWriter w = new StreamWriter(ssl);
+                        StreamWriter w = new StreamWriter(st);
                         w.AutoFlush = true;
 
                         await w.WriteAsync(
                             "GET / HTTP/1.0\r\n" +
-                            $"HOST: {hostname}\r\n\r\n"
+                            "HOST: www.google.com\r\n\r\n"
                             );
 
-                        StreamReader r = new StreamReader(ssl);
+                        StreamReader r = new StreamReader(st);
                         while (true)
                         {
                             string s = await r.ReadLineAsync();
@@ -609,38 +677,10 @@ namespace MVPNClientTest
                         //WriteLine(await r.ReadToEndAsync());
                     }
                 }
-
-                await p.WaitForLoopFinish();
-            }
-        }
-
-        static async Task Test_Pipe_TCP_Client(CancellationToken cancel)
-        {
-            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync("www.google.com", 80, null, cancel))
-            {
-                using (FastPipeEndStream st = p.GetStream())
+                finally
                 {
-                    WriteLine("Connected.");
-                    StreamWriter w = new StreamWriter(st);
-                    w.AutoFlush = true;
-
-                    await w.WriteAsync(
-                        "GET / HTTP/1.1\r\n" +
-                        "HOST: www.google.com\r\n\r\n"
-                        );
-
-                    StreamReader r = new StreamReader(st);
-                    while (true)
-                    {
-                        string s = await r.ReadLineAsync();
-                        if (s == null) break;
-                        WriteLine(s);
-                    }
-
-                    //WriteLine(await r.ReadToEndAsync());
+                    await p.AsyncCleanuper;
                 }
-
-                await p.WaitForLoopFinish();
             }
         }
     }
