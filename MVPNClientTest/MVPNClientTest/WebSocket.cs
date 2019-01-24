@@ -35,7 +35,7 @@ namespace SoftEther.WebSocket
         public int TimeoutOpen { get; set; } = 10 * 1000;
         public int TimeoutComm { get; set; } = 10 * 1000;
 
-        CancelWatcher cancel_watcher;
+        CancelWatcher cancelWatcher;
 
         public CancellationToken Cancel { get; }
         public bool Opened { get; private set; } = false;
@@ -52,12 +52,12 @@ namespace SoftEther.WebSocket
 
         Stream st;
 
-        public WebSocketStream(Stream inner_stream, CancellationToken cancel = default(CancellationToken))
+        public WebSocketStream(Stream innerStream, CancellationToken cancel = default(CancellationToken))
         {
-            this.st = inner_stream;
+            this.st = innerStream;
 
-            cancel_watcher = new CancelWatcher(cancel);
-            this.Cancel = cancel_watcher.CancelToken;
+            cancelWatcher = new CancelWatcher(cancel);
+            this.Cancel = cancelWatcher.CancelToken;
         }
 
         public async Task OpenAsync(string uri)
@@ -72,35 +72,35 @@ namespace SoftEther.WebSocket
 
             byte[] nonce = new byte[16];
             new Random().NextBytes(nonce);
-            string request_key = Convert.ToBase64String(nonce);
+            string requestKey = Convert.ToBase64String(nonce);
 
             req.Headers.Add("Host", u.Host);
             req.Headers.Add("User-Agent", UserAgent);
             req.Headers.Add("Accept", "text/html");
             req.Headers.Add("Sec-WebSocket-Version", "13");
             req.Headers.Add("Origin", "null");
-            req.Headers.Add("Sec-WebSocket-Key", request_key);
+            req.Headers.Add("Sec-WebSocket-Key", requestKey);
             req.Headers.Add("Connection", "keep-alive, Upgrade");
             req.Headers.Add("Pragma", "no-cache");
             req.Headers.Add("Cache-Control", "no-cache");
             req.Headers.Add("Upgrade", "websocket");
 
-            StringWriter tmp_writer = new StringWriter();
-            tmp_writer.WriteLine($"{req.Method} {req.RequestUri.PathAndQuery} HTTP/1.1");
-            tmp_writer.WriteLine(req.Headers.ToString());
+            StringWriter tmpWriter = new StringWriter();
+            tmpWriter.WriteLine($"{req.Method} {req.RequestUri.PathAndQuery} HTTP/1.1");
+            tmpWriter.WriteLine(req.Headers.ToString());
 
-            await st.WriteAsyncWithTimeout(tmp_writer.AsciiToByteArray(),
+            await st.WriteAsyncWithTimeout(tmpWriter.AsciiToByteArray(),
                 timeout: this.TimeoutOpen,
                 cancel: this.Cancel);
 
             Dictionary<string, string> headers = new Dictionary<string, string>();
             int num = 0;
-            int response_code = 0;
+            int responseCode = 0;
 
-            StreamReader tmp_reader = new StreamReader(st);
+            StreamReader tmpReader = new StreamReader(st);
             while (true)
             {
-                string line = await WebSocketHelper.DoAsyncWithTimeout((proc_cancel) => tmp_reader.ReadLineAsync(),
+                string line = await WebSocketHelper.DoAsyncWithTimeout((procCancel) => tmpReader.ReadLineAsync(),
                     timeout: this.TimeoutOpen,
                     cancel: this.Cancel);
                 if (line == "")
@@ -112,7 +112,7 @@ namespace SoftEther.WebSocket
                 {
                     string[] tokens = line.Split(' ');
                     if (tokens[0] != "HTTP/1.1") throw new ApplicationException($"Cannot establish the WebSocket Protocol. Response: \"{tokens}\"");
-                    response_code = int.Parse(tokens[1]);
+                    responseCode = int.Parse(tokens[1]);
                 }
                 else
                 {
@@ -125,9 +125,9 @@ namespace SoftEther.WebSocket
                 num++;
             }
 
-            if (response_code != 101)
+            if (responseCode != 101)
             {
-                throw new ApplicationException($"Cannot establish the WebSocket Protocol. Perhaps the destination host does not support WebSocket. Wrong response code: \"{response_code}\"");
+                throw new ApplicationException($"Cannot establish the WebSocket Protocol. Perhaps the destination host does not support WebSocket. Wrong response code: \"{responseCode}\"");
             }
 
             if (headers["Upgrade"].Equals("websocket", StringComparison.InvariantCultureIgnoreCase) == false)
@@ -135,14 +135,14 @@ namespace SoftEther.WebSocket
                 throw new ApplicationException($"Wrong Upgrade header: \"{headers["Upgrade"]}\"");
             }
 
-            string accept_key = headers["Sec-WebSocket-Accept"];
-            string key_calc_str = request_key + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
+            string acceptKey = headers["Sec-WebSocket-Accept"];
+            string keyCalcStr = requestKey + "258EAFA5-E914-47DA-95CA-C5AB0DC85B11";
             SHA1 sha1 = new SHA1Managed();
-            string accept_key_2 = Convert.ToBase64String(sha1.ComputeHash(key_calc_str.AsciiToByteArray()));
+            string acceptKey2 = Convert.ToBase64String(sha1.ComputeHash(keyCalcStr.AsciiToByteArray()));
 
-            if (accept_key != accept_key_2)
+            if (acceptKey != acceptKey2)
             {
-                throw new ApplicationException($"Wrong accept_key: \'{accept_key}\'");
+                throw new ApplicationException($"Wrong accept_key: \'{acceptKey}\'");
             }
 
             Opened = true;
@@ -195,15 +195,15 @@ namespace SoftEther.WebSocket
         public override async Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             if (count == 0 && this.HasError == false) return 0;
-            throw_if_disconnected();
+            ThrowIfDisconnected();
 
             while (true)
             {
                 while (true)
                 {
-                    throw_if_disconnected();
+                    ThrowIfDisconnected();
 
-                    Frame f = try_recv_next_frame(out int read_buffer_size);
+                    Frame f = TryRecvNextFrame(out int readBufferSize);
                     if (f == null) break; // No more frames
 
                     if (f.Opcode == WebSocketOpcode.Continue || f.Opcode == WebSocketOpcode.Text || f.Opcode == WebSocketOpcode.Bin)
@@ -224,10 +224,10 @@ namespace SoftEther.WebSocket
                         this.HasError = true;
                     }
 
-                    this.PhysicalRecvFifo.SkipRead(read_buffer_size);
+                    this.PhysicalRecvFifo.SkipRead(readBufferSize);
                 }
 
-                throw_if_disconnected();
+                ThrowIfDisconnected();
 
                 int sz = this.AppRecvFifo.Size;
                 if (sz >= 1)
@@ -239,15 +239,15 @@ namespace SoftEther.WebSocket
 
                 try
                 {
-                    byte[] tmp_buffer = new byte[65536];
+                    byte[] tmpBuffer = new byte[65536];
 
-                    int recv_size = await this.st.ReadAsyncWithTimeout(tmp_buffer,
-                        0, tmp_buffer.Length,
+                    int recvSize = await this.st.ReadAsyncWithTimeout(tmpBuffer,
+                        0, tmpBuffer.Length,
                         timeout: TimeoutComm,
                         cancel: Cancel,
                         cancelTokens: cancellationToken);
 
-                    this.PhysicalRecvFifo.Write(tmp_buffer, 0, recv_size);
+                    this.PhysicalRecvFifo.Write(tmpBuffer, 0, recvSize);
                 }
                 catch
                 {
@@ -259,7 +259,7 @@ namespace SoftEther.WebSocket
         public override async Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
         {
             if (count == 0 && this.HasError == false) return;
-            throw_if_disconnected();
+            ThrowIfDisconnected();
 
             while (this.PhysicalSendFifo.Size > this.MaxBufferSize)
             {
@@ -271,19 +271,19 @@ namespace SoftEther.WebSocket
             // App -> Physical
             while (true)
             {
-                throw_if_disconnected();
+                ThrowIfDisconnected();
 
                 int size = AppSendFifo.Size;
                 if (size == 0) break; // No more data
 
                 size = Math.Min(size, SendSingleFragmentSize);
 
-                try_send_frame(WebSocketOpcode.Bin, AppSendFifo.Data, AppSendFifo.DataOffset, size);
+                TrySendFrame(WebSocketOpcode.Bin, AppSendFifo.Data, AppSendFifo.DataOffset, size);
 
                 AppSendFifo.SkipRead(size);
             }
 
-            throw_if_disconnected();
+            ThrowIfDisconnected();
 
             try
             {
@@ -297,28 +297,28 @@ namespace SoftEther.WebSocket
                 this.HasError = true;
             }
         }
-        Frame try_recv_next_frame(out int read_buffer_size)
+        Frame TryRecvNextFrame(out int readBufferSize)
         {
-            read_buffer_size = 0;
+            readBufferSize = 0;
 
             try
             {
-                throw_if_disconnected();
+                ThrowIfDisconnected();
 
                 var buf = this.PhysicalRecvFifo.Span;
-                var buf_pos0 = this.PhysicalRecvFifo.Span;
+                var bufPos0 = this.PhysicalRecvFifo.Span;
 
                 if (buf.Length <= 2) return null;
 
-                byte flag_and_opcode = buf.WalkReadUInt8();
-                byte mask_and_payload_len = buf.WalkReadUInt8();
-                int mask_flag = mask_and_payload_len & 0x80;
-                int payload_len = mask_and_payload_len & 0x7F;
-                if (payload_len == 126)
+                byte flagAndOpcode = buf.WalkReadUInt8();
+                byte maskAndPayloadLen = buf.WalkReadUInt8();
+                int maskFlag = maskAndPayloadLen & 0x80;
+                int payloadLen = maskAndPayloadLen & 0x7F;
+                if (payloadLen == 126)
                 {
-                    payload_len = buf.WalkReadUInt16();
+                    payloadLen = buf.WalkReadUInt16();
                 }
-                else if (payload_len == 127)
+                else if (payloadLen == 127)
                 {
                     ulong u64 = buf.WalkReadUInt64();
                     if (u64 >= int.MaxValue)
@@ -326,36 +326,36 @@ namespace SoftEther.WebSocket
                         this.HasError = true;
                         return null;
                     }
-                    payload_len = (int)u64;
+                    payloadLen = (int)u64;
                 }
 
-                if (payload_len > MaxPayloadLenPerFrame)
+                if (payloadLen > MaxPayloadLenPerFrame)
                 {
                     this.HasError = true;
                     return null;
                 }
 
-                var mask_key = Span<byte>.Empty;
-                if (mask_flag != 0)
+                var maskKey = Span<byte>.Empty;
+                if (maskFlag != 0)
                 {
-                    mask_key = buf.WalkRead(4);
+                    maskKey = buf.WalkRead(4);
                 }
 
                 Frame f = new Frame()
                 {
-                    Data = buf.WalkRead(payload_len).ToArray(),
-                    Opcode = (WebSocketOpcode)(flag_and_opcode & 0xF),
+                    Data = buf.WalkRead(payloadLen).ToArray(),
+                    Opcode = (WebSocketOpcode)(flagAndOpcode & 0xF),
                 };
 
-                if (mask_flag != 0)
+                if (maskFlag != 0)
                 {
                     for (int i = 0; i < f.Data.Length; i++)
                     {
-                        f.Data[i] ^= mask_key[i % 4];
+                        f.Data[i] ^= maskKey[i % 4];
                     }
                 }
 
-                read_buffer_size = buf_pos0.Length - buf.Length;
+                readBufferSize = bufPos0.Length - buf.Length;
 
                 return f;
             }
@@ -365,32 +365,32 @@ namespace SoftEther.WebSocket
             }
         }
 
-        void try_send_frame(WebSocketOpcode opcode, byte[] data, int pos, int size)
+        void TrySendFrame(WebSocketOpcode opcode, byte[] data, int pos, int size)
         {
-            throw_if_disconnected();
+            ThrowIfDisconnected();
 
-            bool use_mask = true;
+            bool useMask = true;
             byte[] mask = null;
-            if (use_mask) mask = WebSocketHelper.Rand(4);
+            if (useMask) mask = WebSocketHelper.Rand(4);
 
             Buf b = new Buf();
 
             b.WriteByte((byte)((uint)0x80 | ((uint)opcode & 0x0f)));
 
             if (size < 125)
-                b.WriteByte((byte)(size | (use_mask ? 0x80 : 0x00)));
+                b.WriteByte((byte)(size | (useMask ? 0x80 : 0x00)));
             else if (size <= 65536)
             {
-                b.WriteByte((byte)(126 | (use_mask ? 0x80 : 0x00)));
+                b.WriteByte((byte)(126 | (useMask ? 0x80 : 0x00)));
                 b.WriteShort((ushort)size);
             }
             else
             {
-                b.WriteByte((byte)(127 | (use_mask ? 0x80 : 0x00)));
+                b.WriteByte((byte)(127 | (useMask ? 0x80 : 0x00)));
                 b.WriteInt64((ulong)size);
             }
 
-            if (use_mask)
+            if (useMask)
             {
                 b.Write(mask);
 
@@ -411,7 +411,7 @@ namespace SoftEther.WebSocket
             PhysicalSendFifo.Write(b);
         }
 
-        void throw_if_disconnected()
+        void ThrowIfDisconnected()
         {
             if (this.Cancel.IsCancellationRequested) this.HasError = true;
             if (this.HasError) throw new ApplicationException("WebSocket is disconnected.");
@@ -425,15 +425,15 @@ namespace SoftEther.WebSocket
             => WriteAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
 
-        Once dispose_flag;
+        Once DisposeFlag;
 
         protected override void Dispose(bool disposing)
         {
             if (disposing)
             {
-                if (dispose_flag.IsFirstCall())
+                if (DisposeFlag.IsFirstCall())
                 {
-                    this.cancel_watcher.DisposeSafe();
+                    this.cancelWatcher.DisposeSafe();
                     this.st.DisposeSafe();
                 }
             }

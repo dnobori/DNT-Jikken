@@ -77,14 +77,14 @@ namespace SoftEther.VpnClient
         public bool IsReachedOnce { get; private set; }
         long CreatedTick;
         long FirstStableReceiveTick;
-        CancelWatcher cancel_watcher;
+        CancelWatcher cancelWatcher;
         public AsyncAutoResetEvent EventRecvReady { get => Nb.EventRecvReady; }
 
-        public UdpAccel(IPAddress ip = null, bool client_mode = true, bool no_nat_t = false, CancellationToken cancel = default(CancellationToken))
+        public UdpAccel(IPAddress ip = null, bool clientMode = true, bool noNatT = false, CancellationToken cancel = default(CancellationToken))
         {
             if (ip == null) ip = IPAddress.Any;
-            cancel_watcher = new CancelWatcher(cancel);
-            ClientMode = client_mode;
+            cancelWatcher = new CancelWatcher(cancel);
+            ClientMode = clientMode;
 
             UdpClient s = new UdpClient(ip.AddressFamily);
 
@@ -93,7 +93,7 @@ namespace SoftEther.VpnClient
                 s.ExclusiveAddressUse = true;
                 s.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, false);
 
-                NoNatT = no_nat_t;
+                NoNatT = noNatT;
 
                 NatT_TranId = WebSocketHelper.Rand(8).GetUInt64();
                 Now = CreatedTick = Time.Tick64;
@@ -105,7 +105,7 @@ namespace SoftEther.VpnClient
 
                 s.Client.Bind(new IPEndPoint(ip, 0));
 
-                Nb = new NonBlockSocket(Udp.Client, cancel_watcher.CancelToken);
+                Nb = new NonBlockSocket(Udp.Client, cancelWatcher.CancelToken);
                 MyEndPoint = (IPEndPoint)s.Client.LocalEndPoint;
 
                 IsIPv6 = ip.AddressFamily == AddressFamily.InterNetworkV6;
@@ -148,24 +148,24 @@ namespace SoftEther.VpnClient
         {
             if (d.IsFirstCall())
             {
-                cancel_watcher.DisposeSafe();
+                cancelWatcher.DisposeSafe();
                 Nb.DisposeSafe();
                 Udp.DisposeSafe();
             }
         }
 
-        static IPAddress dummy_ip = null;
+        static IPAddress dummyIp = null;
         async Task NatT_GetIpTaskProc()
         {
-            int num_retry = 0;
+            int numRetry = 0;
 
-            if (dummy_ip == null)
+            if (dummyIp == null)
             {
-                dummy_ip = new IPAddress(new byte[] { 11, WebSocketHelper.Rand(1)[0], WebSocketHelper.Rand(1)[0], WebSocketHelper.Rand(1)[0] });
+                dummyIp = new IPAddress(new byte[] { 11, WebSocketHelper.Rand(1)[0], WebSocketHelper.Rand(1)[0], WebSocketHelper.Rand(1)[0] });
             }
-            string hostname = VpnSession.GetNatTServerHostName(dummy_ip);
+            string hostname = VpnSession.GetNatTServerHostName(dummyIp);
 
-            while (cancel_watcher.CancelToken.IsCancellationRequested == false)
+            while (cancelWatcher.CancelToken.IsCancellationRequested == false)
             {
                 try
                 {
@@ -179,48 +179,48 @@ namespace SoftEther.VpnClient
                 }
                 catch { }
 
-                num_retry++;
+                numRetry++;
 
-                int wait_time = (int)Math.Min(NatT_GetIP_Interval_Initial * num_retry, NatT_GetIP_Interval_Max);
+                int waitTime = (int)Math.Min(NatT_GetIP_Interval_Initial * numRetry, NatT_GetIP_Interval_Max);
 
-                await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancel_watcher.CancelToken },
-                    timeout: wait_time);
+                await WebSocketHelper.WaitObjectsAsync(cancels: new CancellationToken[] { cancelWatcher.CancelToken },
+                    timeout: waitTime);
             }
         }
 
-        public void InitClient(byte[] server_key, IPEndPoint server_endpoint, uint server_cookie, uint client_cookie, IPAddress server_ip_2 = null)
+        public void InitClient(byte[] serverKey, IPEndPoint serverEndPoint, uint serverCookie, uint clientCookie, IPAddress serverIp2 = null)
         {
             if (ClientMode == false) throw new ApplicationException("ClientMode == false");
-            if ((server_endpoint.Address.AddressFamily == AddressFamily.InterNetworkV6) != IsIPv6) throw new ArgumentException("server_endpoint.Address.AddressFamily");
-            YourKey = server_key;
-            YourEndPoint = server_endpoint;
-            if (server_ip_2 != null)
+            if ((serverEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6) != IsIPv6) throw new ArgumentException("server_endpoint.Address.AddressFamily");
+            YourKey = serverKey;
+            YourEndPoint = serverEndPoint;
+            if (serverIp2 != null)
             {
-                YourEndPoint2 = new IPEndPoint(server_ip_2, YourEndPoint.Port);
+                YourEndPoint2 = new IPEndPoint(serverIp2, YourEndPoint.Port);
             }
             Now = Time.Tick64;
-            MyCookie = client_cookie;
-            YourCookie = server_cookie;
+            MyCookie = clientCookie;
+            YourCookie = serverCookie;
             Inited = true;
         }
 
-        public void InitServer(byte[] client_key, IPEndPoint client_endpoint, IPEndPoint client_endpoint2 = null)
+        public void InitServer(byte[] clientKey, IPEndPoint clientEndPoint, IPEndPoint clientEndPoint2 = null)
         {
-            if ((client_endpoint.Address.AddressFamily == AddressFamily.InterNetworkV6) != IsIPv6) throw new ArgumentException("client_endpoint.Address.AddressFamily");
-            if (client_endpoint2 != null)
+            if ((clientEndPoint.Address.AddressFamily == AddressFamily.InterNetworkV6) != IsIPv6) throw new ArgumentException("client_endpoint.Address.AddressFamily");
+            if (clientEndPoint2 != null)
             {
-                if ((client_endpoint2.Address.AddressFamily == AddressFamily.InterNetworkV6) != IsIPv6) throw new ArgumentException("client_endpoint2.Address.AddressFamily");
+                if ((clientEndPoint2.Address.AddressFamily == AddressFamily.InterNetworkV6) != IsIPv6) throw new ArgumentException("client_endpoint2.Address.AddressFamily");
             }
-            YourKey = client_key;
-            YourEndPoint = client_endpoint;
-            YourEndPoint2 = client_endpoint2;
+            YourKey = clientKey;
+            YourEndPoint = clientEndPoint;
+            YourEndPoint2 = clientEndPoint2;
             Now = Time.Tick64;
             Inited = true;
         }
 
         public void Poll()
         {
-            IPAddress nat_t_ip = NatT_IP;
+            IPAddress natT_IP = NatT_IP;
 
             Now = Time.Tick64;
 
@@ -233,7 +233,7 @@ namespace SoftEther.VpnClient
                     break;
                 }
 
-                if (nat_t_ip != null && nat_t_ip.Equals(ret.IPEndPoint.Address) && ret.IPEndPoint.Port == UdpNatTPort)
+                if (natT_IP != null && natT_IP.Equals(ret.IPEndPoint.Address) && ret.IPEndPoint.Port == UdpNatTPort)
                 {
                     var ep = ParseIPAndPortStr(ret.Data);
                     if (ep != null && ep.Port >= 1 && ep.Port <= 65535)
@@ -268,26 +268,26 @@ namespace SoftEther.VpnClient
                 YourPortByNatTServerChanged = false;
                 if (IsSendReady(false))
                 {
-                    int rand_interval = (int)(WebSocketHelper.RandSInt31() % (KeepAliveIntervalMax - KeepAliveIntervalMin) + KeepAliveIntervalMin);
-                    NextSendKeepAlive = Now + rand_interval;
+                    int RandInterval = (int)(WebSocketHelper.RandSInt31() % (KeepAliveIntervalMax - KeepAliveIntervalMin) + KeepAliveIntervalMin);
+                    NextSendKeepAlive = Now + RandInterval;
 
-                    Send(null, 0, max_size: 1000);
+                    Send(null, 0, maxSize: 1000);
                 }
             }
 
-            if (NoNatT == false && nat_t_ip != null)
+            if (NoNatT == false && natT_IP != null)
             {
                 if (IsSendReady(true) == false)
                 {
                     if (NextPerformNatTTick == 0 || (NextPerformNatTTick <= Now))
                     {
-                        int rand_interval = RudpConsts.NatTIntervalInitial * Math.Min(CommToNatT_NumFail, RudpConsts.NatTIntervalFailMax);
+                        int randInterval = RudpConsts.NatTIntervalInitial * Math.Min(CommToNatT_NumFail, RudpConsts.NatTIntervalFailMax);
                         if (MyPortByNatTServer != 0)
                         {
-                            rand_interval = WebSocketHelper.GenRandInterval(RudpConsts.NatTIntervalMin, RudpConsts.NatTIntervalMax);
+                            randInterval = WebSocketHelper.GenRandInterval(RudpConsts.NatTIntervalMin, RudpConsts.NatTIntervalMax);
                         }
 
-                        NextPerformNatTTick = Now + rand_interval;
+                        NextPerformNatTTick = Now + randInterval;
 
                         byte c = (byte)'B';
 
@@ -295,7 +295,7 @@ namespace SoftEther.VpnClient
                         {
                             if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                             {
-                                Nb.SendUdpQueue.Enqueue(new Datagram(new byte[] { c }, new IPEndPoint(nat_t_ip, RudpConsts.NatTPort)));
+                                Nb.SendUdpQueue.Enqueue(new Datagram(new byte[] { c }, new IPEndPoint(natT_IP, RudpConsts.NatTPort)));
                                 Nb.EventSendNow.SetLazy();
                             }
                         }
@@ -326,25 +326,25 @@ namespace SoftEther.VpnClient
                 throw new ApplicationException("cookie != MyCookie");
             }
 
-            long my_tick = (long)buf.ReadUInt64();
-            long your_tick = (long)buf.ReadUInt64();
-            ushort inner_size = buf.ReadUInt16();
+            long myTick = (long)buf.ReadUInt64();
+            long yourTick = (long)buf.ReadUInt64();
+            ushort innerSize = buf.ReadUInt16();
             byte flag = buf.ReadUInt8();
 
-            var inner_data = buf.Read(inner_size);
+            var innerData = buf.Read(innerSize);
 
-            if (my_tick < LastRecvYourTick)
+            if (myTick < LastRecvYourTick)
             {
-                if ((LastRecvYourTick - my_tick) >= WindowSizeMSec)
+                if ((LastRecvYourTick - myTick) >= WindowSizeMSec)
                 {
                     throw new ApplicationException("(LastRecvYourTick - my_tick) >= WindowSizeMSec");
                 }
             }
 
-            LastRecvMyTick = Math.Max(LastRecvMyTick, your_tick);
-            LastRecvYourTick = Math.Max(LastRecvYourTick, my_tick);
+            LastRecvMyTick = Math.Max(LastRecvMyTick, yourTick);
+            LastRecvYourTick = Math.Max(LastRecvYourTick, myTick);
 
-            ret = new Datagram(inner_data.ToArray(), null, flag);
+            ret = new Datagram(innerData.ToArray(), null, flag);
 
             if (LastSetSrcIpAndPortTick < LastRecvYourTick)
             {
@@ -401,9 +401,9 @@ namespace SoftEther.VpnClient
             return ret;
         }
 
-        public void Send(Memory<byte> data, byte flag, int max_size = 0)
+        public void Send(Memory<byte> data, byte flag, int maxSize = 0)
         {
-            if (max_size == 0) max_size = MaxUdpPacketSize;
+            if (maxSize == 0) maxSize = MaxUdpPacketSize;
 
             FastMemoryBuffer<byte> buf = new FastMemoryBuffer<byte>();
 
@@ -413,7 +413,7 @@ namespace SoftEther.VpnClient
                 buf.Write(NextIv);
             }
 
-            int iv_pos = buf.CurrentPosition;
+            int ivPos = buf.CurrentPosition;
 
             // Cookie
             buf.WriteUInt32(YourCookie);
@@ -436,32 +436,32 @@ namespace SoftEther.VpnClient
             if (PlainTextMode == false)
             {
                 // Padding
-                int current_length = buf.CurrentPosition;
+                int currentLength = buf.CurrentPosition;
 
-                if (current_length < max_size)
+                if (currentLength < maxSize)
                 {
-                    int pad_size = Math.Min(max_size - current_length, MaxPaddingSize);
-                    pad_size = WebSocketHelper.RandSInt31() % pad_size;
-                    Span<byte> pad = new byte[pad_size];
+                    int padSize = Math.Min(maxSize - currentLength, MaxPaddingSize);
+                    padSize = WebSocketHelper.RandSInt31() % padSize;
+                    Span<byte> pad = new byte[padSize];
                     buf.Write(pad);
                 }
 
                 buf.Walk(PacketMacSize);
 
-                var mem_dst = buf.Memory.Slice(iv_pos);
-                var mem_src = mem_dst.Slice(0, mem_dst.Length - PacketMacSize);
+                var memDst = buf.Memory.Slice(ivPos);
+                var memSrc = memDst.Slice(0, memDst.Length - PacketMacSize);
                 var key = MyKey.AsMemory().Slice(0, ChaChaKeySize);
-                WebSocketHelper.Aead_ChaCha20Poly1305_Ietf_Encrypt(mem_dst, mem_src, key, NextIv, null);
-                mem_src.Slice(mem_src.Length - PacketIvSize, PacketIvSize).CopyTo(NextIv);
+                WebSocketHelper.Aead_ChaCha20Poly1305_Ietf_Encrypt(memDst, memSrc, key, NextIv, null);
+                memSrc.Slice(memSrc.Length - PacketIvSize, PacketIvSize).CopyTo(NextIv);
             }
 
-            var send_data = buf.Memory;
+            var sendData = buf.Memory;
 
             lock (Nb.SendUdpQueue)
             {
                 if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                 {
-                    Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), YourEndPoint));
+                    Nb.SendUdpQueue.Enqueue(new Datagram(sendData.ToArray(), YourEndPoint));
                     Nb.EventSendNow.SetLazy();
                 }
             }
@@ -476,7 +476,7 @@ namespace SoftEther.VpnClient
                         {
                             if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                             {
-                                Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), new IPEndPoint(YourEndPoint.Address, YourPortByNatTServer)));
+                                Nb.SendUdpQueue.Enqueue(new Datagram(sendData.ToArray(), new IPEndPoint(YourEndPoint.Address, YourPortByNatTServer)));
                                 Nb.EventSendNow.SetLazy();
                             }
                         }
@@ -488,10 +488,10 @@ namespace SoftEther.VpnClient
                         {
                             if (Nb.SendUdpQueue.Count <= Nb.MaxRecvUdpQueueSize)
                             {
-                                Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), YourEndPoint2));
+                                Nb.SendUdpQueue.Enqueue(new Datagram(sendData.ToArray(), YourEndPoint2));
                                 if (YourPortByNatTServer != 0 && YourEndPoint2.Port != YourPortByNatTServer)
                                 {
-                                    Nb.SendUdpQueue.Enqueue(new Datagram(send_data.ToArray(), new IPEndPoint(YourEndPoint2.Address, YourPortByNatTServer)));
+                                    Nb.SendUdpQueue.Enqueue(new Datagram(sendData.ToArray(), new IPEndPoint(YourEndPoint2.Address, YourPortByNatTServer)));
                                     Nb.EventSendNow.SetLazy();
                                 }
                             }
@@ -511,16 +511,16 @@ namespace SoftEther.VpnClient
             Nb.EventSendNow.SetIfLazyQueued();
         }
 
-        public bool IsSendReady(bool check_keepalive)
+        public bool IsSendReady(bool checkKeepalive)
         {
-            long timeout_value;
+            long timeoutValue;
             if (Inited == false) return false;
             if (YourEndPoint == null) return false;
-            timeout_value = KeepAliveTimeoutFast;
+            timeoutValue = KeepAliveTimeoutFast;
 
-            if (check_keepalive)
+            if (checkKeepalive)
             {
-                if (LastRecvTick == 0 || ((LastRecvTick + timeout_value) < Now))
+                if (LastRecvTick == 0 || ((LastRecvTick + timeoutValue) < Now))
                 {
                     FirstStableReceiveTick = 0;
                     return false;

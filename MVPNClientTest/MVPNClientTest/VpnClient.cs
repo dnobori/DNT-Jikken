@@ -24,10 +24,10 @@ namespace SoftEther.VpnClient
     {
         public string ErrorCode { get; }
         public string ErrorMessage { get; }
-        public VpnError(string error_code, string error_message) : base($"Error ({error_code}): {error_message}")
+        public VpnError(string errorCode, string errorMessage) : base($"Error ({errorCode}): {errorMessage}")
         {
-            this.ErrorCode = error_code;
-            this.ErrorMessage = error_message;
+            this.ErrorCode = errorCode;
+            this.ErrorMessage = errorMessage;
         }
     }
 
@@ -97,7 +97,7 @@ namespace SoftEther.VpnClient
     {
         public VpnSessionSetting Setting { get; }
 
-        TcpClient tcp_client;
+        TcpClient tcpClient;
         Stream sock;
         SslStream ssl;
         WebSocketStream ws;
@@ -105,7 +105,7 @@ namespace SoftEther.VpnClient
         public IPEndPoint LocalEndPoint { get; private set; }
         public IPEndPoint RemoteEndPoint { get; private set; }
 
-        CancelWatcher cancel_watcher;
+        CancelWatcher cancelWatcher;
         CancellationToken cancel;
 
         public int TimeoutComm
@@ -121,11 +121,11 @@ namespace SoftEther.VpnClient
         public VpnSocket(VpnSessionSetting setting, CancellationToken cancel)
         {
             this.Setting = setting.ClonePublics();
-            this.cancel_watcher = new CancelWatcher(cancel);
-            this.cancel = this.cancel_watcher.CancelToken;
+            this.cancelWatcher = new CancelWatcher(cancel);
+            this.cancel = this.cancelWatcher.CancelToken;
         }
 
-        static Boolean check_cert(Object sender, X509Certificate certificate,
+        static Boolean CheckCert(Object sender, X509Certificate certificate,
             X509Chain chain, SslPolicyErrors sslPolicyErrors)
         {
             return true;
@@ -133,20 +133,20 @@ namespace SoftEther.VpnClient
 
         public async Task ConnectAsync()
         {
-            tcp_client = new TcpClient();
+            tcpClient = new TcpClient();
 
-            tcp_client.NoDelay = true;
-            tcp_client.LingerState = new LingerOption(false, 0);
-            tcp_client.ExclusiveAddressUse = false;
+            tcpClient.NoDelay = true;
+            tcpClient.LingerState = new LingerOption(false, 0);
+            tcpClient.ExclusiveAddressUse = false;
 
-            await tcp_client.ConnectAsync(Setting.Host.Hostname, Setting.Host.Port, timeout: Setting.Details.TimeoutConnect, cancel: this.cancel);
+            await tcpClient.ConnectAsync(Setting.Host.Hostname, Setting.Host.Port, timeout: Setting.Details.TimeoutConnect, cancel: this.cancel);
 
-            this.LocalEndPoint = (IPEndPoint)tcp_client.Client.LocalEndPoint;
-            this.RemoteEndPoint = (IPEndPoint)tcp_client.Client.RemoteEndPoint;
+            this.LocalEndPoint = (IPEndPoint)tcpClient.Client.LocalEndPoint;
+            this.RemoteEndPoint = (IPEndPoint)tcpClient.Client.RemoteEndPoint;
 
-            sock = tcp_client.GetStream();
+            sock = tcpClient.GetStream();
 
-            ssl = new SslStream(sock, true, check_cert);
+            ssl = new SslStream(sock, true, CheckCert);
 
             await WebSocketHelper.DoAsyncWithTimeout(
                 mainProc: async c =>
@@ -171,65 +171,65 @@ namespace SoftEther.VpnClient
                 cancel: this.cancel);
         }
 
-        public async Task<byte[]> RecvAsync(int max_size, bool read_all = false)
+        public async Task<byte[]> RecvAsync(int maxSize, bool readAll = false)
         {
-            return await ws.ReadAsyncWithTimeout(max_size,
+            return await ws.ReadAsyncWithTimeout(maxSize,
                 timeout: Setting.Details.TimeoutComm,
                 cancel: this.cancel,
-                readAll: read_all);
+                readAll: readAll);
         }
 
-        public async Task<int> RecvAsync(byte[] buffer, int pos, int size, bool read_all = false)
+        public async Task<int> RecvAsync(byte[] buffer, int pos, int size, bool readAll = false)
         {
             int ret = await ws.ReadAsyncWithTimeout(buffer, pos, size,
                 timeout: Setting.Details.TimeoutComm,
                 cancel: this.cancel,
-                readAll: read_all);
+                readAll: readAll);
 
             return ret;
         }
 
-        public async Task SendJsonAsync(object json_data)
+        public async Task SendJsonAsync(object jsonData)
         {
-            string json_string = json_data.ObjectToJson();
-            byte[] json_byte = Encoding.UTF8.GetBytes(json_string);
+            string jsonString = jsonData.ObjectToJson();
+            byte[] jsonByte = Encoding.UTF8.GetBytes(jsonString);
             Buf buf = new Buf();
-            buf.WriteShort((ushort)json_byte.Length);
-            buf.Write(json_byte);
-            byte[] send_data = buf.ByteData;
-            await SendAsync(send_data, 0, send_data.Length);
+            buf.WriteShort((ushort)jsonByte.Length);
+            buf.Write(jsonByte);
+            byte[] sendData = buf.ByteData;
+            await SendAsync(sendData, 0, sendData.Length);
         }
 
-        public async Task<T> RecvJsonAsync<T>(bool no_error_check = false)
+        public async Task<T> RecvJsonAsync<T>(bool noErrorCheck = false)
             where T : VpnJsonResponse
         {
             ushort size = (await RecvAsync(2, true)).GetUInt16();
             byte[] data = await RecvAsync(size, true);
-            string json_string = Encoding.UTF8.GetString(data);
+            string jsonString = Encoding.UTF8.GetString(data);
 
-            T ret = json_string.JsonToObject<T>();
+            T ret = jsonString.JsonToObject<T>();
 
-            if (no_error_check == false)
+            if (noErrorCheck == false)
             {
-                if (string.IsNullOrEmpty(ret.Error_str) == false && ret.Error_str.StartsWith("e_", StringComparison.InvariantCultureIgnoreCase))
+                if (string.IsNullOrEmpty(ret.ErrorStr) == false && ret.ErrorStr.StartsWith("e_", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    throw new VpnError(ret.Error_str, ret.ErrorMessage_utf);
+                    throw new VpnError(ret.ErrorStr, ret.ErrorMessage_Utf);
                 }
             }
 
             return ret;
         }
 
-        Once dispose_flag;
+        Once DisposeFlag;
         public void Dispose()
         {
-            if (dispose_flag.IsFirstCall())
+            if (DisposeFlag.IsFirstCall())
             {
                 ws.DisposeSafe();
                 ssl.DisposeSafe();
                 sock.DisposeSafe();
-                tcp_client.DisposeSafe();
-                cancel_watcher.DisposeSafe();
+                tcpClient.DisposeSafe();
+                cancelWatcher.DisposeSafe();
             }
         }
     }
@@ -311,8 +311,8 @@ namespace SoftEther.VpnClient
 
     public class VpnJsonResponse
     {
-        public string Error_str = null;
-        public string ErrorMessage_utf = null;
+        public string ErrorStr = null;
+        public string ErrorMessage_Utf = null;
     }
 
     public struct VpnConnectionInfo
@@ -347,20 +347,20 @@ namespace SoftEther.VpnClient
 
         UdpAccel UdpAccel = null;
 
-        public VpnConnection(VpnSession session, CancellationToken cancel, VpnVirtualNetworkAdapter network_adapter)
+        public VpnConnection(VpnSession session, CancellationToken cancel, VpnVirtualNetworkAdapter networkAdapter)
         {
             Session = session;
             Setting = session.Setting.ClonePublics();
             CancelByParent = cancel;
             CancelWatcher = new CancelWatcher(CancelByParent);
-            NetworkAdapter = network_adapter;
+            NetworkAdapter = networkAdapter;
 
             info.Settings = this.Setting.ClonePublics();
         }
 
         public async Task ConnectAsync()
         {
-            UdpAccel udp_accel = null;
+            UdpAccel udpAccel = null;
 
             VpnSocket s = new VpnSocket(Session.Setting, CancelWatcher.CancelToken);
             this.Socket = s;
@@ -370,15 +370,15 @@ namespace SoftEther.VpnClient
             info.LocalEndPoint = s.LocalEndPoint;
             info.RemoteEndPoint = s.RemoteEndPoint;
 
-            Session.notify_event(new VpnSessionEventArgs(VpnSessionEventType.SessionNegotiating));
+            Session.NotifyEvent(new VpnSessionEventArgs(VpnSessionEventType.SessionNegotiating));
 
             if (Setting.Details.UseUdpAcceleration)
             {
-                udp_accel = new UdpAccel(Socket.LocalEndPoint.Address, true, false, CancelWatcher.CancelToken);
+                udpAccel = new UdpAccel(Socket.LocalEndPoint.Address, true, false, CancelWatcher.CancelToken);
             }
 
             // Phase 1: Send a Client Hello JSON message
-            VpnJsonClientHello client_hello = new VpnJsonClientHello()
+            VpnJsonClientHello clientHello = new VpnJsonClientHello()
             {
                 MvpnProtocolVersion_u32 = 100,
                 Nonce_bin = WebSocketHelper.Rand(128),
@@ -386,71 +386,71 @@ namespace SoftEther.VpnClient
                 NetworkName_str = "DEFAULT",
             };
 
-            if (udp_accel != null)
+            if (udpAccel != null)
             {
-                client_hello.UseUdpAcceleration_bool = true;
-                client_hello.UdpAccelerationClientIp_ip = udp_accel.MyEndPoint.Address.ToString();
-                client_hello.UdpAccelerationClientPort_u32 = (uint)udp_accel.MyEndPoint.Port;
-                client_hello.UdpAccelerationClientKey_bin = udp_accel.MyKey;
+                clientHello.UseUdpAcceleration_bool = true;
+                clientHello.UdpAccelerationClientIp_ip = udpAccel.MyEndPoint.Address.ToString();
+                clientHello.UdpAccelerationClientPort_u32 = (uint)udpAccel.MyEndPoint.Port;
+                clientHello.UdpAccelerationClientKey_bin = udpAccel.MyKey;
             }
 
-            await s.SendJsonAsync(client_hello);
+            await s.SendJsonAsync(clientHello);
 
             // Phase 2: Receive a Server Hello JSON message
-            VpnJsonServerHello server_hello = await s.RecvJsonAsync<VpnJsonServerHello>();
+            VpnJsonServerHello serverHello = await s.RecvJsonAsync<VpnJsonServerHello>();
 
-            info.ServerImplementation = server_hello.Implementation_str;
+            info.ServerImplementation = serverHello.Implementation_str;
 
             // Phase 3: Send a Client Auth JSON message
-            VpnJsonClientAuth client_auth = new VpnJsonClientAuth()
+            VpnJsonClientAuth clientAuth = new VpnJsonClientAuth()
             {
                 AuthMethod_str = "password_plain",
                 AuthPlainPassword_str = "microsoft",
                 AuthUsername_str = "test",
             };
 
-            info.ClientUserName = client_auth.AuthUsername_str;
+            info.ClientUserName = clientAuth.AuthUsername_str;
 
-            await s.SendJsonAsync(client_auth);
+            await s.SendJsonAsync(clientAuth);
 
             // Phase 4: Receive a Server Auth Response JSON message
-            VpnJsonServerAuthResponse server_auth_response = await s.RecvJsonAsync<VpnJsonServerAuthResponse>();
+            VpnJsonServerAuthResponse serverAuthResponse = await s.RecvJsonAsync<VpnJsonServerAuthResponse>();
 
-            if (server_auth_response.UseUdpAcceleration_bool == false)
+            if (serverAuthResponse.UseUdpAcceleration_bool == false)
             {
-                if (udp_accel != null)
+                if (udpAccel != null)
                 {
-                    udp_accel.DisposeSafe();
-                    udp_accel = null;
+                    udpAccel.DisposeSafe();
+                    udpAccel = null;
                 }
             }
             else
             {
-                if (udp_accel != null)
+                if (udpAccel != null)
                 {
-                    udp_accel.InitClient(server_auth_response.UdpAccelerationServerKey_bin,
-                        new IPEndPoint(IPAddress.Parse(server_auth_response.UdpAccelerationServerIp_ip), (int)server_auth_response.UdpAccelerationServerPort_u32),
-                        server_auth_response.UdpAccelerationServerCookie_u32,
-                        server_auth_response.UdpAccelerationClientCookie_u32);
+                    udpAccel.InitClient(serverAuthResponse.UdpAccelerationServerKey_bin,
+                        new IPEndPoint(IPAddress.Parse(serverAuthResponse.UdpAccelerationServerIp_ip), (int)serverAuthResponse.UdpAccelerationServerPort_u32),
+                        serverAuthResponse.UdpAccelerationServerCookie_u32,
+                        serverAuthResponse.UdpAccelerationClientCookie_u32);
 
-                    UdpAccel = udp_accel;
+                    UdpAccel = udpAccel;
                 }
             }
 
-            info.NetworkName = server_auth_response.NetworkName_str;
-            info.HeartBeatInterval = (int)server_auth_response.HeartBeatInterval_u32;
-            info.DisconnectTimeout = (int)server_auth_response.DisconnectTimeout_u32;
+            info.NetworkName = serverAuthResponse.NetworkName_str;
+            info.HeartBeatInterval = (int)serverAuthResponse.HeartBeatInterval_u32;
+            info.DisconnectTimeout = (int)serverAuthResponse.DisconnectTimeout_u32;
             info.ConnectedDateTime = DateTimeOffset.Now;
 
             s.TimeoutComm = Timeout.Infinite;
         }
 
 
-        Exception disconnect_reason = null;
+        Exception disconnectReason = null;
 
-        void set_disconnect_reason(Exception e)
+        void SetDisconnectReason(Exception e)
         {
-            if (disconnect_reason == null) disconnect_reason = e;
+            if (disconnectReason == null) disconnectReason = e;
         }
 
         async Task sessionUdpAccelRecvLoopAsync()
@@ -468,12 +468,12 @@ namespace SoftEther.VpnClient
                         {
                             this.info.LastCommunicationDateTime = DateTimeOffset.Now;
 
-                            var packet_data = pkt.Data;
-                            VpnProtocolPacketType packet_type = (VpnProtocolPacketType)pkt.Flag;
+                            var packetData = pkt.Data;
+                            VpnProtocolPacketType packetType = (VpnProtocolPacketType)pkt.Flag;
 
-                            if (packet_type == VpnProtocolPacketType.Ethernet || packet_type == VpnProtocolPacketType.IPv4)
+                            if (packetType == VpnProtocolPacketType.Ethernet || packetType == VpnProtocolPacketType.IPv4)
                             {
-                                await this.NetworkAdapter.OnPacketsReceived(VnState, VnParam, new VpnPacket[] { new VpnPacket(packet_type, packet_data) });
+                                await this.NetworkAdapter.OnPacketsReceived(VnState, VnParam, new VpnPacket[] { new VpnPacket(packetType, packetData) });
                             }
                         }
                     }
@@ -488,7 +488,7 @@ namespace SoftEther.VpnClient
                         timeout: 256);
                 }
             }
-            catch (Exception ex) { set_disconnect_reason(ex); }
+            catch (Exception ex) { SetDisconnectReason(ex); }
         }
 
         async Task sessionSockRecvLoopAsync()
@@ -497,30 +497,30 @@ namespace SoftEther.VpnClient
             {
                 while (CancelWatcher.CancelToken.IsCancellationRequested == false)
                 {
-                    byte[] signature_bin = await this.Socket.RecvAsync(4, true);
-                    if (signature_bin.GetUInt32() != 0xCAFEBEEF)
+                    byte[] signatureBin = await this.Socket.RecvAsync(4, true);
+                    if (signatureBin.GetUInt32() != 0xCAFEBEEF)
                     {
                         throw new ApplicationException("VPN protocol error.");
                     }
 
-                    byte[] packet_type_bin = await this.Socket.RecvAsync(1, true);
-                    VpnProtocolPacketType packet_type = (VpnProtocolPacketType)packet_type_bin[0];
+                    byte[] packetTypeBin = await this.Socket.RecvAsync(1, true);
+                    VpnProtocolPacketType packetType = (VpnProtocolPacketType)packetTypeBin[0];
 
-                    byte[] packet_data_size_bin = await this.Socket.RecvAsync(2, true);
-                    ushort packet_data_size = packet_data_size_bin.GetUInt16();
+                    byte[] packetDataSizeBin = await this.Socket.RecvAsync(2, true);
+                    ushort packetDataSize = packetDataSizeBin.GetUInt16();
 
-                    byte[] packet_data = await this.Socket.RecvAsync(packet_data_size, true);
+                    byte[] packetData = await this.Socket.RecvAsync(packetDataSize, true);
 
                     this.TimeoutDetector.Keep();
                     this.info.LastCommunicationDateTime = DateTimeOffset.Now;
 
-                    if (packet_type == VpnProtocolPacketType.Ethernet || packet_type == VpnProtocolPacketType.IPv4)
+                    if (packetType == VpnProtocolPacketType.Ethernet || packetType == VpnProtocolPacketType.IPv4)
                     {
-                        await this.NetworkAdapter.OnPacketsReceived(VnState, VnParam, new VpnPacket[] { new VpnPacket(packet_type, packet_data) });
+                        await this.NetworkAdapter.OnPacketsReceived(VnState, VnParam, new VpnPacket[] { new VpnPacket(packetType, packetData) });
                     }
                 }
             }
-            catch (Exception ex) { set_disconnect_reason(ex); }
+            catch (Exception ex) { SetDisconnectReason(ex); }
         }
 
         Fifo SockSendFifo = new Fifo();
@@ -556,17 +556,17 @@ namespace SoftEther.VpnClient
         {
             while (CancelWatcher.CancelToken.IsCancellationRequested == false)
             {
-                byte[] send_buf;
+                byte[] sendBuf;
 
                 lock (SockSendFifo)
                 {
-                    send_buf = SockSendFifo.Read();
+                    sendBuf = SockSendFifo.Read();
                 }
 
-                if (send_buf.Length >= 1)
+                if (sendBuf.Length >= 1)
                 {
-                    await this.Socket.SendAsync(send_buf, 0, send_buf.Length);
-                    Dbg.Where($"sock send: {send_buf.Length}");
+                    await this.Socket.SendAsync(sendBuf, 0, sendBuf.Length);
+                    Dbg.Where($"sock send: {sendBuf.Length}");
                 }
 
                 await WebSocketHelper.WaitObjectsAsync(
@@ -617,7 +617,7 @@ namespace SoftEther.VpnClient
         {
             if (DisconnectedByVn.IsFirstCall())
             {
-                set_disconnect_reason(new ApplicationException("The user disconnected the VPN session."));
+                SetDisconnectReason(new ApplicationException("The user disconnected the VPN session."));
                 this.CancelWatcher.Cancel();
             }
         }
@@ -632,31 +632,31 @@ namespace SoftEther.VpnClient
                 this.TimeoutDetector = new TimeoutDetector(Info.DisconnectTimeout,
                     callback: (x) =>
                     {
-                        set_disconnect_reason(new ApplicationException("VPN transport communication timed out."));
+                        SetDisconnectReason(new ApplicationException("VPN transport communication timed out."));
                         return false;
                     });
 
-                Task sock_recv_task = sessionSockRecvLoopAsync();
-                Task sock_generate_heartbeat_task = sessionSockGenerateHeartBeatLoopAsync();
-                Task sock_send_task = sessionSockSendLoopAsync();
+                Task sockRecvTask = sessionSockRecvLoopAsync();
+                Task sockGenerateHeartBeatTask = sessionSockGenerateHeartBeatLoopAsync();
+                Task sockSendTask = sessionSockSendLoopAsync();
 
-                Task udp_accel_recv_task = UdpAccel != null ? sessionUdpAccelRecvLoopAsync() : null;
+                Task udpAccelRecvTask = UdpAccel != null ? sessionUdpAccelRecvLoopAsync() : null;
 
                 await WebSocketHelper.WaitObjectsAsync(
-                    tasks: new Task[] { sock_recv_task, sock_generate_heartbeat_task, sock_send_task, udp_accel_recv_task, this.TimeoutDetector.TaskWaitMe },
+                    tasks: new Task[] { sockRecvTask, sockGenerateHeartBeatTask, sockSendTask, udpAccelRecvTask, this.TimeoutDetector.TaskWaitMe },
                     cancels: new CancellationToken[] { this.CancelWatcher.CancelToken }
                     );
 
                 this.CancelWatcher.Cancel();
 
-                await sock_recv_task.TryWaitAsync();
-                await sock_generate_heartbeat_task.TryWaitAsync();
-                await sock_send_task.TryWaitAsync();
-                await udp_accel_recv_task.TryWaitAsync();
+                await sockRecvTask.TryWaitAsync();
+                await sockGenerateHeartBeatTask.TryWaitAsync();
+                await sockSendTask.TryWaitAsync();
+                await udpAccelRecvTask.TryWaitAsync();
 
                 this.TimeoutDetector.DisposeSafe();
 
-                if (this.disconnect_reason != null) throw this.disconnect_reason;
+                if (this.disconnectReason != null) throw this.disconnectReason;
             }
             finally
             {
@@ -723,18 +723,18 @@ namespace SoftEther.VpnClient
         VpnVirtualNetworkAdapter NetworkAdapter;
         VpnConnection CurrentConnection = null;
 
-        public VpnSession(VpnSessionSetting setting, VpnSessionNotify notify, VpnVirtualNetworkAdapter network_adapter)
+        public VpnSession(VpnSessionSetting setting, VpnSessionNotify notify, VpnVirtualNetworkAdapter networkAdapter)
         {
             this.Setting = setting.ClonePublics();
             this.Notify = notify;
-            this.NetworkAdapter = network_adapter;
+            this.NetworkAdapter = networkAdapter;
 
-            this.notify_event(new VpnSessionEventArgs(VpnSessionEventType.Init));
+            this.NotifyEvent(new VpnSessionEventArgs(VpnSessionEventType.Init));
         }
 
         public VpnConnectionInfo ConnectionInfo { get => CurrentConnection.Info; }
 
-        internal void notify_event(VpnSessionEventArgs e)
+        internal void NotifyEvent(VpnSessionEventArgs e)
         {
             this.Notify.Fire(this, e);
         }
@@ -751,7 +751,7 @@ namespace SoftEther.VpnClient
                 if (MainLoopTask == null)
                 {
                     Cancel = new CancellationTokenSource();
-                    MainLoopTask = main_loop();
+                    MainLoopTask = mainLoop();
                 }
                 await Task.CompletedTask;
             }
@@ -784,12 +784,12 @@ namespace SoftEther.VpnClient
             return $"x{tmp[2]}.x{tmp[3]}.servers.nat-traversal.softether-network.net.";
         }
 
-        async Task main_loop()
+        async Task mainLoop()
         {
-            notify_event(new VpnSessionEventArgs(VpnSessionEventType.SessionStarted));
+            NotifyEvent(new VpnSessionEventArgs(VpnSessionEventType.SessionStarted));
             try
             {
-                await do_vpn_session();
+                await DoVpnSession();
             }
             catch (Exception ex)
             {
@@ -798,26 +798,26 @@ namespace SoftEther.VpnClient
                 {
                     ex = aex.Flatten().InnerExceptions[0];
                 }
-                notify_event(new VpnSessionEventArgs(VpnSessionEventType.Error, ex));
+                NotifyEvent(new VpnSessionEventArgs(VpnSessionEventType.Error, ex));
             }
             finally
             {
-                notify_event(new VpnSessionEventArgs(VpnSessionEventType.SessionStopped));
+                NotifyEvent(new VpnSessionEventArgs(VpnSessionEventType.SessionStopped));
             }
         }
 
-        async Task do_vpn_session()
+        async Task DoVpnSession()
         {
             using (VpnConnection c = new VpnConnection(this, this.Cancel.Token, this.NetworkAdapter))
             {
                 CurrentConnection = c;
                 try
                 {
-                    notify_event(new VpnSessionEventArgs(VpnSessionEventType.SessionConnectingToServer));
+                    NotifyEvent(new VpnSessionEventArgs(VpnSessionEventType.SessionConnectingToServer));
 
                     await c.ConnectAsync();
 
-                    notify_event(new VpnSessionEventArgs(VpnSessionEventType.SessionEstablished));
+                    NotifyEvent(new VpnSessionEventArgs(VpnSessionEventType.SessionEstablished));
 
                     await c.SessionMainLoopAsync();
                 }

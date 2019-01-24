@@ -131,13 +131,13 @@ namespace MVPNClientTest
             int ConnectTimeout = 10 * 1000;
             int RecvTimeout = 5000;
 
-            public SpeedTest(IPAddress ip, int port, int num_connection, int timespan, ModeFlag mode, CancellationToken cancel)
+            public SpeedTest(IPAddress ip, int port, int numConnection, int timespan, ModeFlag mode, CancellationToken cancel)
             {
                 this.IsServerMode = false;
                 this.Ip = ip;
                 this.Port = port;
                 this.Cancel = cancel;
-                this.NumConnection = Math.Max(num_connection, 1);
+                this.NumConnection = Math.Max(numConnection, 1);
                 this.TimeSpan = Math.Max(timespan, 1000);
                 this.Mode = mode;
                 if (Mode == ModeFlag.Both)
@@ -209,41 +209,41 @@ namespace MVPNClientTest
                                 MemoryBuffer<byte> buf = await st.ReceiveAsync(17);
 
                                 Direction dir = buf.ReadBool8() ? Direction.Send : Direction.Recv;
-                                ulong session_id = 0;
+                                ulong sessionId = 0;
                                 long timespan = 0;
 
                                 try
                                 {
-                                    session_id = buf.ReadUInt64();
+                                    sessionId = buf.ReadUInt64();
                                     timespan = buf.ReadSInt64();
                                 }
                                 catch { }
 
-                                long recv_end_tick = FastTick64.Now + timespan;
-                                if (timespan == 0) recv_end_tick = long.MaxValue;
+                                long recvEndTick = FastTick64.Now + timespan;
+                                if (timespan == 0) recvEndTick = long.MaxValue;
 
-                                using (var session = sessions.Enter(session_id))
+                                using (var session = sessions.Enter(sessionId))
                                 {
                                     using (new DelayAction((int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => p.Disconnect()))
                                     {
                                         if (dir == Direction.Recv)
                                         {
-                                            RefInt ref_tmp = new RefInt();
-                                            long total_size = 0;
+                                            RefInt refTmp = new RefInt();
+                                            long totalSize = 0;
 
                                             while (true)
                                             {
-                                                var ret = await st.FastReceiveAsync(totalRecvSize: ref_tmp);
+                                                var ret = await st.FastReceiveAsync(totalRecvSize: refTmp);
                                                 if (ret.Count == 0)
                                                 {
                                                     break;
                                                 }
-                                                total_size += ref_tmp;
+                                                totalSize += refTmp;
 
                                                 if (ret[0].Span[0] == (byte)'!')
                                                     break;
 
-                                                if (FastTick64.Now >= recv_end_tick)
+                                                if (FastTick64.Now >= recvEndTick)
                                                     break;
                                             }
 
@@ -254,10 +254,10 @@ namespace MVPNClientTest
 
                                             while (true)
                                             {
-                                                MemoryBuffer<byte> send_buf = new MemoryBuffer<byte>();
-                                                send_buf.WriteSInt64(total_size);
+                                                MemoryBuffer<byte> sendBuf = new MemoryBuffer<byte>();
+                                                sendBuf.WriteSInt64(totalSize);
 
-                                                await st.SendAsync(send_buf);
+                                                await st.SendAsync(sendBuf);
 
                                                 await Task.Delay(100);
                                             }
@@ -269,7 +269,7 @@ namespace MVPNClientTest
 
                                             while (true)
                                             {
-                                                if (session_id == 0 || session.Context.NoMoreData == false)
+                                                if (sessionId == 0 || session.Context.NoMoreData == false)
                                                 {
                                                     await st.SendAsync(SendData);
                                                 }
@@ -314,7 +314,7 @@ namespace MVPNClientTest
                 SessionId = WebSocketHelper.RandUInt64();
 
                 List<Task<Result>> tasks = new List<Task<Result>>();
-                List<AsyncManualResetEvent> ready_events = new List<AsyncManualResetEvent>();
+                List<AsyncManualResetEvent> readyEvents = new List<AsyncManualResetEvent>();
 
                 using (CancelWatcher cw = new CancelWatcher(this.Cancel))
                 {
@@ -328,19 +328,19 @@ namespace MVPNClientTest
                         else
                             dir = ((i % 2) == 0) ? Direction.Recv : Direction.Send;
 
-                        AsyncManualResetEvent ready_event = new AsyncManualResetEvent();
-                        var t = ClientSingleConnectionAsync(dir, ready_event, cw.CancelToken);
+                        AsyncManualResetEvent readyEvent = new AsyncManualResetEvent();
+                        var t = ClientSingleConnectionAsync(dir, readyEvent, cw.CancelToken);
                         ExceptionQueue.RegisterWatchedTask(t);
                         tasks.Add(t);
-                        ready_events.Add(ready_event);
+                        readyEvents.Add(readyEvent);
                     }
 
                     try
                     {
-                        using (var when_all_ready = new WhenAll(ready_events.Select(x => x.WaitAsync())))
+                        using (var whenAllReady = new WhenAll(readyEvents.Select(x => x.WaitAsync())))
                         {
                             await WebSocketHelper.WaitObjectsAsync(
-                                tasks: tasks.Append(when_all_ready.WaitMe).ToArray(),
+                                tasks: tasks.Append(whenAllReady.WaitMe).ToArray(),
                                 cancels: cw.CancelToken.ToSingleArray(),
                                 manualEvents: ExceptionQueue.WhenExceptionAdded.ToSingleArray());
                         }
@@ -360,14 +360,14 @@ namespace MVPNClientTest
                         {
                             ClientStartEvent.Set(true);
 
-                            using (var when_all_completed = new WhenAll(tasks))
+                            using (var whenAllCompleted = new WhenAll(tasks))
                             {
                                 await WebSocketHelper.WaitObjectsAsync(
-                                    tasks: when_all_completed.WaitMe.ToSingleArray(),
+                                    tasks: whenAllCompleted.WaitMe.ToSingleArray(),
                                     cancels: cw.CancelToken.ToSingleArray()
                                     );
 
-                                await when_all_completed.WaitMe;
+                                await whenAllCompleted.WaitMe;
                             }
                         }
 
@@ -412,7 +412,7 @@ namespace MVPNClientTest
                 return null;
             }
 
-            async Task<Result> ClientSingleConnectionAsync(Direction dir, AsyncManualResetEvent fire_me_when_ready, CancellationToken cancel)
+            async Task<Result> ClientSingleConnectionAsync(Direction dir, AsyncManualResetEvent fireMeWhenReady, CancellationToken cancel)
             {
                 Result ret = new Result();
                 using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(Ip, Port, cancel, ConnectTimeout))
@@ -435,7 +435,7 @@ namespace MVPNClientTest
 
                                 //throw new ApplicationException("aaaa" + dir.ToString());
 
-                                fire_me_when_ready.Set();
+                                fireMeWhenReady.Set();
 
                                 cancel.ThrowIfCancellationRequested();
 
@@ -444,32 +444,32 @@ namespace MVPNClientTest
                                     cancels: cancel.ToSingleArray()
                                     );
 
-                                long tick_start = FastTick64.Now;
-                                long tick_end = tick_start + this.TimeSpan;
+                                long tickStart = FastTick64.Now;
+                                long tickEnd = tickStart + this.TimeSpan;
 
-                                var send_data = new MemoryBuffer<byte>();
-                                send_data.WriteBool8(dir == Direction.Recv);
-                                send_data.WriteUInt64(SessionId);
-                                send_data.WriteSInt64(TimeSpan);
+                                var sendData = new MemoryBuffer<byte>();
+                                sendData.WriteBool8(dir == Direction.Recv);
+                                sendData.WriteUInt64(SessionId);
+                                sendData.WriteSInt64(TimeSpan);
 
-                                await st.SendAsync(send_data);
+                                await st.SendAsync(sendData);
 
                                 if (dir == Direction.Recv)
                                 {
-                                    RefInt total_recv_size = new RefInt();
+                                    RefInt totalRecvSize = new RefInt();
                                     while (true)
                                     {
                                         long now = FastTick64.Now;
 
-                                        if (now >= tick_end)
+                                        if (now >= tickEnd)
                                             break;
 
                                         await WebSocketHelper.WaitObjectsAsync(
-                                            tasks: st.FastReceiveAsync(totalRecvSize: total_recv_size).ToSingleArray(),
-                                            timeout: (int)(tick_end - now),
+                                            tasks: st.FastReceiveAsync(totalRecvSize: totalRecvSize).ToSingleArray(),
+                                            timeout: (int)(tickEnd - now),
                                             exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);
 
-                                        ret.NumBytesDownload += total_recv_size;
+                                        ret.NumBytesDownload += totalRecvSize;
                                     }
                                 }
                                 else
@@ -480,7 +480,7 @@ namespace MVPNClientTest
                                     {
                                         long now = FastTick64.Now;
 
-                                        if (now >= tick_end)
+                                        if (now >= tickEnd)
                                             break;
 
                                         /*await WebSocketHelper.WaitObjectsAsync(
@@ -491,17 +491,17 @@ namespace MVPNClientTest
                                         await st.FastSendAsync(SendData, flush: true);
                                     }
 
-                                    Task recv_result = Task.Run(async () =>
+                                    Task recvResult = Task.Run(async () =>
                                     {
-                                        var recv_memory = await st.ReceiveAllAsync(8);
+                                        var recvMemory = await st.ReceiveAllAsync(8);
 
-                                        MemoryBuffer<byte> recv_memory_buf = recv_memory;
-                                        ret.NumBytesUpload = recv_memory_buf.ReadSInt64();
+                                        MemoryBuffer<byte> recvMemoryBuf = recvMemory;
+                                        ret.NumBytesUpload = recvMemoryBuf.ReadSInt64();
 
                                         st.Disconnect();
                                     });
 
-                                    Task send_surprise = Task.Run(async () =>
+                                    Task sendSurprise = Task.Run(async () =>
                                     {
                                         byte[] surprise = new byte[260];
                                         surprise.AsSpan().Fill((byte)'!');
@@ -515,9 +515,9 @@ namespace MVPNClientTest
                                         }
                                     });
 
-                                    await WhenAll.Await(false, recv_result, send_surprise);
+                                    await WhenAll.Await(false, recvResult, sendSurprise);
 
-                                    await recv_result;
+                                    await recvResult;
                                 }
 
                                 st.Disconnect();
@@ -548,11 +548,11 @@ namespace MVPNClientTest
             await test.RunServerAsync();
         }
 
-        static async Task Test_Pipe_SpeedTest_Client(string server_host, int server_port, int num_connection, int timespan, SpeedTest.ModeFlag mode, CancellationToken cancel, AddressFamily? af = null)
+        static async Task Test_Pipe_SpeedTest_Client(string serverHost, int serverPort, int numConnection, int timespan, SpeedTest.ModeFlag mode, CancellationToken cancel, AddressFamily? af = null)
         {
-            IPAddress target_ip = await FastTcpPipe.GetIPFromHostName(server_host, af, cancel);
+            IPAddress targetIP = await FastTcpPipe.GetIPFromHostName(serverHost, af, cancel);
 
-            SpeedTest test = new SpeedTest(target_ip, server_port, num_connection, timespan, mode, cancel);
+            SpeedTest test = new SpeedTest(targetIP, serverPort, numConnection, timespan, mode, cancel);
 
             var result = await test.RunClientAsync();
 

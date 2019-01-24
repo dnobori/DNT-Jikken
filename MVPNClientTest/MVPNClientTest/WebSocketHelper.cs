@@ -4984,7 +4984,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public delegate bool TimeoutDetectorCallbackDelegate(TimeoutDetector detector);
+    public delegate bool TimeoutDetectorCallback(TimeoutDetector detector);
 
     public sealed class TimeoutDetector : IDisposable
     {
@@ -5012,10 +5012,10 @@ namespace SoftEther.WebSocket.Helper
 
         public bool TimedOut { get; private set; } = false;
 
-        TimeoutDetectorCallbackDelegate Callback;
+        TimeoutDetectorCallback Callback;
 
         public TimeoutDetector(int timeout, CancelWatcher watcher = null, AutoResetEvent eventAuto = null, ManualResetEvent eventManual = null,
-            TimeoutDetectorCallbackDelegate callback = null, object userState = null)
+            TimeoutDetectorCallback callback = null, object userState = null)
         {
             if (timeout == System.Threading.Timeout.Infinite || timeout == int.MaxValue)
             {
@@ -5338,19 +5338,19 @@ namespace SoftEther.WebSocket.Helper
             public int Num;
         }
 
-        public delegate TGroupContext NewGroupContextDelegate(TKey key, object userState);
-        public delegate void DeleteGroupContextDelegate(TKey key, TGroupContext groupContext, object userState);
+        public delegate TGroupContext NewGroupContextCallback(TKey key, object userState);
+        public delegate void DeleteGroupContextCallback(TKey key, TGroupContext groupContext, object userState);
 
         public object UserState { get; }
 
-        NewGroupContextDelegate NewGroupContextProc;
-        DeleteGroupContextDelegate DeleteGroupContextProc;
+        NewGroupContextCallback NewGroupContextProc;
+        DeleteGroupContextCallback DeleteGroupContextProc;
 
         Dictionary<TKey, GroupInstance> Hash = new Dictionary<TKey, GroupInstance>();
 
         object LockObj = new object();
 
-        public GroupManager(NewGroupContextDelegate onNewGroup, DeleteGroupContextDelegate onDeleteGroup, object userState = null)
+        public GroupManager(NewGroupContextCallback onNewGroup, DeleteGroupContextCallback onDeleteGroup, object userState = null)
         {
             NewGroupContextProc = onNewGroup;
             DeleteGroupContextProc = onDeleteGroup;
@@ -6046,13 +6046,13 @@ namespace SoftEther.WebSocket.Helper
 
     public class AsyncBulkReceiver<TUserReturnElement, TUserState>
     {
-        public delegate Task<ValueOrClosed<TUserReturnElement>> AsyncReceiveProcDelegate(TUserState state);
+        public delegate Task<ValueOrClosed<TUserReturnElement>> AsyncReceiveCallback(TUserState state);
 
         public int DefaultMaxCount { get; } = 1024;
 
-        AsyncReceiveProcDelegate AsyncReceiveProc;
+        AsyncReceiveCallback AsyncReceiveProc;
 
-        public AsyncBulkReceiver(AsyncReceiveProcDelegate asyncReceiveProc, int defaultMaxCount = 1024)
+        public AsyncBulkReceiver(AsyncReceiveCallback asyncReceiveProc, int defaultMaxCount = 1024)
         {
             DefaultMaxCount = defaultMaxCount;
             AsyncReceiveProc = asyncReceiveProc;
@@ -6955,7 +6955,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class HostNetInfo : BackgroundStateData
+    public class HostNetInfo : BackgroundStateDataBase
     {
         public override BackgroundStateDataUpdatePolicy DataUpdatePolicy =>
             new BackgroundStateDataUpdatePolicy(300, 6000, 2000);
@@ -7049,7 +7049,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public override bool Equals(BackgroundStateData otherArg)
+        public override bool Equals(BackgroundStateDataBase otherArg)
         {
             HostNetInfo other = otherArg as HostNetInfo;
             if (string.Equals(this.HostName, other.HostName) == false) return false;
@@ -7186,20 +7186,20 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class BackgroundStateData : IEquatable<BackgroundStateData>
+    public abstract class BackgroundStateDataBase : IEquatable<BackgroundStateDataBase>
     {
         public DateTimeOffset TimeStamp { get; } = DateTimeOffset.Now;
         public long TickTimeStamp { get; } = FastTick64.Now;
 
         public abstract BackgroundStateDataUpdatePolicy DataUpdatePolicy { get; }
 
-        public abstract bool Equals(BackgroundStateData other);
+        public abstract bool Equals(BackgroundStateDataBase other);
 
         public abstract void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action callMe);
     }
 
     public static class BackgroundState<TData>
-        where TData : BackgroundStateData, new()
+        where TData : BackgroundStateDataBase, new()
     {
         public struct CurrentData
         {
@@ -10217,7 +10217,7 @@ namespace SoftEther.WebSocket.Helper
         Datagram = 2,
     }
 
-    public abstract class FastPipeEndAsyncObjectWrapper : IDisposable
+    public abstract class FastPipeEndAsyncObjectWrapperBase : IDisposable
     {
         public CancelWatcher CancelWatcher { get; }
         public FastPipeEnd PipeEnd { get; }
@@ -10226,7 +10226,7 @@ namespace SoftEther.WebSocket.Helper
 
         public SharedExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
 
-        public FastPipeEndAsyncObjectWrapper(FastPipeEnd pipeEnd, CancellationToken cancel = default(CancellationToken))
+        public FastPipeEndAsyncObjectWrapperBase(FastPipeEnd pipeEnd, CancellationToken cancel = default(CancellationToken))
         {
             PipeEnd = pipeEnd;
             CancelWatcher = new CancelWatcher(cancel);
@@ -10485,7 +10485,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapper, IDisposable
+    public class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapperBase, IDisposable
     {
         public Socket Socket { get; }
         public int RecvTmpBufferSize { get; private set; }
@@ -10749,7 +10749,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapper, IDisposable
+    public class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapperBase, IDisposable
     {
         public Stream Stream { get; }
         public int RecvTmpBufferSize { get; private set; }
@@ -10869,11 +10869,11 @@ namespace SoftEther.WebSocket.Helper
 
         CancellationTokenSource CancelSource = new CancellationTokenSource();
 
-        public delegate Task FastPipeTcpListenerAcceptProc(FastPipeTcpListener listener, FastTcpPipe pipe, FastPipeEnd end);
+        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastTcpPipe pipe, FastPipeEnd end);
 
-        FastPipeTcpListenerAcceptProc AcceptProc;
+        FastPipeTcpListenerAcceptCallback AcceptProc;
 
-        public FastPipeTcpListener(FastPipeTcpListenerAcceptProc acceptProc, object userState = null)
+        public FastPipeTcpListener(FastPipeTcpListenerAcceptCallback acceptProc, object userState = null)
         {
             this.UserState = userState;
             this.AcceptProc = acceptProc;
