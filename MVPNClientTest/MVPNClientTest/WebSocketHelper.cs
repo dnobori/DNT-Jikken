@@ -9543,21 +9543,35 @@ namespace SoftEther.WebSocket.Helper
 
         public FastPipeEndAttachHandle Attach(object user_state = null) => new FastPipeEndAttachHandle(this, user_state);
 
-        public FastPipeEndStream GetStream(bool auto_flush = true) => new FastPipeEndStream(this, auto_flush);
+        public FastPipeEndStream GetStream(bool auto_flush = true) => FastPipeEndStream.InternalNew(this, auto_flush);
     }
 
-    public class FastPipeEndStream : Stream, IDisposable
+    public class FastPipeEndStream : NetworkStream, IDisposable
     {
         public bool AutoFlush { get; set; }
-        public FastPipeEnd End { get; }
-        public FastPipeEnd.FastPipeEndAttachHandle AttachHandle { get; }
+        public FastPipeEnd End { get; private set; }
+        public FastPipeEnd.FastPipeEndAttachHandle AttachHandle { get; private set; }
 
-        public FastPipeEndStream(FastPipeEnd end, bool auto_flush = true)
+        private FastPipeEndStream() : base(null) { }
+
+        internal void InternalInit(FastPipeEnd end, bool auto_flush = true)
         {
             End = end;
             AutoFlush = auto_flush;
 
+            ReadTimeout = Timeout.Infinite;
+            WriteTimeout = Timeout.Infinite;
+
             AttachHandle = end.Attach();
+        }
+
+        internal static FastPipeEndStream InternalNew(FastPipeEnd end, bool auto_flush = true)
+        {
+            FastPipeEndStream ret = WebSocketHelper.NewWithoutConstructor<FastPipeEndStream>();
+
+            ret.InternalInit(end, auto_flush);
+
+            return ret;
         }
 
 
@@ -9951,8 +9965,10 @@ namespace SoftEther.WebSocket.Helper
         public override void SetLength(long value) => throw new NotImplementedException();
 
         public override bool CanTimeout => true;
-        public override int ReadTimeout { get; set; } = Timeout.Infinite;
-        public override int WriteTimeout { get; set; } = Timeout.Infinite;
+        public override int ReadTimeout { get; set; }
+        public override int WriteTimeout { get; set; }
+
+        public override bool DataAvailable => base.DataAvailable;
 
         public override void Flush() => FastFlush();
 
@@ -9986,8 +10002,116 @@ namespace SoftEther.WebSocket.Helper
             {
                 AttachHandle.Dispose();
             }
-            base.Dispose(disposing);
         }
+
+        public override bool Equals(object obj) => object.Equals(this, obj);
+
+        public override int GetHashCode() => 0;
+
+        public override string ToString() => "FastPipeEndStream";
+
+        public override object InitializeLifetimeService() => base.InitializeLifetimeService();
+
+        public override void Close() => Dispose(true);
+
+        public override void CopyTo(Stream destination, int bufferSize)
+        {
+            byte[] array = ArrayPool<byte>.Shared.Rent(bufferSize);
+            try
+            {
+                int count;
+                while ((count = this.Read(array, 0, array.Length)) != 0)
+                {
+                    destination.Write(array, 0, count);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(array, false);
+            }
+        }
+
+        public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
+        {
+            byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
+            try
+            {
+                for (; ; )
+                {
+                    int num = await this.ReadAsync(new Memory<byte>(buffer), cancellationToken).ConfigureAwait(false);
+                    int num2 = num;
+                    if (num2 == 0)
+                    {
+                        break;
+                    }
+                    await destination.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, num2), cancellationToken).ConfigureAwait(false);
+                }
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(buffer, false);
+            }
+        }
+
+        [Obsolete]
+        protected override WaitHandle CreateWaitHandle() => new ManualResetEvent(false);
+
+        [Obsolete]
+        protected override void ObjectInvariant() { }
+
+        public override int Read(Span<byte> buffer)
+        {
+            byte[] array = ArrayPool<byte>.Shared.Rent(buffer.Length);
+            int result;
+            try
+            {
+                int num = this.Read(array, 0, buffer.Length);
+                if ((ulong)num > (ulong)((long)buffer.Length))
+                {
+                    throw new IOException("StreamTooLong");
+                }
+                new Span<byte>(array, 0, num).CopyTo(buffer);
+                result = num;
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(array, false);
+            }
+            return result;
+        }
+
+        public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
+            => await ReceiveAsync(buffer, cancellationToken);
+
+        public override int ReadByte()
+        {
+            byte[] array = new byte[1];
+            if (this.Read(array, 0, 1) == 0)
+            {
+                return -1;
+            }
+            return (int)array[0];
+        }
+
+        public override void Write(ReadOnlySpan<byte> buffer)
+        {
+            byte[] array = ArrayPool<byte>.Shared.Rent(buffer.Length);
+            try
+            {
+                buffer.CopyTo(array);
+                this.Write(array, 0, buffer.Length);
+            }
+            finally
+            {
+                ArrayPool<byte>.Shared.Return(array, false);
+            }
+        }
+
+        public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
+            => await this.SendAsync(buffer, cancellationToken);
+
+        public override void WriteByte(byte value)
+            => this.Write(new byte[] { value }, 0, 1);
     }
 
     public class FastPipeNonblockStateHelper

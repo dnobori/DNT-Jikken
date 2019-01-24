@@ -56,7 +56,7 @@ namespace MVPNClientTest
             try
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
-                //Test_Pipe_SslStream_Client(cancel.Token).Wait();
+                Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("www.google.com", 80, 1, 5000, SpeedTest.ModeFlag.Recv, cancel.Token).Wait();
 
