@@ -365,6 +365,535 @@ namespace cs_struct_bench1
             ClassTypeInitTest.TestValue++;
         }
 
+        static int test_c_program_main()
+        {
+            int j;
+            int total = 0;
+
+            for (j = 3; j <= 20000; j++)
+            {
+                int k;
+                bool ok = true;
+
+                for (k = 2; k < j; k++)
+                {
+                    if ((j % k) == 0)
+                    {
+                        ok = false;
+                        break;
+                    }
+                }
+
+                if (ok)
+                {
+                    total++;
+                }
+            }
+
+            // 2261
+
+            return total;
+        }
+
+        [MethodImpl(MethodImplOptions.AggressiveInlining)]
+        static unsafe void SetDWORD(byte[] data, int offset, int value)
+        {
+            fixed (byte* ptr = data)
+                *((int*)(ptr + offset)) = value;
+        }
+
+        static unsafe int test_asm_program_main()
+        {
+            Memory<byte> mem = new byte[4096];
+            Span<byte> m = mem.Span;
+            byte[] a = new byte[4096];
+
+            int ebp = 2000;
+            int eax = 0;
+            int edx = 0;
+
+
+            fixed (byte* ptr = a)
+            {
+                //	int j;
+                //	int total = 0;
+                //013974BE  mov         dword ptr [ebp-14h],0 
+                *((int*)(ptr + ebp - 0x14)) = 0;
+
+                //	for (j = 3;j <= 20000;j++)
+                //013974C5  mov         dword ptr [ebp-8],3 
+                *((int*)(ptr + ebp - 0x8)) = 3;
+
+                //013974CC  jmp         013974D7 
+                goto L_013974D7;
+
+                L_013974CE:
+                //013974CE  mov         eax,dword ptr [ebp-8] 
+                eax = *((int*)(ptr + ebp - 0x8));
+
+                //013974D1  add         eax,1 
+                eax = eax + 1;
+
+                //013974D4  mov         dword ptr [ebp-8],eax 
+                *((int*)(ptr + ebp - 0x8)) = eax;
+
+                L_013974D7:
+                //013974D7  cmp         dword ptr [ebp-8],4E20h 
+                //013974DE  jg          01397528 
+                if (*((int*)(ptr + ebp - 0x8)) > 0x4E20) goto L_01397528;
+
+                //	{
+                //		int k;
+                //		bool ok = true;
+                //013974E0  mov         dword ptr [ebp-2Ch],1 
+                *((int*)(ptr + ebp - 0x2C)) = 1;
+
+                //		for (k = 2;k < j;k++)
+                //013974E7  mov         dword ptr [ebp-20h],2 
+                *((int*)(ptr + ebp - 0x20)) = 2;
+
+                //013974EE  jmp         013974F9 
+                goto L_013974F9;
+
+                L_013974F0:
+                //013974F0  mov         eax,dword ptr [ebp-20h] 
+                eax = *((int*)(ptr + ebp - 0x20));
+
+                //013974F3  add         eax,1 
+                eax = eax + 1;
+
+                //013974F6  mov         dword ptr [ebp-20h],eax 
+                *((int*)(ptr + ebp - 0x20)) = eax;
+
+                L_013974F9:
+                //013974F9  mov         eax,dword ptr [ebp-20h] 
+                eax = *((int*)(ptr + ebp - 0x20));
+
+                //013974FC  cmp         eax,dword ptr [ebp-8] (j)
+                //013974FF  jge         01397517 
+                if (*((int*)(ptr + ebp - 0x8)) <= eax) goto L_01397517; // if (j >= k)
+
+                //		{
+                //			if ((j % k) == 0)
+                //01397501  mov         eax,dword ptr [ebp-8] (j)
+                eax = *((int*)(ptr + ebp - 0x8));
+
+                //01397504  cdq              
+                edx = (int)((long)eax >> 32);
+
+                //01397505  idiv        eax,dword ptr [ebp-20h] 
+                if (false)
+                {
+                    int _edx = (int)((((long)edx) << 32) + eax) % *((int*)(ptr + ebp - 0x20));
+                    eax = (int)((((long)edx) << 32) + eax) / *((int*)(ptr + ebp - 0x20));
+                    edx = _edx;
+                }
+                else
+                {
+                    int tmp1 = (int)((((long)edx) << 32) + eax);
+                    int tmp2 = *((int*)(ptr + ebp - 0x20));
+                    //int _edx = tmp1 % tmp2;
+                    eax = tmp1 / tmp2;
+                    //edx = _edx;
+                    edx = tmp1 - tmp2 * eax;
+                }
+
+                //01397508  test        edx,edx 
+                //0139750A  jne         01397515 
+                if (edx != 0) goto L_01397515;
+
+                //			{
+                //				ok = false;
+                //0139750C  mov         dword ptr [ebp-2Ch],0 
+                *((int*)(ptr + ebp - 0x2C)) = 0;
+
+                //				break;
+                //01397513  jmp         01397517 
+                goto L_01397517;
+
+                //			}
+                //		}
+
+                L_01397515:
+                //01397515  jmp         013974F0 
+                goto L_013974F0;
+
+                //		if (ok)
+
+                L_01397517:
+                //01397517  cmp         dword ptr [ebp-2Ch],0 
+                //0139751B  je          01397526 
+                if (*((int*)(ptr + ebp - 0x2C)) == 0) goto L_01397526;
+
+                //		{
+                //			total++;
+                //0139751D  mov         eax,dword ptr [ebp-14h] 
+                eax = *((int*)(ptr + ebp - 0x14));
+
+                //01397520  add         eax,1 
+                eax += 1;
+
+                //01397523  mov         dword ptr [ebp-14h],eax 
+                *((int*)(ptr + ebp - 0x14)) = eax;
+                //		}
+                //	}
+
+                L_01397526:
+                //01397526  jmp         013974CE 
+                goto L_013974CE;
+
+                L_01397528:
+                //	return total;
+                // 01397528 8B 45 EC         mov         eax,dword ptr [ebp-14h]
+                eax = *((int*)(ptr + ebp - 0x14));
+
+
+                if (eax != 2261) throw new ApplicationException("Error!");
+                return eax;
+            }
+        }
+
+
+
+        public class TestCpu
+        {
+            public int ebp;
+            public int eax;
+            public int edx;
+            public byte[] memory = new byte[4096];
+        }
+
+        static TestCpu cpu = new TestCpu();
+
+
+        static unsafe int test_asm_program_main_2()
+        {
+            Memory<byte> mem = new byte[4096];
+            Span<byte> m = mem.Span;
+            byte[] memory = cpu.memory;
+
+            //ref int ebp = ref cpu.ebp;
+            //ref int eax = ref cpu.eax;
+            //ref int edx = ref cpu.edx;
+
+            int ebp, eax, edx;
+
+            ebp = 2000;
+
+
+            fixed (byte* ptr = memory)
+            {
+                //	int j;
+                //	int total = 0;
+                //013974BE  mov         dword ptr [ebp-14h],0 
+                *((int*)(ptr + ebp - 0x14)) = 0;
+
+                //	for (j = 3;j <= 20000;j++)
+                //013974C5  mov         dword ptr [ebp-8],3 
+                *((int*)(ptr + ebp - 0x8)) = 3;
+
+                //013974CC  jmp         013974D7 
+                goto L_013974D7;
+
+                L_013974CE:
+                //013974CE  mov         eax,dword ptr [ebp-8] 
+                eax = *((int*)(ptr + ebp - 0x8));
+
+                //013974D1  add         eax,1 
+                eax = eax + 1;
+
+                //013974D4  mov         dword ptr [ebp-8],eax 
+                *((int*)(ptr + ebp - 0x8)) = eax;
+
+                L_013974D7:
+                //013974D7  cmp         dword ptr [ebp-8],4E20h 
+                //013974DE  jg          01397528 
+                if (*((int*)(ptr + ebp - 0x8)) > 0x4E20) goto L_01397528;
+
+                //	{
+                //		int k;
+                //		bool ok = true;
+                //013974E0  mov         dword ptr [ebp-2Ch],1 
+                *((int*)(ptr + ebp - 0x2C)) = 1;
+
+                //		for (k = 2;k < j;k++)
+                //013974E7  mov         dword ptr [ebp-20h],2 
+                *((int*)(ptr + ebp - 0x20)) = 2;
+
+                //013974EE  jmp         013974F9 
+                goto L_013974F9;
+
+                L_013974F0:
+                //013974F0  mov         eax,dword ptr [ebp-20h] 
+                eax = *((int*)(ptr + ebp - 0x20));
+
+                //013974F3  add         eax,1 
+                eax = eax + 1;
+
+                //013974F6  mov         dword ptr [ebp-20h],eax 
+                *((int*)(ptr + ebp - 0x20)) = eax;
+
+                L_013974F9:
+                //013974F9  mov         eax,dword ptr [ebp-20h] 
+                eax = *((int*)(ptr + ebp - 0x20));
+
+                //013974FC  cmp         eax,dword ptr [ebp-8] (j)
+                //013974FF  jge         01397517 
+                if (*((int*)(ptr + ebp - 0x8)) <= eax) goto L_01397517; // if (j >= k)
+
+                //		{
+                //			if ((j % k) == 0)
+                //01397501  mov         eax,dword ptr [ebp-8] (j)
+                eax = *((int*)(ptr + ebp - 0x8));
+
+                //01397504  cdq              
+                edx = (int)((long)eax >> 32);
+
+                //01397505  idiv        eax,dword ptr [ebp-20h] 
+                if (false)
+                {
+                    int _edx = (int)((((long)edx) << 32) + eax) % *((int*)(ptr + ebp - 0x20));
+                    eax = (int)((((long)edx) << 32) + eax) / *((int*)(ptr + ebp - 0x20));
+                    edx = _edx;
+                }
+                else
+                {
+                    int tmp1 = (int)((((long)edx) << 32) + eax);
+                    int tmp2 = *((int*)(ptr + ebp - 0x20));
+                    //int _edx = tmp1 % tmp2;
+                    eax = tmp1 / tmp2;
+                    //edx = _edx;
+                    edx = tmp1 - tmp2 * eax;
+                }
+
+                //01397508  test        edx,edx 
+                //0139750A  jne         01397515 
+                if (edx != 0) goto L_01397515;
+
+                //			{
+                //				ok = false;
+                //0139750C  mov         dword ptr [ebp-2Ch],0 
+                *((int*)(ptr + ebp - 0x2C)) = 0;
+
+                //				break;
+                //01397513  jmp         01397517 
+                goto L_01397517;
+
+                //			}
+                //		}
+
+                L_01397515:
+                //01397515  jmp         013974F0 
+                goto L_013974F0;
+
+                //		if (ok)
+
+                L_01397517:
+                //01397517  cmp         dword ptr [ebp-2Ch],0 
+                //0139751B  je          01397526 
+                if (*((int*)(ptr + ebp - 0x2C)) == 0) goto L_01397526;
+
+                //		{
+                //			total++;
+                //0139751D  mov         eax,dword ptr [ebp-14h] 
+                eax = *((int*)(ptr + ebp - 0x14));
+
+                //01397520  add         eax,1 
+                eax += 1;
+
+                //01397523  mov         dword ptr [ebp-14h],eax 
+                *((int*)(ptr + ebp - 0x14)) = eax;
+                //		}
+                //	}
+
+                L_01397526:
+                //01397526  jmp         013974CE 
+                goto L_013974CE;
+
+                L_01397528:
+                //	return total;
+                // 01397528 8B 45 EC         mov         eax,dword ptr [ebp-14h]
+                eax = *((int*)(ptr + ebp - 0x14));
+
+
+                if (eax != 2261) throw new ApplicationException("Error!");
+                return eax;
+            }
+        }
+
+
+        static unsafe int test_asm_program_main_3()
+        {
+            Memory<byte> mem = new byte[4096];
+            Span<byte> m = mem.Span;
+            byte[] memory = cpu.memory;
+
+            //ref int ebp = ref cpu.ebp;
+            //ref int eax = ref cpu.eax;
+            //ref int edx = ref cpu.edx;
+
+            int ebp = 0, eax = 0, edx = 0;
+
+            ebp = 2000;
+
+
+            fixed (byte* ptr = memory)
+            {
+                //	int j;
+                //	int total = 0;
+                //013974BE  mov         dword ptr [ebp-14h],0 
+                if (ebp - 0x14 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                * ((int*)(ptr + ebp - 0x14)) = 0;
+
+                //	for (j = 3;j <= 20000;j++)
+                //013974C5  mov         dword ptr [ebp-8],3 
+                if (ebp - 0x8 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                *((int*)(ptr + ebp - 0x8)) = 3;
+
+                //013974CC  jmp         013974D7 
+                goto L_013974D7;
+
+                L_013974CE:
+                //013974CE  mov         eax,dword ptr [ebp-8] 
+                if (ebp - 0x8 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                eax = *((int*)(ptr + ebp - 0x8));
+
+                //013974D1  add         eax,1 
+                eax = eax + 1;
+
+                //013974D4  mov         dword ptr [ebp-8],eax 
+                if (ebp - 0x8 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                *((int*)(ptr + ebp - 0x8)) = eax;
+
+                L_013974D7:
+                //013974D7  cmp         dword ptr [ebp-8],4E20h 
+                //013974DE  jg          01397528 
+                if (ebp - 0x8 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                if (*((int*)(ptr + ebp - 0x8)) > 0x4E20) goto L_01397528;
+
+                //	{
+                //		int k;
+                //		bool ok = true;
+                //013974E0  mov         dword ptr [ebp-2Ch],1 
+                if (ebp - 0x2C + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                *((int*)(ptr + ebp - 0x2C)) = 1;
+
+                //		for (k = 2;k < j;k++)
+                //013974E7  mov         dword ptr [ebp-20h],2 
+                if (ebp - 0x20 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                *((int*)(ptr + ebp - 0x20)) = 2;
+
+                //013974EE  jmp         013974F9 
+                goto L_013974F9;
+
+                L_013974F0:
+                //013974F0  mov         eax,dword ptr [ebp-20h] 
+                if (ebp - 0x20 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                eax = *((int*)(ptr + ebp - 0x20));
+
+                //013974F3  add         eax,1 
+                eax = eax + 1;
+
+                //013974F6  mov         dword ptr [ebp-20h],eax 
+                if (ebp - 0x20 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                *((int*)(ptr + ebp - 0x20)) = eax;
+
+                L_013974F9:
+                //013974F9  mov         eax,dword ptr [ebp-20h] 
+                if (ebp - 0x20 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                eax = *((int*)(ptr + ebp - 0x20));
+
+                //013974FC  cmp         eax,dword ptr [ebp-8] (j)
+                //013974FF  jge         01397517 
+                if (ebp - 0x8 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                if (*((int*)(ptr + ebp - 0x8)) <= eax) goto L_01397517; // if (j >= k)
+
+                //		{
+                //			if ((j % k) == 0)
+                //01397501  mov         eax,dword ptr [ebp-8] (j)
+                if (ebp - 0x8 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                eax = *((int*)(ptr + ebp - 0x8));
+
+                //01397504  cdq              
+                edx = (int)((long)eax >> 32);
+
+                //01397505  idiv        eax,dword ptr [ebp-20h] 
+                if (false)
+                {
+                    int _edx = (int)((((long)edx) << 32) + eax) % *((int*)(ptr + ebp - 0x20));
+                    eax = (int)((((long)edx) << 32) + eax) / *((int*)(ptr + ebp - 0x20));
+                    edx = _edx;
+                }
+                else
+                {
+                    int tmp1 = (int)((((long)edx) << 32) + eax);
+                    int tmp2 = *((int*)(ptr + ebp - 0x20));
+                    //int _edx = tmp1 % tmp2;
+                    eax = tmp1 / tmp2;
+                    //edx = _edx;
+                    edx = tmp1 - tmp2 * eax;
+                }
+
+                //01397508  test        edx,edx 
+                //0139750A  jne         01397515 
+                if (edx != 0) goto L_01397515;
+
+                //			{
+                //				ok = false;
+                //0139750C  mov         dword ptr [ebp-2Ch],0 
+                if (ebp - 0x2c + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                *((int*)(ptr + ebp - 0x2C)) = 0;
+
+                //				break;
+                //01397513  jmp         01397517 
+                goto L_01397517;
+
+                //			}
+                //		}
+
+                L_01397515:
+                //01397515  jmp         013974F0 
+                goto L_013974F0;
+
+                //		if (ok)
+
+                L_01397517:
+                //01397517  cmp         dword ptr [ebp-2Ch],0 
+                //0139751B  je          01397526 
+                if (ebp - 0x2c + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                if (*((int*)(ptr + ebp - 0x2C)) == 0) goto L_01397526;
+
+                //		{
+                //			total++;
+                //0139751D  mov         eax,dword ptr [ebp-14h] 
+                if (ebp - 0x14 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                eax = *((int*)(ptr + ebp - 0x14));
+
+                //01397520  add         eax,1 
+                eax += 1;
+
+                //01397523  mov         dword ptr [ebp-14h],eax 
+                if (ebp - 0x14 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                *((int*)(ptr + ebp - 0x14)) = eax;
+                //		}
+                //	}
+
+                L_01397526:
+                //01397526  jmp         013974CE 
+                goto L_013974CE;
+
+                L_01397528:
+                //	return total;
+                // 01397528 8B 45 EC         mov         eax,dword ptr [ebp-14h]
+                if (ebp - 0x14 + 4 >= memory.Length) throw new IndexOutOfRangeException($"{ebp} {eax} {edx}");
+                eax = *((int*)(ptr + ebp - 0x14));
+
+
+                if (eax != 2261) throw new ApplicationException("Error!");
+                return eax;
+            }
+        }
+
         static void Main(string[] args)
         {
             WriteLine("Started.");
@@ -442,6 +971,9 @@ namespace cs_struct_bench1
 
             int pool_test_size = 1024;
 
+            //WriteLine(test_c_program_main());
+            //return;
+
 
             WriteLine("Start Bench");
             FastMemoryAllocator<byte> alloc = new FastMemoryAllocator<byte>();
@@ -451,6 +983,46 @@ namespace cs_struct_bench1
 
             var q = new MicroBenchmarkQueue()
 
+
+                .Add(new MicroBenchmark<Memory<byte>>("test_asm_program_main_2", 5, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        test_asm_program_main_2();
+                        // 56 ms
+                    }
+                }
+                ), true, 190125)
+
+                .Add(new MicroBenchmark<Memory<byte>>("test_asm_program_main_3", 5, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        test_asm_program_main_3();
+                        // 56 ms
+                    }
+                }
+                ), true, 190125)
+                .Add(new MicroBenchmark<Memory<byte>>("test_asm_program_main", 5, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        test_asm_program_main();
+                        // 56 ms
+                    }
+                }
+                ), true, 190125)
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("test_c_program", 5, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        test_c_program_main();
+                        // 48 ms
+                    }
+                }
+                ), true, 190125)
 
 
                 .Add(new MicroBenchmark<Memory<byte>>("Type init test", 100000, (state, iterations) =>
