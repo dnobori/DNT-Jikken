@@ -3052,7 +3052,7 @@ namespace SoftEther.WebSocket.Helper
 
     // ---------------
 
-    public class RefInt
+    public class RefInt : IEquatable<RefInt>, IComparable<RefInt>
     {
         public RefInt() : this(0) { }
         public RefInt(int value)
@@ -3067,14 +3067,45 @@ namespace SoftEther.WebSocket.Helper
         public int Decrement() => Interlocked.Decrement(ref this.Value);
 
         public override bool Equals(object obj) => obj is RefInt x && this.Value == x.Value;
-        public override int GetHashCode() => HashCode.Combine(Value);
+        public override int GetHashCode() => Value.GetHashCode();
+
+        public bool Equals(RefInt other) => this.Value.Equals(other.Value);
+        public int CompareTo(RefInt other) => this.Value.CompareTo(other.Value);
+
         public static bool operator ==(RefInt left, int right) => left.Value == right;
         public static bool operator !=(RefInt left, int right) => left.Value != right;
         public static implicit operator int(RefInt r) => r.Value;
         public static implicit operator RefInt(int value) => new RefInt(value);
     }
 
-    public class RefBool
+    public class RefLong : IEquatable<RefLong>, IComparable<RefLong>
+    {
+        public RefLong() : this(0) { }
+        public RefLong(long value)
+        {
+            this.Value = value;
+        }
+        long _value;
+        public long Value { get => Get(); set => Set(value); }
+        public void Set(long value) => Interlocked.Exchange(ref this._value, value);
+        public long Get() => Interlocked.Read(ref this._value);
+        public override string ToString() => this.Value.ToString();
+        public long Increment() => Interlocked.Increment(ref this._value);
+        public long Decrement() => Interlocked.Decrement(ref this._value);
+
+        public override bool Equals(object obj) => obj is RefLong x && this.Value == x.Value;
+        public override int GetHashCode() => Value.GetHashCode();
+
+        public bool Equals(RefLong other) => this.Value.Equals(other.Value);
+        public int CompareTo(RefLong other) => this.Value.CompareTo(other.Value);
+
+        public static bool operator ==(RefLong left, long right) => left.Value == right;
+        public static bool operator !=(RefLong left, long right) => left.Value != right;
+        public static implicit operator long(RefLong r) => r.Value;
+        public static implicit operator RefLong(long value) => new RefLong(value);
+    }
+
+    public class RefBool : IEquatable<RefBool>, IComparable<RefBool>
     {
         public RefBool() : this(false) { }
         public RefBool(bool value)
@@ -3087,7 +3118,11 @@ namespace SoftEther.WebSocket.Helper
         public override string ToString() => this.Value.ToString();
 
         public override bool Equals(object obj) => obj is RefBool x && this.Value == x.Value;
-        public override int GetHashCode() => HashCode.Combine(Value);
+        public override int GetHashCode() => Value.GetHashCode();
+
+        public bool Equals(RefBool other) => this.Value.Equals(other.Value);
+        public int CompareTo(RefBool other) => this.Value.CompareTo(other.Value);
+
         public static bool operator ==(RefBool left, bool right) => left.Value == right;
         public static bool operator !=(RefBool left, bool right) => left.Value != right;
         public static implicit operator bool(RefBool r) => r.Value;
@@ -6351,6 +6386,136 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    public class HierarchyPosition : RefInt { }
+
+    public class SharedHierarchy<T>
+    {
+        public class HierarchyBodyItem : IComparable<HierarchyBodyItem>, IEquatable<HierarchyBodyItem>
+        {
+            public HierarchyPosition Position;
+            public T Value;
+            public HierarchyBodyItem(HierarchyPosition position, T value)
+            {
+                this.Position = position;
+                this.Value = value;
+            }
+
+            public int CompareTo(HierarchyBodyItem other) => this.Position.CompareTo(other.Position);
+            public bool Equals(HierarchyBodyItem other) => this.Position.Equals(other.Position);
+            public override bool Equals(object obj) => (obj is HierarchyBodyItem) ? this.Position.Equals(obj as HierarchyBodyItem) : false;
+            public override int GetHashCode() => this.Position.GetHashCode();
+        }
+
+        class HierarchyBody
+        {
+            public List<HierarchyBodyItem> _InternalList = new List<HierarchyBodyItem>();
+
+            public HierarchyBody Next = null;
+
+            public HierarchyBody() { }
+
+            public HierarchyBodyItem[] ToArray()
+            {
+                lock (_InternalList)
+                    return _InternalList.ToArray();
+            }
+
+            public HierarchyPosition Join(HierarchyPosition targetPosition, bool joinAsSuperior, T value)
+            {
+                lock (_InternalList)
+                {
+                    var current = _InternalList;
+
+                    var inferiors = current.Where(x => joinAsSuperior ? (x.Position <= targetPosition) : (x.Position < targetPosition));
+                    var me = new HierarchyBodyItem(new HierarchyPosition(), value);
+                    var superiors = current.Where(x => joinAsSuperior ? (x.Position > targetPosition) : (x.Position >= targetPosition));
+
+                    current = inferiors.Append(me).Concat(superiors).ToList();
+
+                    int positionIncrement = 0;
+                    current.ForEach(x => x.Position.Set(++positionIncrement));
+
+                    _InternalList.Clear();
+                    _InternalList.AddRange(current);
+
+                    return me.Position;
+                }
+            }
+
+            public static void Merge(HierarchyBody inferiors, HierarchyBody superiors)
+            {
+                if (inferiors == superiors) return;
+
+                Debug.Assert(inferiors._InternalList != null);
+                Debug.Assert(superiors._InternalList != null);
+
+                lock (inferiors._InternalList)
+                {
+                    lock (superiors._InternalList)
+                    {
+                        HierarchyBody merged = new HierarchyBody();
+                        merged._InternalList.AddRange(inferiors._InternalList.Concat(superiors._InternalList));
+
+                        int positionIncrement = 0;
+                        merged._InternalList.ForEach(x => x.Position.Set(++positionIncrement));
+
+                        inferiors._InternalList = superiors._InternalList = null;
+                        Debug.Assert(inferiors.Next == null); Debug.Assert(superiors.Next == null);
+                        inferiors.Next = superiors.Next = merged;
+                    }
+                }
+            }
+
+            public HierarchyBody GetLast()
+            {
+                if (Next == null)
+                    return this;
+                else
+                    return Next.GetLast();
+            }
+        }
+
+        HierarchyBody First;
+
+        public static readonly object GlobalLock = new object();
+
+        public SharedHierarchy()
+        {
+            First = new HierarchyBody();
+        }
+
+        public void Encounter(SharedHierarchy<T> inferiors)
+        {
+            if (this == inferiors) return;
+
+            lock (GlobalLock)
+            {
+                HierarchyBody inferiorsBody = inferiors.First.GetLast();
+                HierarchyBody superiorsBody = this.First.GetLast();
+                if (inferiorsBody == superiorsBody) return;
+
+                HierarchyBody.Merge(inferiorsBody, superiorsBody);
+            }
+        }
+
+        public HierarchyPosition Join(HierarchyPosition targetPosition, bool joinAsSuperior, T value)
+        {
+            lock (GlobalLock)
+                return this.First.GetLast().Join(targetPosition, joinAsSuperior, value);
+        }
+
+        public HierarchyBodyItem[] ToArrayWithPositions()
+        {
+            lock (GlobalLock)
+                return this.First.GetLast().ToArray();
+        }
+
+        public HierarchyBodyItem[] ItemsWithPositionsReadOnly { get => ToArrayWithPositions(); }
+
+        public T[] ToArray() => ToArrayWithPositions().Select(x => x.Value).ToArray();
+        public T[] ItemsReadOnly { get => ToArray(); }
+    }
+
     public class SharedQueue<T>
     {
         class QueueBody
@@ -6359,7 +6524,7 @@ namespace SoftEther.WebSocket.Helper
 
             public QueueBody Next;
 
-            public SortedList<long, T> List = new SortedList<long, T>();
+            public SortedList<long, T> _InternalList = new SortedList<long, T>();
             public readonly int MaxItems;
 
             public QueueBody(int maxItems)
@@ -6370,65 +6535,65 @@ namespace SoftEther.WebSocket.Helper
 
             public void Enqueue(T item, bool distinct = false)
             {
-                lock (List)
+                lock (_InternalList)
                 {
-                    if (List.Count > MaxItems) return;
-                    if (distinct && List.ContainsValue(item)) return;
+                    if (_InternalList.Count > MaxItems) return;
+                    if (distinct && _InternalList.ContainsValue(item)) return;
                     long ts = Interlocked.Increment(ref globalTimestamp);
-                    List.Add(ts, item);
+                    _InternalList.Add(ts, item);
                 }
             }
 
             public T Dequeue()
             {
-                lock (List)
+                lock (_InternalList)
                 {
-                    if (List.Count == 0) return default(T);
-                    long ts = List.Keys[0];
-                    T ret = List[ts];
-                    List.Remove(ts);
+                    if (_InternalList.Count == 0) return default(T);
+                    long ts = _InternalList.Keys[0];
+                    T ret = _InternalList[ts];
+                    _InternalList.Remove(ts);
                     return ret;
                 }
             }
 
             public T[] ToArray()
             {
-                lock (List)
+                lock (_InternalList)
                 {
-                    return List.Values.ToArray();
+                    return _InternalList.Values.ToArray();
                 }
             }
 
             public static void Merge(QueueBody q1, QueueBody q2)
             {
                 if (q1 == q2) return;
-                lock (q1.List)
-                {
-                    lock (q2.List)
-                    {
-                        Debug.Assert(q1.List != null);
-                        Debug.Assert(q2.List != null);
+                Debug.Assert(q1._InternalList != null);
+                Debug.Assert(q2._InternalList != null);
 
+                lock (q1._InternalList)
+                {
+                    lock (q2._InternalList)
+                    {
                         QueueBody q3 = new QueueBody(Math.Max(q1.MaxItems, q2.MaxItems));
-                        foreach (long ts in q1.List.Keys)
-                            q3.List.Add(ts, q1.List[ts]);
-                        foreach (long ts in q2.List.Keys)
-                            q3.List.Add(ts, q2.List[ts]);
-                        if (q3.List.Count > q3.MaxItems)
+                        foreach (long ts in q1._InternalList.Keys)
+                            q3._InternalList.Add(ts, q1._InternalList[ts]);
+                        foreach (long ts in q2._InternalList.Keys)
+                            q3._InternalList.Add(ts, q2._InternalList[ts]);
+                        if (q3._InternalList.Count > q3.MaxItems)
                         {
                             int num = 0;
                             List<long> removeList = new List<long>();
-                            foreach (long ts in q3.List.Keys)
+                            foreach (long ts in q3._InternalList.Keys)
                             {
                                 num++;
                                 if (num > q3.MaxItems)
                                     removeList.Add(ts);
                             }
                             foreach (long ts in removeList)
-                                q3.List.Remove(ts);
+                                q3._InternalList.Remove(ts);
                         }
-                        q1.List = null;
-                        q2.List = null;
+                        q1._InternalList = null;
+                        q2._InternalList = null;
                         Debug.Assert(q1.Next == null);
                         Debug.Assert(q2.Next == null);
                         q1.Next = q3;
@@ -6495,7 +6660,7 @@ namespace SoftEther.WebSocket.Helper
             get
             {
                 var q = this.First.GetLast();
-                var list = q.List;
+                var list = q._InternalList;
                 if (list == null) return 0;
                 lock (list)
                     return list.Count;
