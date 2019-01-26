@@ -56,12 +56,13 @@ namespace MVPNClientTest
             try
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
+
                 //Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
-                Test_Pipe_SslStream_Client2(cancel.Token).Wait();
+                //Test_Pipe_SslStream_Client2(cancel.Token).Wait();
 
-                //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Both, cancel.Token).Wait();
-                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
+                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -195,97 +196,101 @@ namespace MVPNClientTest
                         Dbg.Where($"Delete session: {key}");
                     }))
                 {
-                    FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, p, end) =>
+                    FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, sock) =>
                     {
-                        CleanuperLady lady = new CleanuperLady();
+                        AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
                         try
                         {
 
-                            Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
+                            //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
-                            using (var st = end.GetStream())
+                            using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd))
                             {
-                                lady.Add(st);
-
-                                st.AttachHandle.SetStreamReceiveTimeout(RecvTimeout);
-
-                                await st.SendAsync(Encoding.ASCII.GetBytes("TrafficServer\r\n\0"));
-
-                                MemoryBuffer<byte> buf = await st.ReceiveAsync(17);
-
-                                Direction dir = buf.ReadBool8() ? Direction.Send : Direction.Recv;
-                                ulong sessionId = 0;
-                                long timespan = 0;
-
-                                try
+                                lady.Add(app);
+                                using (var st = await app.GetStreamAsync())
                                 {
-                                    sessionId = buf.ReadUInt64();
-                                    timespan = buf.ReadSInt64();
-                                }
-                                catch { }
+                                    var attachHandle = await app.GetAttachHandleAsync();
 
-                                long recvEndTick = FastTick64.Now + timespan;
-                                if (timespan == 0) recvEndTick = long.MaxValue;
+                                    attachHandle.SetStreamReceiveTimeout(RecvTimeout);
 
-                                using (var session = sessions.Enter(sessionId))
-                                {
-                                    using (var delay = new DelayAction((int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => p.Disconnect()))
+                                    await st.SendAsync(Encoding.ASCII.GetBytes("TrafficServer\r\n\0"));
+
+                                    MemoryBuffer<byte> buf = await st.ReceiveAsync(17);
+
+                                    Direction dir = buf.ReadBool8() ? Direction.Send : Direction.Recv;
+                                    ulong sessionId = 0;
+                                    long timespan = 0;
+
+                                    try
                                     {
-                                        lady.Add(delay);
-                                        if (dir == Direction.Recv)
+                                        sessionId = buf.ReadUInt64();
+                                        timespan = buf.ReadSInt64();
+                                    }
+                                    catch { }
+
+                                    long recvEndTick = FastTick64.Now + timespan;
+                                    if (timespan == 0) recvEndTick = long.MaxValue;
+
+                                    using (var session = sessions.Enter(sessionId))
+                                    {
+                                        using (var delay = new DelayAction((int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => sock.UpperSidePipeEnd.Disconnect()))
                                         {
-                                            RefInt refTmp = new RefInt();
-                                            long totalSize = 0;
-
-                                            while (true)
+                                            lady.Add(delay);
+                                            if (dir == Direction.Recv)
                                             {
-                                                var ret = await st.FastReceiveAsync(totalRecvSize: refTmp);
-                                                if (ret.Count == 0)
+                                                RefInt refTmp = new RefInt();
+                                                long totalSize = 0;
+
+                                                while (true)
                                                 {
-                                                    break;
-                                                }
-                                                totalSize += refTmp;
-
-                                                if (ret[0].Span[0] == (byte)'!')
-                                                    break;
-
-                                                if (FastTick64.Now >= recvEndTick)
-                                                    break;
-                                            }
-
-                                            st.AttachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
-                                            st.AttachHandle.SetStreamSendTimeout(60 * 5 * 1000);
-
-                                            session.Context.NoMoreData = true;
-
-                                            while (true)
-                                            {
-                                                MemoryBuffer<byte> sendBuf = new MemoryBuffer<byte>();
-                                                sendBuf.WriteSInt64(totalSize);
-
-                                                await st.SendAsync(sendBuf);
-
-                                                await Task.Delay(100);
-                                            }
-                                        }
-                                        else
-                                        {
-                                            st.AttachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
-                                            st.AttachHandle.SetStreamSendTimeout(Timeout.Infinite);
-
-                                            while (true)
-                                            {
-                                                if (sessionId == 0 || session.Context.NoMoreData == false)
-                                                {
-                                                    await st.SendAsync(SendData);
-                                                }
-                                                else
-                                                {
-                                                    var recvMemory = await st.ReceiveAsync();
-
-                                                    if (recvMemory.Length == 0)
+                                                    var ret = await st.FastReceiveAsync(totalRecvSize: refTmp);
+                                                    if (ret.Count == 0)
+                                                    {
                                                         break;
+                                                    }
+                                                    totalSize += refTmp;
+
+                                                    if (ret[0].Span[0] == (byte)'!')
+                                                        break;
+
+                                                    if (FastTick64.Now >= recvEndTick)
+                                                        break;
+                                                }
+
+                                                attachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
+                                                attachHandle.SetStreamSendTimeout(60 * 5 * 1000);
+
+                                                session.Context.NoMoreData = true;
+
+                                                while (true)
+                                                {
+                                                    MemoryBuffer<byte> sendBuf = new MemoryBuffer<byte>();
+                                                    sendBuf.WriteSInt64(totalSize);
+
+                                                    await st.SendAsync(sendBuf);
+
+                                                    await Task.Delay(100);
+                                                }
+                                            }
+                                            else
+                                            {
+                                                attachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
+                                                attachHandle.SetStreamSendTimeout(Timeout.Infinite);
+
+                                                while (true)
+                                                {
+                                                    if (sessionId == 0 || session.Context.NoMoreData == false)
+                                                    {
+                                                        await st.SendAsync(SendData);
+                                                    }
+                                                    else
+                                                    {
+                                                        var recvMemory = await st.ReceiveAsync();
+
+                                                        if (recvMemory.Length == 0)
+                                                            break;
+                                                    }
                                                 }
                                             }
                                         }
@@ -300,7 +305,7 @@ namespace MVPNClientTest
                         finally
                         {
                             Dbg.Where();
-                            await lady.CleanupAsync();
+                            await lady;
                             Dbg.Where();
                         }
                     });
@@ -437,132 +442,138 @@ namespace MVPNClientTest
             async Task<Result> ClientSingleConnectionAsync(Direction dir, AsyncManualResetEvent fireMeWhenReady, CancellationToken cancel)
             {
                 Result ret = new Result();
-                CleanuperLady lady = new CleanuperLady();
+                AsyncCleanuperLady lady = new AsyncCleanuperLady();
                 try
                 {
-                    using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout))
+                    using (FastTcpSock sock = await FastTcpSock.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout))
                     {
-                        lady.Add(p);
-                        using (FastPipeEndStream st = p.GetStream())
+                        lady.Add(sock);
+
+                        using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd))
                         {
-                            lady.Add(st);
+                            lady.Add(app);
 
-                            if (dir == Direction.Recv)
-                                st.AttachHandle.SetStreamReceiveTimeout(RecvTimeout);
+                            var attachHandle = await app.GetAttachHandleAsync();
 
-                            try
+                            using (FastPipeEndStream st = await app.GetStreamAsync())
                             {
-                                var hello = await st.ReceiveAllAsync(16);
-
-                                Dbg.Where();
-                                if (Encoding.ASCII.GetString(hello.Span).StartsWith("TrafficServer\r\n") == false)
-                                    throw new ApplicationException("Target server is not a Traffic Server.");
-                                Dbg.Where();
-
-                                //throw new ApplicationException("aaaa" + dir.ToString());
-
-                                fireMeWhenReady.Set();
-
-                                cancel.ThrowIfCancellationRequested();
-
-                                await WebSocketHelper.WaitObjectsAsync(
-                                    manualEvents: ClientStartEvent.ToSingleArray(),
-                                    cancels: cancel.ToSingleArray()
-                                    );
-
-                                long tickStart = FastTick64.Now;
-                                long tickEnd = tickStart + this.TimeSpan;
-
-                                var sendData = new MemoryBuffer<byte>();
-                                sendData.WriteBool8(dir == Direction.Recv);
-                                sendData.WriteUInt64(SessionId);
-                                sendData.WriteSInt64(TimeSpan);
-
-                                await st.SendAsync(sendData);
-
                                 if (dir == Direction.Recv)
+                                    (await app.GetAttachHandleAsync()).SetStreamReceiveTimeout(RecvTimeout);
+
+                                try
                                 {
-                                    RefInt totalRecvSize = new RefInt();
-                                    while (true)
+                                    var hello = await st.ReceiveAllAsync(16);
+
+                                    Dbg.Where();
+                                    if (Encoding.ASCII.GetString(hello.Span).StartsWith("TrafficServer\r\n") == false)
+                                        throw new ApplicationException("Target server is not a Traffic Server.");
+                                    Dbg.Where();
+
+                                    //throw new ApplicationException("aaaa" + dir.ToString());
+
+                                    fireMeWhenReady.Set();
+
+                                    cancel.ThrowIfCancellationRequested();
+
+                                    await WebSocketHelper.WaitObjectsAsync(
+                                        manualEvents: ClientStartEvent.ToSingleArray(),
+                                        cancels: cancel.ToSingleArray()
+                                        );
+
+                                    long tickStart = FastTick64.Now;
+                                    long tickEnd = tickStart + this.TimeSpan;
+
+                                    var sendData = new MemoryBuffer<byte>();
+                                    sendData.WriteBool8(dir == Direction.Recv);
+                                    sendData.WriteUInt64(SessionId);
+                                    sendData.WriteSInt64(TimeSpan);
+
+                                    await st.SendAsync(sendData);
+
+                                    if (dir == Direction.Recv)
                                     {
-                                        long now = FastTick64.Now;
-
-                                        if (now >= tickEnd)
-                                            break;
-
-                                        await WebSocketHelper.WaitObjectsAsync(
-                                            tasks: st.FastReceiveAsync(totalRecvSize: totalRecvSize).ToSingleArray(),
-                                            timeout: (int)(tickEnd - now),
-                                            exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);
-
-                                        ret.NumBytesDownload += totalRecvSize;
-                                    }
-                                }
-                                else
-                                {
-                                    st.AttachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
-
-                                    while (true)
-                                    {
-                                        long now = FastTick64.Now;
-
-                                        if (now >= tickEnd)
-                                            break;
-
-                                        /*await WebSocketHelper.WaitObjectsAsync(
-                                            tasks: st.FastSendAsync(SendData, flush: true).ToSingleArray(),
-                                            timeout: (int)(tick_end - now),
-                                            exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);*/
-
-                                        await st.FastSendAsync(SendData, flush: true);
-                                    }
-
-                                    Task recvResult = Task.Run(async () =>
-                                    {
-                                        var recvMemory = await st.ReceiveAllAsync(8);
-
-                                        MemoryBuffer<byte> recvMemoryBuf = recvMemory;
-                                        ret.NumBytesUpload = recvMemoryBuf.ReadSInt64();
-
-                                        st.Disconnect();
-                                    });
-
-                                    Task sendSurprise = Task.Run(async () =>
-                                    {
-                                        byte[] surprise = new byte[260];
-                                        surprise.AsSpan().Fill((byte)'!');
+                                        RefInt totalRecvSize = new RefInt();
                                         while (true)
                                         {
-                                            await st.SendAsync(surprise);
+                                            long now = FastTick64.Now;
+
+                                            if (now >= tickEnd)
+                                                break;
 
                                             await WebSocketHelper.WaitObjectsAsync(
-                                                manualEvents: p.OnDisconnectedEvent.ToSingleArray(),
-                                                timeout: 200);
+                                                tasks: st.FastReceiveAsync(totalRecvSize: totalRecvSize).ToSingleArray(),
+                                                timeout: (int)(tickEnd - now),
+                                                exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);
+
+                                            ret.NumBytesDownload += totalRecvSize;
                                         }
-                                    });
+                                    }
+                                    else
+                                    {
+                                        attachHandle.SetStreamReceiveTimeout(Timeout.Infinite);
 
-                                    await WhenAll.Await(false, recvResult, sendSurprise);
+                                        while (true)
+                                        {
+                                            long now = FastTick64.Now;
 
-                                    await recvResult;
+                                            if (now >= tickEnd)
+                                                break;
+
+                                            /*await WebSocketHelper.WaitObjectsAsync(
+                                                tasks: st.FastSendAsync(SendData, flush: true).ToSingleArray(),
+                                                timeout: (int)(tick_end - now),
+                                                exceptions: ExceptionWhen.TaskException | ExceptionWhen.CancelException);*/
+
+                                            await st.FastSendAsync(SendData, flush: true);
+                                        }
+
+                                        Task recvResult = Task.Run(async () =>
+                                        {
+                                            var recvMemory = await st.ReceiveAllAsync(8);
+
+                                            MemoryBuffer<byte> recvMemoryBuf = recvMemory;
+                                            ret.NumBytesUpload = recvMemoryBuf.ReadSInt64();
+
+                                            st.Disconnect();
+                                        });
+
+                                        Task sendSurprise = Task.Run(async () =>
+                                        {
+                                            byte[] surprise = new byte[260];
+                                            surprise.AsSpan().Fill((byte)'!');
+                                            while (true)
+                                            {
+                                                await st.SendAsync(surprise);
+
+                                                await WebSocketHelper.WaitObjectsAsync(
+                                                    manualEvents: sock.Pipe.OnDisconnectedEvent.ToSingleArray(),
+                                                    timeout: 200);
+                                            }
+                                        });
+
+                                        await WhenAll.Await(false, recvResult, sendSurprise);
+
+                                        await recvResult;
+                                    }
+
+                                    st.Disconnect();
+
+                                    Dbg.Where();
+                                    return ret;
                                 }
-
-                                st.Disconnect();
-
-                                Dbg.Where();
-                                return ret;
-                            }
-                            catch (Exception ex)
-                            {
-                                Dbg.Where(ex.Message);
-                                ExceptionQueue.Add(ex);
-                                throw;
+                                catch (Exception ex)
+                                {
+                                    Dbg.Where(ex.Message);
+                                    ExceptionQueue.Add(ex);
+                                    throw;
+                                }
                             }
                         }
                     }
                 }
                 finally
                 {
-                    await lady.CleanupAsync();
+                    await lady;
                 }
             }
         }
@@ -576,7 +587,7 @@ namespace MVPNClientTest
 
         static async Task Test_Pipe_SpeedTest_Client(string serverHost, int serverPort, int numConnection, int timespan, SpeedTest.ModeFlag mode, CancellationToken cancel, AddressFamily? af = null)
         {
-            IPAddress targetIP = await FastTcpPipe.GetIPFromHostName(serverHost, af, cancel);
+            IPAddress targetIP = await FastTcpSock.GetIPFromHostName(serverHost, af, cancel);
 
             SpeedTest test = new SpeedTest(targetIP, serverPort, numConnection, timespan, mode, cancel);
 
@@ -591,12 +602,12 @@ namespace MVPNClientTest
             string hostname = "news.goo.ne.jp";
             int port = 443;
 
-            CleanuperLady lady = new CleanuperLady();
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, port, null, cancel))
+                using (FastTcpSock sock = await FastTcpSock.ConnectAsync(hostname, port, null, cancel))
                 {
-                    lady.Add(p);
+                    lady.Add(sock);
 
                     using (FastPipe p2 = new FastPipe(cancel))
                     {
@@ -613,33 +624,36 @@ namespace MVPNClientTest
                             },
                         };
 
-                        using (FastSslProtocolStack ssl = new FastSslProtocolStack(p.LocalPipeEnd, p2.A_LowerSide, opt, cancel))
+                        using (FastSslProtocolStack ssl = new FastSslProtocolStack(sock.UpperSidePipeEnd, p2.A_LowerSide, opt, cancel))
                         {
                             lady.Add(ssl);
 
                             await ssl.WaitInitSuccessOrFailAsync();
 
-                            using (var st = p2.B_UpperSide.GetStream())
+                            using (var app = new FastAppProtocolStub(p2.B_UpperSide, cancel))
                             {
-                                lady.Add(st);
+                                lady.Add(app);
 
-                                WriteLine("Connected.");
-                                StreamWriter w = new StreamWriter(st);
-                                w.AutoFlush = true;
-
-                                await w.WriteAsync(
-                                    "GET / HTTP/1.0\r\n" +
-                                    $"HOST: {hostname}\r\n\r\n"
-                                    );
-
-                                StreamReader r = new StreamReader(st);
-                                while (true)
+                                using (var st = await app.GetStreamAsync())
                                 {
-                                    string s = await r.ReadLineAsync();
-                                    if (s == null) break;
-                                    WriteLine(s);
+                                    WriteLine("Connected.");
+                                    StreamWriter w = new StreamWriter(st);
+                                    w.AutoFlush = true;
+
+                                    await w.WriteAsync(
+                                        "GET / HTTP/1.0\r\n" +
+                                        $"HOST: {hostname}\r\n\r\n"
+                                        );
+
+                                    StreamReader r = new StreamReader(st);
+                                    while (true)
+                                    {
+                                        string s = await r.ReadLineAsync();
+                                        if (s == null) break;
+                                        WriteLine(s);
+                                    }
+                                    Dbg.Where();
                                 }
-                                Dbg.Where();
                             }
                         }
                     }
@@ -647,7 +661,7 @@ namespace MVPNClientTest
             }
             finally
             {
-                await lady.CleanupAsync();
+                await lady;
             }
         }
 
@@ -655,37 +669,86 @@ namespace MVPNClientTest
         {
             string hostname = "news.goo.ne.jp";
 
-            CleanuperLady lady = new CleanuperLady();
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                using (FastTcpPipe p = await FastTcpPipe.ConnectAsync(hostname, 443, null, cancel))
+                using (FastTcpSock sock = await FastTcpSock.ConnectAsync(hostname, 443, null, cancel))
                 {
-                    lady.Add(p);
-                    using (FastPipeEndStream st = p.GetStream())
+                    lady.Add(sock);
+
+                    using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd, cancel))
                     {
-                        lady.Add(st);
-                        using (SslStream ssl = new SslStream(st))
+                        lady.Add(app);
+
+                        using (FastPipeEndStream st = await app.GetStreamAsync())
                         {
-                            //st.AttachHandle.SetStreamReceiveTimeout(3000);
-
-                            SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
+                            using (SslStream ssl = new SslStream(st))
                             {
-                                TargetHost = hostname,
-                                AllowRenegotiation = true,
-                                RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
-                            };
+                                //st.AttachHandle.SetStreamReceiveTimeout(3000);
 
-                            await ssl.AuthenticateAsClientAsync(opt, cancel);
+                                SslClientAuthenticationOptions opt = new SslClientAuthenticationOptions()
+                                {
+                                    TargetHost = hostname,
+                                    AllowRenegotiation = true,
+                                    RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
+                                };
+
+                                await ssl.AuthenticateAsClientAsync(opt, cancel);
+                                WriteLine("Connected.");
+                                StreamWriter w = new StreamWriter(ssl);
+                                w.AutoFlush = true;
+
+                                await w.WriteAsync(
+                                    "GET / HTTP/1.1\r\n" +
+                                    $"HOST: {hostname}\r\n\r\n"
+                                    );
+
+                                StreamReader r = new StreamReader(ssl);
+                                while (true)
+                                {
+                                    string s = await r.ReadLineAsync();
+                                    if (s == null) break;
+                                    WriteLine(s);
+                                }
+
+                                //WriteLine(await r.ReadToEndAsync());
+                            }
+                        }
+                    }
+                }
+            }
+            finally
+            {
+                await lady;
+            }
+        }
+
+        static async Task Test_Pipe_TCP_Client(CancellationToken cancel)
+        {
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+            try
+            {
+                using (var sock = await FastTcpSock.ConnectAsync("www.google.com", 80, null, cancel))
+                {
+                    lady.Add(sock);
+
+                    using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd, cancel))
+                    {
+                        lady.Add(app);
+
+                        using (FastPipeEndStream st = await app.GetStreamAsync())
+                        {
+                            (await app.GetAttachHandleAsync()).SetStreamTimeout(2000, -1);
                             WriteLine("Connected.");
-                            StreamWriter w = new StreamWriter(ssl);
+                            StreamWriter w = new StreamWriter(st);
                             w.AutoFlush = true;
 
                             await w.WriteAsync(
-                                "GET / HTTP/1.1\r\n" +
-                                $"HOST: {hostname}\r\n\r\n"
+                                "GET / HTTP/1.0\r\n" +
+                                "HOST: www.google.com\r\n\r\n"
                                 );
 
-                            StreamReader r = new StreamReader(ssl);
+                            StreamReader r = new StreamReader(st);
                             while (true)
                             {
                                 string s = await r.ReadLineAsync();
@@ -700,43 +763,7 @@ namespace MVPNClientTest
             }
             finally
             {
-                await lady.CleanupAsync();
-            }
-        }
-
-        static async Task Test_Pipe_TCP_Client(CancellationToken cancel)
-        {
-            using (FastTcpPipe p = await FastTcpPipe.ConnectAsync("www.google.com", 80, null, cancel))
-            {
-                try
-                {
-                    using (FastPipeEndStream st = p.GetStream())
-                    {
-                        st.AttachHandle.SetStreamTimeout(2000, -1);
-                        WriteLine("Connected.");
-                        StreamWriter w = new StreamWriter(st);
-                        w.AutoFlush = true;
-
-                        await w.WriteAsync(
-                            "GET / HTTP/1.0\r\n" +
-                            "HOST: www.google.com\r\n\r\n"
-                            );
-
-                        StreamReader r = new StreamReader(st);
-                        while (true)
-                        {
-                            string s = await r.ReadLineAsync();
-                            if (s == null) break;
-                            WriteLine(s);
-                        }
-
-                        //WriteLine(await r.ReadToEndAsync());
-                    }
-                }
-                finally
-                {
-                    await p.AsyncCleanuper;
-                }
+                await lady;
             }
         }
     }

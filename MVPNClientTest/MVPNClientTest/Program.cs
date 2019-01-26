@@ -122,13 +122,13 @@ namespace MVPNClientTest
                 TestPipeTcp();
             }
 
-            FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, p, end) =>
+            FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, sock) =>
             {
                 try
                 {
-                    Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
+                    //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
-                    using (var st = end.GetStream())
+                    using (var st = sock.UpperSidePipeEnd._InternalGetStream())
                     {
                         while (true)
                         {
