@@ -160,11 +160,11 @@ namespace MVPNClientTest
         {
             using (FastPipe pipe = new FastPipe(cancel))
             {
-                using (var wrap = new FastPipeEndSocketWrapper(pipe.A, socket))
+                using (var wrap = new FastPipeEndSocketWrapper(pipe.A_LowerSide, socket))
                 {
                     try
                     {
-                        var end = pipe.B;
+                        var end = pipe.B_UpperSide;
                         var reader = end.StreamReader;
                         var writer = end.StreamWriter;
                         Dbg.Where();
@@ -787,10 +787,10 @@ namespace MVPNClientTest
 
             using (FastPipe pipe = new FastPipe())
             {
-                var reader = pipe.A.DatagramReader;
-                var writer = pipe.A.DatagramWriter;
+                var reader = pipe.B_UpperSide.DatagramReader;
+                var writer = pipe.B_UpperSide.DatagramWriter;
 
-                using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.B, uc.Client))
+                using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.A_LowerSide, uc.Client))
                 {
                     try
                     {

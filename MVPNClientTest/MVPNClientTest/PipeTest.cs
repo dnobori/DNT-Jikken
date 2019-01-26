@@ -126,7 +126,7 @@ namespace MVPNClientTest
             int TimeSpan;
             ulong SessionId;
             CancellationToken Cancel;
-            SharedExceptionQueue ExceptionQueue;
+            ExceptionQueue ExceptionQueue;
             AsyncManualResetEvent ClientStartEvent;
 
             int ConnectTimeout = 10 * 1000;
@@ -332,7 +332,7 @@ namespace MVPNClientTest
 
                 WriteLine("Client mode start");
 
-                ExceptionQueue = new SharedExceptionQueue();
+                ExceptionQueue = new ExceptionQueue();
                 SessionId = WebSocketHelper.RandUInt64();
 
                 List<Task<Result>> tasks = new List<Task<Result>>();
@@ -613,13 +613,13 @@ namespace MVPNClientTest
                             },
                         };
 
-                        using (FastSslProtocolStack ssl = new FastSslProtocolStack(p.LocalPipeEnd, p2.A, opt, cancel))
+                        using (FastSslProtocolStack ssl = new FastSslProtocolStack(p.LocalPipeEnd, p2.A_LowerSide, opt, cancel))
                         {
                             lady.Add(ssl);
 
                             await ssl.WaitInitSuccessOrFailAsync();
 
-                            using (var st = p2.B.GetStream())
+                            using (var st = p2.B_UpperSide.GetStream())
                             {
                                 lady.Add(st);
 
