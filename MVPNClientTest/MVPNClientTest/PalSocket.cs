@@ -34,7 +34,7 @@ using System.Security.Authentication;
 
 namespace SoftEther.WebSocket.Helper
 {
-    public class PalSocket : IDisposable
+    class PalSocket : IDisposable
     {
         Socket _Socket;
 

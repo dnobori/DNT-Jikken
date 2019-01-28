@@ -21,7 +21,7 @@ using System.Security.Cryptography;
 
 namespace SoftEther.VpnClient
 {
-    public class UdpAccel : IDisposable
+    class UdpAccel : IDisposable
     {
         public const int TmpBufSize = 2048;
         public const int PacketIvSize = 12;

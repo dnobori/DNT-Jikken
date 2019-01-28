@@ -20,7 +20,7 @@ using System.Security.Cryptography;
 
 namespace SoftEther.VpnClient
 {
-    public class VpnError : ApplicationException
+    class VpnError : ApplicationException
     {
         public string ErrorCode { get; }
         public string ErrorMessage { get; }
@@ -31,31 +31,31 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public class VpnProxySetting
+    class VpnProxySetting
     {
     }
 
-    public class VpnHostSetting
+    class VpnHostSetting
     {
         public string Hostname = "";
         public int Port = 443;
     }
 
-    public class VpnSessionDetails
+    class VpnSessionDetails
     {
         public int TimeoutConnect = 15 * 1000;
         public int TimeoutComm = 15 * 1000;
         public bool UseUdpAcceleration = true;
     }
 
-    public class VpnSessionSetting
+    class VpnSessionSetting
     {
         public VpnHostSetting Host = new VpnHostSetting();
         public VpnProxySetting Proxy = new VpnProxySetting();
         public VpnSessionDetails Details = new VpnSessionDetails();
     }
 
-    public enum VpnSessionEventType
+    enum VpnSessionEventType
     {
         Init,
         SessionStarted,
@@ -66,7 +66,7 @@ namespace SoftEther.VpnClient
         Error,
     }
 
-    public class VpnSessionEventArgs
+    class VpnSessionEventArgs
     {
         public VpnSessionEventType EventType;
         public Exception Error;
@@ -78,7 +78,7 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public class VpnSessionNotify
+    class VpnSessionNotify
     {
         public event EventHandler<VpnSessionEventArgs> VpnEventHandler;
 
@@ -93,7 +93,7 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public class VpnSocket : IDisposable
+    class VpnSocket : IDisposable
     {
         public VpnSessionSetting Setting { get; }
 
@@ -234,20 +234,20 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public static class VpnProtocolConsts
+    static class VpnProtocolConsts
     {
         public const uint PacketMagicNumber = 0xCAFEBEEF;
         public const int MaxBufferingPacketSize = (1600 * 1600);
     }
 
-    public enum VpnProtocolPacketType
+    enum VpnProtocolPacketType
     {
         Ethernet = 0,
         IPv4 = 1,
         HeartBeat = 254,
     }
 
-    public class VpnJsonClientHello
+    class VpnJsonClientHello
     {
         public uint MvpnProtocolVersion_u32 = 0;
         public byte[] Nonce_bin = null;
@@ -268,7 +268,7 @@ namespace SoftEther.VpnClient
         public string L3HelperIPv4Gateway_ip = null;
     }
 
-    public class VpnJsonServerHello : VpnJsonResponse
+    class VpnJsonServerHello : VpnJsonResponse
     {
         public uint MvpnProtocolVersion_u32 = 0;
         public byte[] Nonce_bin = null;
@@ -276,14 +276,14 @@ namespace SoftEther.VpnClient
         public string SupportedAuthMethod_str = null;
     }
 
-    public class VpnJsonClientAuth
+    class VpnJsonClientAuth
     {
         public string AuthMethod_str = null;
         public string AuthUsername_str = null;
         public string AuthPlainPassword_str = null;
     }
 
-    public class VpnJsonServerAuthResponse : VpnJsonResponse
+    class VpnJsonServerAuthResponse : VpnJsonResponse
     {
         public uint RetryAllowedCount_u32 = 0;
         public uint HeartBeatInterval_u32 = 0;
@@ -309,13 +309,13 @@ namespace SoftEther.VpnClient
         public string L3HelperIPv4PushedStaticRoutes_str = null;
     }
 
-    public class VpnJsonResponse
+    class VpnJsonResponse
     {
         public string ErrorStr = null;
         public string ErrorMessage_Utf = null;
     }
 
-    public struct VpnConnectionInfo
+    struct VpnConnectionInfo
     {
         public VpnSessionSetting Settings;
         public IPEndPoint LocalEndPoint;
@@ -327,11 +327,11 @@ namespace SoftEther.VpnClient
         public int HeartBeatInterval;
         public int DisconnectTimeout;
         public DateTimeOffset LastCommunicationDateTime;
-        public bool UdpAccelerationIsEnabled;
-        public bool UdpAccelerationIsActuallyUsed;
+        //public bool UdpAccelerationIsEnabled;
+        //public bool UdpAccelerationIsActuallyUsed;
     }
 
-    public class VpnConnection : IDisposable
+    class VpnConnection : IDisposable
     {
         public VpnSession Session { get; }
         public VpnSessionSetting Setting { get; }
@@ -678,10 +678,10 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public delegate void VpnVirtualNetworkAdapterPacketsSendDelegate(VpnPacket[] packets);
-    public delegate void VpnVirtualNetworkAdapterDisconnectDelegate();
+    delegate void VpnVirtualNetworkAdapterPacketsSendDelegate(VpnPacket[] packets);
+    delegate void VpnVirtualNetworkAdapterDisconnectDelegate();
 
-    public class VpnVirtualNetworkAdapterParam
+    class VpnVirtualNetworkAdapterParam
     {
         public readonly VpnSession Session;
         public readonly VpnVirtualNetworkAdapterPacketsSendDelegate SendPackets;
@@ -696,7 +696,7 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public class VpnPacket
+    class VpnPacket
     {
         public readonly VpnProtocolPacketType Type;
         public readonly Memory<byte> Data;
@@ -708,14 +708,14 @@ namespace SoftEther.VpnClient
         }
     }
 
-    public abstract class VpnVirtualNetworkAdapter
+    abstract class VpnVirtualNetworkAdapter
     {
         public abstract Task<object> OnConnected(VpnVirtualNetworkAdapterParam param);
         public abstract Task OnDisconnected(object state, VpnVirtualNetworkAdapterParam param);
         public abstract Task OnPacketsReceived(object state, VpnVirtualNetworkAdapterParam param, VpnPacket[] packets);
     }
 
-    public class VpnSession
+    class VpnSession
     {
         public VpnSessionSetting Setting { get; }
         public VpnSessionNotify Notify { get; }

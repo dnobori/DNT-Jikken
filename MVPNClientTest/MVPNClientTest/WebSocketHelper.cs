@@ -755,7 +755,7 @@ namespace SoftEther.WebSocket.Helper
     }
 
 
-    public class MemoryBuffer<T>
+    class MemoryBuffer<T>
     {
         Memory<T> InternalBuffer;
         public int CurrentPosition { get; private set; }
@@ -990,7 +990,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class ReadOnlyMemoryBuffer<T>
+    class ReadOnlyMemoryBuffer<T>
     {
         ReadOnlyMemory<T> InternalBuffer;
         public int CurrentPosition { get; private set; }
@@ -1174,7 +1174,7 @@ namespace SoftEther.WebSocket.Helper
     }
 
 
-    public static class SpanMemoryBufferHelper
+    static class SpanMemoryBufferHelper
     {
         public static SpanBuffer<T> AsSpanBuffer<T>(this Span<T> span) => new SpanBuffer<T>(span);
         public static SpanBuffer<T> AsSpanBuffer<T>(this Memory<T> memory) => new SpanBuffer<T>(memory.Span);
@@ -2750,7 +2750,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class FastMemoryAllocator<T>
+    sealed class FastMemoryAllocator<T>
     {
         Memory<T> Pool;
         int CurrentPos;
@@ -2809,7 +2809,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public static class FastTick64
+    static class FastTick64
     {
         public static long Now { get => GetTick64() - Base; }
         static readonly long Base = GetTick64() - 1;
@@ -2839,7 +2839,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public static class FastHashHelper
+    static class FastHashHelper
     {
         public static int ComputeHash32(this string data, StringComparison cmp = StringComparison.Ordinal)
             => data.GetHashCode(cmp);
@@ -3053,7 +3053,7 @@ namespace SoftEther.WebSocket.Helper
 
     // ---------------
 
-    public class RefInt : IEquatable<RefInt>, IComparable<RefInt>
+    class RefInt : IEquatable<RefInt>, IComparable<RefInt>
     {
         public RefInt() : this(0) { }
         public RefInt(int value)
@@ -3079,7 +3079,7 @@ namespace SoftEther.WebSocket.Helper
         public static implicit operator RefInt(int value) => new RefInt(value);
     }
 
-    public class RefLong : IEquatable<RefLong>, IComparable<RefLong>
+    class RefLong : IEquatable<RefLong>, IComparable<RefLong>
     {
         public RefLong() : this(0) { }
         public RefLong(long value)
@@ -3106,7 +3106,7 @@ namespace SoftEther.WebSocket.Helper
         public static implicit operator RefLong(long value) => new RefLong(value);
     }
 
-    public class RefBool : IEquatable<RefBool>, IComparable<RefBool>
+    class RefBool : IEquatable<RefBool>, IComparable<RefBool>
     {
         public RefBool() : this(false) { }
         public RefBool(bool value)
@@ -3130,7 +3130,7 @@ namespace SoftEther.WebSocket.Helper
         public static implicit operator RefBool(bool value) => new RefBool(value);
     }
 
-    public class Ref<T>
+    class Ref<T>
     {
         public Ref() : this(default(T)) { }
         public Ref(T value)
@@ -3176,7 +3176,7 @@ namespace SoftEther.WebSocket.Helper
     }
 
     // Buffer
-    public class Buf
+    class Buf
     {
         MemoryStream buf;
 
@@ -3428,7 +3428,7 @@ namespace SoftEther.WebSocket.Helper
     }
 
     // FIFO
-    public class Fifo
+    class Fifo
     {
         byte[] p;
         int pos, size;
@@ -3637,7 +3637,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class AsyncLock : IDisposable
+    sealed class AsyncLock : IDisposable
     {
         public sealed class LockHolder : IDisposable
         {
@@ -3680,7 +3680,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public static class Dbg
+    static class Dbg
     {
         static object LockObj = new object();
 
@@ -3708,7 +3708,7 @@ namespace SoftEther.WebSocket.Helper
         All = 0x7FFFFFFF,
     }
 
-    public static class WebSocketHelper
+    static class WebSocketHelper
     {
         public static bool IsLittleEndian { get; }
         public static bool IsBigEndian => !IsLittleEndian;
@@ -4881,7 +4881,7 @@ namespace SoftEther.WebSocket.Helper
             => System.Runtime.Serialization.FormatterServices.GetUninitializedObject(t);
     }
 
-    public sealed class WhenAll : IDisposable
+    sealed class WhenAll : IDisposable
     {
         public Task WaitMe { get; }
         public bool AllOk { get; private set; } = false;
@@ -5022,7 +5022,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class AsyncCleanuperLady
+    class AsyncCleanuperLady
     {
         ConcurrentQueue<AsyncCleanuper> CleanuperQueue = new ConcurrentQueue<AsyncCleanuper>();
         ConcurrentQueue<Task> TaskQueue = new ConcurrentQueue<Task>();
@@ -5063,13 +5063,13 @@ namespace SoftEther.WebSocket.Helper
             => CleanupAsync().GetAwaiter();
     }
 
-    public interface IAsyncCleanupable : IDisposable
+    interface IAsyncCleanupable : IDisposable
     {
         AsyncCleanuper AsyncCleanuper { get; }
         Task _CleanupAsyncInternal();
     }
 
-    public class AsyncCleanuper
+    class AsyncCleanuper
     {
         IAsyncCleanupable Target { get; }
 
@@ -5098,9 +5098,9 @@ namespace SoftEther.WebSocket.Helper
             => CleanupAsync().GetAwaiter();
     }
 
-    public delegate bool TimeoutDetectorCallback(TimeoutDetector detector);
+    delegate bool TimeoutDetectorCallback(TimeoutDetector detector);
 
-    public sealed class TimeoutDetector : IAsyncCleanupable
+    sealed class TimeoutDetector : IAsyncCleanupable
     {
         Task mainLoop;
 
@@ -5220,7 +5220,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class CancelWatcher : IAsyncCleanupable
+    sealed class CancelWatcher : IAsyncCleanupable
     {
         CancellationTokenSource cts = new CancellationTokenSource();
         public CancellationToken CancelToken { get => cts.Token; }
@@ -5352,7 +5352,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class AsyncAutoResetEvent
+    class AsyncAutoResetEvent
     {
         object lockobj = new object();
         List<AsyncManualResetEvent> eventQueue = new List<AsyncManualResetEvent>();
@@ -5429,7 +5429,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class Holder<T> : IDisposable
+    class Holder<T> : IDisposable
     {
         public T UserData { get; }
         Action<T> DisposeProc;
@@ -5461,7 +5461,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class Holder : IDisposable
+    class Holder : IDisposable
     {
         Action DisposeProc;
         LeakChecker.Holder Leak;
@@ -5491,7 +5491,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class AsyncHolder<T> : IAsyncCleanupable
+    class AsyncHolder<T> : IAsyncCleanupable
     {
         public AsyncCleanuper AsyncCleanuper { get; }
 
@@ -5547,7 +5547,7 @@ namespace SoftEther.WebSocket.Helper
             => AsyncCleanuper.GetAwaiter();
     }
 
-    public class AsyncHolder : IAsyncCleanupable
+    class AsyncHolder : IAsyncCleanupable
     {
         public AsyncCleanuper AsyncCleanuper { get; }
 
@@ -5601,7 +5601,7 @@ namespace SoftEther.WebSocket.Helper
             => AsyncCleanuper.GetAwaiter();
     }
 
-    public sealed class GroupManager<TKey, TGroupContext> : IDisposable
+    sealed class GroupManager<TKey, TGroupContext> : IDisposable
     {
         public class GroupHandle : Holder<GroupInstance>
         {
@@ -5703,7 +5703,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class DelayAction : IAsyncCleanupable
+    sealed class DelayAction : IAsyncCleanupable
     {
         public Action<object> Action { get; }
         public object UserState { get; }
@@ -5790,7 +5790,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class AsyncCallbackList
+    class AsyncCallbackList
     {
         List<(Action<object> action, object state)> HardCallbackList = new List<(Action<object> action, object state)>();
         List<(Action<object> action, object state)> SoftCallbackList = new List<(Action<object> action, object state)>();
@@ -5852,7 +5852,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class AsyncManualResetEvent
+    class AsyncManualResetEvent
     {
         object lockobj = new object();
         volatile TaskCompletionSource<bool> tcs;
@@ -5954,7 +5954,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public static class Time
+    static class Time
     {
         static TimeHelper h = new TimeHelper();
         static TimeSpan baseTimeSpan = new TimeSpan(0, 0, 1);
@@ -6025,7 +6025,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class Datagram
+    class Datagram
     {
         public Memory<byte> Data;
         public EndPoint EndPoint;
@@ -6041,7 +6041,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class NonBlockSocket : IDisposable
+    sealed class NonBlockSocket : IDisposable
     {
         public Socket Sock { get; }
         public bool IsStream { get; }
@@ -6334,7 +6334,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class AsyncBulkReceiver<TUserReturnElement, TUserState>
+    class AsyncBulkReceiver<TUserReturnElement, TUserState>
     {
         public delegate Task<ValueOrClosed<TUserReturnElement>> AsyncReceiveCallback(TUserState state);
 
@@ -6417,7 +6417,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class ExceptionQueue
+    class ExceptionQueue
     {
         public const int MaxItems = 128;
         SharedQueue<Exception> Queue = new SharedQueue<Exception>(MaxItems, true);
@@ -6557,13 +6557,13 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class HierarchyPosition : RefInt
+    class HierarchyPosition : RefInt
     {
         public HierarchyPosition() : base(-1) { }
         public bool IsInstalled { get => (this.Value != -1); }
     }
 
-    public class SharedHierarchy<T>
+    class SharedHierarchy<T>
     {
         public class HierarchyBodyItem : IComparable<HierarchyBodyItem>, IEquatable<HierarchyBodyItem>
         {
@@ -6743,7 +6743,7 @@ namespace SoftEther.WebSocket.Helper
         public T[] ItemsReadOnly { get => ToArray(); }
     }
 
-    public abstract class LayerInfoBase
+    abstract class LayerInfoBase
     {
         public HierarchyPosition Position { get; } = new HierarchyPosition();
         internal SharedHierarchy<LayerInfoBase>.HierarchyBodyItem _InternalHierarchyBodyItem = null;
@@ -6763,7 +6763,7 @@ namespace SoftEther.WebSocket.Helper
             => ProtocolStack = protocolStack;
     }
 
-    public interface ILayerInfoSsl
+    interface ILayerInfoSsl
     {
         bool IsServerMode { get; }
         string SslProtocol { get; }
@@ -6777,19 +6777,19 @@ namespace SoftEther.WebSocket.Helper
         X509Certificate RemoteCertificate { get; }
     }
 
-    public interface ILayerInfoIpEndPoint
+    interface ILayerInfoIpEndPoint
     {
         IPAddress LocalIPAddress { get; }
         IPAddress RemoteIPAddress { get; }
     }
 
-    public interface ILayerInfoTcpEndPoint : ILayerInfoIpEndPoint
+    interface ILayerInfoTcpEndPoint : ILayerInfoIpEndPoint
     {
         int LocalPort { get; }
         int RemotePort { get; }
     }
 
-    public class LayerStack
+    class LayerStack
     {
         SharedHierarchy<LayerInfoBase> Hierarchy = new SharedHierarchy<LayerInfoBase>();
 
@@ -6818,7 +6818,7 @@ namespace SoftEther.WebSocket.Helper
         public void Encounter(LayerStack other) => this.Hierarchy.Encounter(other.Hierarchy);
     }
 
-    public class SharedQueue<T>
+    class SharedQueue<T>
     {
         class QueueBody
         {
@@ -6972,7 +6972,7 @@ namespace SoftEther.WebSocket.Helper
         public T[] ItemsReadOnly { get => ToArray(); }
     }
 
-    public class MicroBenchmarkQueue
+    class MicroBenchmarkQueue
     {
         List<(IMicroBenchmark bm, int priority, int index)> List = new List<(IMicroBenchmark bm, int priority, int index)>();
 
@@ -6990,26 +6990,25 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public static class Limbo
+    static class Limbo
     {
         public static long SInt = 0;
         public static ulong UInt = 0;
         public volatile static object ObjectSlow = null;
     }
 
-    public class MicroBenchmarkGlobalParam
+    class MicroBenchmarkGlobalParam
     {
         public static int DefaultDurationMSecs = 250;
-        public static readonly double EmptyBaseLine;
     }
 
-    public interface IMicroBenchmark
+    interface IMicroBenchmark
     {
         double Start(int duration = 0);
         double StartAndPrint(int duration = 0);
     }
 
-    public class MicroBenchmark<TUserVariable> : IMicroBenchmark
+    class MicroBenchmark<TUserVariable> : IMicroBenchmark
     {
         public readonly string Name;
         volatile bool StopFlag;
@@ -7114,7 +7113,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public static class LeakChecker
+    static class LeakChecker
     {
         static Dictionary<long, Holder> List = new Dictionary<long, Holder>();
         static long CurrentId = 0;
@@ -7204,13 +7203,13 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastLinkedListNode<T>
+    class FastLinkedListNode<T>
     {
         public T Value;
         public FastLinkedListNode<T> Next, Previous;
     }
 
-    public class FastLinkedList<T>
+    class FastLinkedList<T>
     {
         public int Count;
         public FastLinkedListNode<T> First, Last;
@@ -7438,7 +7437,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class LocalTimer
+    sealed class LocalTimer
     {
         SortedSet<long> List = new SortedSet<long>();
         HashSet<long> Hash = new HashSet<long>();
@@ -7516,7 +7515,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class HostNetInfo : BackgroundStateDataBase
+    class HostNetInfo : BackgroundStateDataBase
     {
         public override BackgroundStateDataUpdatePolicy DataUpdatePolicy =>
             new BackgroundStateDataUpdatePolicy(300, 6000, 2000);
@@ -7747,7 +7746,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class BackgroundStateDataBase : IEquatable<BackgroundStateDataBase>
+    abstract class BackgroundStateDataBase : IEquatable<BackgroundStateDataBase>
     {
         public DateTimeOffset TimeStamp { get; } = DateTimeOffset.Now;
         public long TickTimeStamp { get; } = FastTick64.Now;
@@ -7759,7 +7758,7 @@ namespace SoftEther.WebSocket.Helper
         public abstract void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action callMe);
     }
 
-    public static class BackgroundState<TData>
+    static class BackgroundState<TData>
         where TData : BackgroundStateDataBase, new()
     {
         public struct CurrentData
@@ -7981,7 +7980,7 @@ namespace SoftEther.WebSocket.Helper
         Stopped,
     }
 
-    public sealed class TcpListenManager : IAsyncCleanupable
+    sealed class TcpListenManager : IAsyncCleanupable
     {
         public class Listener
         {
@@ -8271,14 +8270,14 @@ namespace SoftEther.WebSocket.Helper
         public AsyncCleanuper AsyncCleanuper { get; }
     }
 
-    public class DisconnectedException : Exception { }
-    public class FastBufferDisconnectedException : DisconnectedException { }
-    public class SocketDisconnectedException : DisconnectedException { }
-    public class BaseStreamDisconnectedException : DisconnectedException { }
+    class DisconnectedException : Exception { }
+    class FastBufferDisconnectedException : DisconnectedException { }
+    class SocketDisconnectedException : DisconnectedException { }
+    class BaseStreamDisconnectedException : DisconnectedException { }
 
-    public delegate void FastEventCallback<TCaller, TEventType>(TCaller buffer, TEventType type, object userState);
+    delegate void FastEventCallback<TCaller, TEventType>(TCaller buffer, TEventType type, object userState);
 
-    public class FastEvent<TCaller, TEventType>
+    class FastEvent<TCaller, TEventType>
     {
         public FastEventCallback<TCaller, TEventType> Proc { get; }
         public object UserState { get; }
@@ -8299,7 +8298,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastEventListenerList<TCaller, TEventType>
+    class FastEventListenerList<TCaller, TEventType>
     {
         FastReadList<FastEvent<TCaller, TEventType>> ListenerList;
         FastReadList<AutoResetEvent> EventList;
@@ -8368,7 +8367,7 @@ namespace SoftEther.WebSocket.Helper
         Disconnected,
     }
 
-    public interface IFastBufferState
+    interface IFastBufferState
     {
         long Id { get; }
 
@@ -8393,7 +8392,7 @@ namespace SoftEther.WebSocket.Helper
         void CompleteWrite(bool checkDisconnect = true);
     }
 
-    public interface IFastBuffer<T> : IFastBufferState
+    interface IFastBuffer<T> : IFastBufferState
     {
         void Clear();
         void Enqueue(T item);
@@ -8419,7 +8418,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class Fifo<T>
+    class Fifo<T>
     {
         public T[] PhysicalData { get; private set; }
         public int Size { get; private set; }
@@ -8582,7 +8581,7 @@ namespace SoftEther.WebSocket.Helper
         public static long NewId() => Interlocked.Increment(ref Id);
     }
 
-    public class FastStreamBuffer<T> : IFastBuffer<Memory<T>>
+    class FastStreamBuffer<T> : IFastBuffer<Memory<T>>
     {
         FastLinkedList<Memory<T>> List = new FastLinkedList<Memory<T>>();
         public long PinHead { get; private set; } = 0;
@@ -9507,7 +9506,7 @@ namespace SoftEther.WebSocket.Helper
 
 
 
-    public class FastDatagramBuffer<T> : IFastBuffer<T>
+    class FastDatagramBuffer<T> : IFastBuffer<T>
     {
         Fifo<T> Fifo = new Fifo<T>();
 
@@ -9803,19 +9802,19 @@ namespace SoftEther.WebSocket.Helper
         public T[] ItemsSlow { get => ToArray(); }
     }
 
-    public class FastStreamFifo : FastStreamBuffer<byte>
+    class FastStreamFifo : FastStreamBuffer<byte>
     {
         public FastStreamFifo(bool enableEvents = false, long? thresholdLength = null)
             : base(enableEvents, thresholdLength) { }
     }
 
-    public class FastDatagramFifo : FastDatagramBuffer<Datagram>
+    class FastDatagramFifo : FastDatagramBuffer<Datagram>
     {
         public FastDatagramFifo(bool enableEvents = false, long? thresholdLength = null)
             : base(enableEvents, thresholdLength) { }
     }
 
-    public static class FastPipeHelper
+    static class FastPipeHelper
     {
         public static async Task WaitForReadyToWrite(this IFastBufferState writer, CancellationToken cancel, int timeout)
         {
@@ -9862,7 +9861,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public static class FastPipeGlobalConfig
+    static class FastPipeGlobalConfig
     {
         public static int MaxStreamBufferLength = 4 * 65536;
         public static int MaxDatagramQueueLength = 65536;
@@ -9887,7 +9886,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class FastPipe : IAsyncCleanupable
+    sealed class FastPipe : IAsyncCleanupable
     {
         public CancelWatcher CancelWatcher { get; }
 
@@ -10079,7 +10078,7 @@ namespace SoftEther.WebSocket.Helper
         FromUpperToB_UpperSide,
     }
 
-    public class FastPipeEnd
+    class FastPipeEnd
     {
         FastPipe Pipe { get; }
 
@@ -10324,7 +10323,7 @@ namespace SoftEther.WebSocket.Helper
         public void CheckDisconnected() => Pipe.CheckDisconnected();
     }
 
-    public sealed class FastPipeEndStream : NetworkStream
+    sealed class FastPipeEndStream : NetworkStream
     {
         public bool AutoFlush { get; set; }
         public FastPipeEnd End { get; private set; }
@@ -10902,7 +10901,7 @@ namespace SoftEther.WebSocket.Helper
 
     }
 
-    public class FastPipeNonblockStateHelper
+    class FastPipeNonblockStateHelper
     {
         byte[] LastState = new byte[0];
 
@@ -11004,7 +11003,7 @@ namespace SoftEther.WebSocket.Helper
         Datagram = 2,
     }
 
-    public abstract class FastPipeEndAsyncObjectWrapperBase : IAsyncCleanupable
+    abstract class FastPipeEndAsyncObjectWrapperBase : IAsyncCleanupable
     {
         public CancelWatcher CancelWatcher { get; }
         public FastPipeEnd PipeEnd { get; }
@@ -11280,7 +11279,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapperBase
+    sealed class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapperBase
     {
         public Socket Socket { get; }
         public int RecvTmpBufferSize { get; private set; }
@@ -11439,7 +11438,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapperBase
+    sealed class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapperBase
     {
         public Stream Stream { get; }
         public int RecvTmpBufferSize { get; private set; }
@@ -11553,9 +11552,9 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class FastProtocolOptionsBase { }
+    abstract class FastProtocolOptionsBase { }
 
-    public abstract class FastProtocolStackBase : IAsyncCleanupable
+    abstract class FastProtocolStackBase : IAsyncCleanupable
     {
         public virtual AsyncCleanuper AsyncCleanuper { get; }
 
@@ -11624,9 +11623,9 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class FastTopProtocolOptionsBase : FastProtocolOptionsBase { }
+    abstract class FastTopProtocolOptionsBase : FastProtocolOptionsBase { }
 
-    public abstract class FastTopProtocolStubBase : FastProtocolStackBase
+    abstract class FastTopProtocolStubBase : FastProtocolStackBase
     {
         public FastPipeEnd Lower { get; }
 
@@ -11680,9 +11679,9 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastAppProtocolOptions : FastTopProtocolOptionsBase { }
+    class FastAppProtocolOptions : FastTopProtocolOptionsBase { }
 
-    public class FastAppProtocolStub : FastTopProtocolStubBase
+    class FastAppProtocolStub : FastTopProtocolStubBase
     {
         public FastAppProtocolStub(FastPipeEnd lower, CancellationToken cancel = default, FastAppProtocolOptions options = null) : base(lower, options, cancel)
         {
@@ -11744,9 +11743,9 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class FastBottomProtocolOptionsBase : FastProtocolOptionsBase { }
+    abstract class FastBottomProtocolOptionsBase : FastProtocolOptionsBase { }
 
-    public abstract class FastBottomProtocolStubBase : FastProtocolStackBase
+    abstract class FastBottomProtocolStubBase : FastProtocolStackBase
     {
         public FastPipeEnd Upper { get; }
 
@@ -11804,7 +11803,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class FastTcpProtocolOptionsBase : FastBottomProtocolOptionsBase
+    abstract class FastTcpProtocolOptionsBase : FastBottomProtocolOptionsBase
     {
         public const int DefaultTcpConnectTimeout = 15 * 1000;
 
@@ -11813,7 +11812,7 @@ namespace SoftEther.WebSocket.Helper
         public int ConnectTimeout { get; set; } = DefaultTcpConnectTimeout;
     }
 
-    public abstract class FastTcpProtocolStubBase : FastBottomProtocolStubBase
+    abstract class FastTcpProtocolStubBase : FastBottomProtocolStubBase
     {
         public FastTcpProtocolStubBase(FastPipeEnd upper, FastTcpProtocolOptionsBase options, CancellationToken cancel = default) : base(upper, options, cancel) { }
     }
@@ -11824,13 +11823,13 @@ namespace SoftEther.WebSocket.Helper
         ByConnectedSocketObject,
     }
 
-    public class FastTcpSockProtocolOptions : FastTcpProtocolOptionsBase
+    class FastTcpSockProtocolOptions : FastTcpProtocolOptionsBase
     {
         public FastTcpSockProtocolInitMode InitMode { get; set; } = FastTcpSockProtocolInitMode.ByRemoteEndPoint;
         public Socket SocketObject { get; set; } = null;
     }
 
-    public sealed class FastTcpSockProtocolStub : FastTcpProtocolStubBase
+    sealed class FastTcpSockProtocolStub : FastTcpProtocolStubBase
     {
         public class LayerInfo : LayerInfoBase, ILayerInfoTcpEndPoint
         {
@@ -11899,7 +11898,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class FastTcpSock : IAsyncCleanupable
+    sealed class FastTcpSock : IAsyncCleanupable
     {
         public AsyncCleanuper AsyncCleanuper { get; }
         public FastPipe Pipe { get; }
@@ -12030,7 +12029,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public abstract class FastLinearMiddleProtocolOptionsBase : FastProtocolOptionsBase
+    abstract class FastLinearMiddleProtocolOptionsBase : FastProtocolOptionsBase
     {
         public int LowerReceiveTimeoutOnInit { get; set; } = 5 * 1000;
         public int LowerSendTimeoutOnInit { get; set; } = 60 * 1000;
@@ -12039,7 +12038,7 @@ namespace SoftEther.WebSocket.Helper
         public int LowerSendTimeoutAfterInit { get; set; } = Timeout.Infinite;
     }
 
-    public abstract class FastLinearMiddleProtocolStackBase : FastProtocolStackBase
+    abstract class FastLinearMiddleProtocolStackBase : FastProtocolStackBase
     {
         public FastPipeEnd Lower { get; }
         public FastPipeEnd Upper { get; }
@@ -12120,13 +12119,13 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public class FastSslProtocolOptions : FastLinearMiddleProtocolOptionsBase
+    class FastSslProtocolOptions : FastLinearMiddleProtocolOptionsBase
     {
         public bool IsServerMode { get; set; } = false;
         public SslClientAuthenticationOptions SslClientOptions { get; set; } = new SslClientAuthenticationOptions();
     }
 
-    public class FastSslProtocolStack : FastLinearMiddleProtocolStackBase
+    class FastSslProtocolStack : FastLinearMiddleProtocolStackBase
     {
         public class LayerInfo : LayerInfoBase, ILayerInfoSsl
         {
@@ -12202,7 +12201,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class FastPipeTcpListener : IAsyncCleanupable
+    sealed class FastPipeTcpListener : IAsyncCleanupable
     {
         public TcpListenManager ListenerManager { get; }
 

@@ -29,7 +29,7 @@ namespace SoftEther.WebSocket
         Pong = 0x0A,
     }
 
-    public class WebSocketStream : Stream
+    class WebSocketStream : Stream
     {
         public string UserAgent { get; set; } = "Mozilla/5.0 (WebSocket) WebSocket Client";
         public int TimeoutOpen { get; set; } = 10 * 1000;

@@ -59,10 +59,10 @@ namespace MVPNClientTest
 
                 //Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
-                //Test_Pipe_SslStream_Client2(cancel.Token).Wait();
+                Test_Pipe_SslStream_Client2(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
-                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
                 //{

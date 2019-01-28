@@ -21,7 +21,7 @@ using System.Security.Cryptography;
 
 namespace SoftEther.VpnClient
 {
-    public class RudpConsts
+    class RudpConsts
     {
         public const int NatTPort = 5004;
         public const int GetIPInterval = 5 * 1000;
