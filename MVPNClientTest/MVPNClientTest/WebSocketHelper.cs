@@ -3173,6 +3173,8 @@ namespace SoftEther.WebSocket.Helper
         public static bool operator ==(Ref<T> r, bool b) { return r.IsTrue() == b; }
         public static bool operator !=(Ref<T> r, bool b) { return r.IsTrue() != b; }
         public static bool operator !(Ref<T> r) { return !r.IsTrue(); }
+        public static implicit operator T(Ref<T> r) => r.Value;
+        public static implicit operator Ref<T>(T value) => new Ref<T>(value);
     }
 
     // Buffer
@@ -3635,6 +3637,81 @@ namespace SoftEther.WebSocket.Helper
                 return this.Data.AsSpan(this.pos, this.size);
             }
         }
+    }
+
+    sealed class CachedProperty<T>
+    {
+        object LockObj = new object();
+        bool IsCached = false;
+        T CachedValue;
+
+        Func<T> Getter;
+        Func<T, T> Setter;
+        Func<T, T> Normalizer;
+
+        public CachedProperty(Func<T, T> setter = null, Func<T> getter = null, Func<T, T> normalizer = null)
+        {
+            Setter = setter;
+            Getter = getter;
+            Normalizer = normalizer;
+        }
+
+        public void Set(T value)
+        {
+            if (Setter == null) throw new NotImplementedException();
+            if (Normalizer != null)
+                value = Normalizer(value);
+
+            lock (LockObj)
+            {
+                value = Setter(value);
+                CachedValue = value;
+                IsCached = true;
+            }
+        }
+
+        public T Get()
+        {
+            lock (LockObj)
+            {
+                if (IsCached)
+                    return CachedValue;
+
+                if (Getter == null) throw new NotImplementedException("The value is undefined yet.");
+
+                T value = Getter();
+
+                if (Normalizer != null)
+                    value = Normalizer(value);
+
+                CachedValue = value;
+                IsCached = true;
+
+                return value;
+            }
+        }
+
+        public void Flush()
+        {
+            lock (LockObj)
+            {
+                IsCached = false;
+                CachedValue = default;
+            }
+        }
+
+        public T GetFast()
+        {
+            if (IsCached)
+                return CachedValue;
+
+            return Get();
+        }
+
+        public T Value { get => Get(); set => Set(value); }
+        public T ValueFast { get => GetFast(); }
+
+        public static implicit operator T(CachedProperty<T> r) => r.Value;
     }
 
     sealed class AsyncLock : IDisposable
