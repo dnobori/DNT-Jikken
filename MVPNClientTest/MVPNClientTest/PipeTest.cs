@@ -61,7 +61,7 @@ namespace MVPNClientTest
 
                 Test_Pipe_SslStream_Client2(cancel.Token).Wait();
 
-                //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Download, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
                 //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
@@ -312,8 +312,8 @@ namespace MVPNClientTest
 
                     try
                     {
-                        listener.ListenerManager.Add(this.ServerPort, IPVersion.IPv4);
-                        listener.ListenerManager.Add(this.ServerPort, IPVersion.IPv6);
+                        listener.PalListener.Add(this.ServerPort, IPVersion.IPv4);
+                        listener.PalListener.Add(this.ServerPort, IPVersion.IPv6);
 
                         WriteLine("Listening.");
 
@@ -445,7 +445,7 @@ namespace MVPNClientTest
                 AsyncCleanuperLady lady = new AsyncCleanuperLady();
                 try
                 {
-                    using (FastTcpSock sock = await FastTcpSock.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout))
+                    using (FastPalTcpSock sock = await FastPalTcpSock.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout))
                     {
                         lady.Add(sock);
 
@@ -587,7 +587,7 @@ namespace MVPNClientTest
 
         static async Task Test_Pipe_SpeedTest_Client(string serverHost, int serverPort, int numConnection, int timespan, SpeedTest.ModeFlag mode, CancellationToken cancel, AddressFamily? af = null)
         {
-            IPAddress targetIP = await FastTcpSock.GetIPFromHostName(serverHost, af, cancel);
+            IPAddress targetIP = await FastPalTcpSock.GetIPFromHostName(serverHost, af, cancel);
 
             SpeedTest test = new SpeedTest(targetIP, serverPort, numConnection, timespan, mode, cancel);
 
@@ -605,7 +605,7 @@ namespace MVPNClientTest
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                using (FastTcpSock sock = await FastTcpSock.ConnectAsync(hostname, port, null, cancel))
+                using (FastPalTcpSock sock = await FastPalTcpSock.ConnectAsync(hostname, port, null, cancel))
                 {
                     lady.Add(sock);
 
@@ -672,7 +672,7 @@ namespace MVPNClientTest
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                using (FastTcpSock sock = await FastTcpSock.ConnectAsync(hostname, 443, null, cancel))
+                using (FastPalTcpSock sock = await FastPalTcpSock.ConnectAsync(hostname, 443, null, cancel))
                 {
                     lady.Add(sock);
 
@@ -728,7 +728,7 @@ namespace MVPNClientTest
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                using (var sock = await FastTcpSock.ConnectAsync("www.google.com", 80, null, cancel))
+                using (var sock = await FastPalTcpSock.ConnectAsync("www.google.com", 80, null, cancel))
                 {
                     lady.Add(sock);
 

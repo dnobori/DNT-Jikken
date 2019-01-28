@@ -3852,86 +3852,6 @@ namespace SoftEther.WebSocket.Helper
             IsLittleEndian = BitConverter.IsLittleEndian;
         }
 
-        public static bool CanUdpSocketErrorBeIgnored(SocketException e)
-        {
-            switch (e.SocketErrorCode)
-            {
-                case SocketError.ConnectionReset:
-                case SocketError.NetworkReset:
-                case SocketError.MessageSize:
-                case SocketError.HostUnreachable:
-                case SocketError.NetworkUnreachable:
-                case SocketError.NoBufferSpaceAvailable:
-                case SocketError.AddressNotAvailable:
-                case SocketError.ConnectionRefused:
-                case SocketError.Interrupted:
-                case SocketError.WouldBlock:
-                case SocketError.TryAgain:
-                case SocketError.InProgress:
-                case SocketError.InvalidArgument:
-                case (SocketError)12: // ENOMEM
-                case (SocketError)10068: // WSAEUSERS
-                    return true;
-            }
-            return false;
-        }
-
-        static readonly IPEndPoint StaticUdpEndPointIPv4 = new IPEndPoint(IPAddress.Any, 0);
-        static readonly IPEndPoint StaticUdpEndPointIPv6 = new IPEndPoint(IPAddress.IPv6Any, 0);
-        const int UdpMaxRetryOnIgnoreError = 1000;
-        public static async Task<SocketReceiveFromResult> ReceiveFromSafeUdpErrorAsync(this Socket socket, ArraySegment<byte> buffer, SocketFlags socketFlags)
-        {
-            int numRetry = 0;
-
-            LABEL_RETRY:
-
-            try
-            {
-                Task<SocketReceiveFromResult> t = socket.ReceiveFromAsync(buffer, socketFlags, socket.AddressFamily == AddressFamily.InterNetworkV6 ? StaticUdpEndPointIPv6 : StaticUdpEndPointIPv4);
-                if (t.IsCompleted == false)
-                {
-                    numRetry = 0;
-                    await t;
-                }
-                SocketReceiveFromResult ret = t.Result;
-                if (ret.ReceivedBytes <= 0) throw new SocketDisconnectedException();
-                return ret;
-            }
-            catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e) || socket.Available >= 1)
-            {
-                numRetry++;
-                if (numRetry >= UdpMaxRetryOnIgnoreError)
-                {
-                    throw;
-                }
-                await Task.Yield();
-                goto LABEL_RETRY;
-            }
-        }
-        public static Task<SocketReceiveFromResult> ReceiveFromSafeUdpErrorAsync(this Socket socket, Memory<byte> buffer, SocketFlags socketFlags)
-            => ReceiveFromSafeUdpErrorAsync(socket, buffer.AsSegment(), socketFlags);
-
-        public static async Task<int> SendToSafeUdpErrorAsync(this Socket socket, ArraySegment<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP)
-        {
-            try
-            {
-                Task<int> t = socket.SendToAsync(buffer, socketFlags, remoteEP);
-                if (t.IsCompleted == false)
-                {
-                    await t;
-                }
-                int ret = t.Result;
-                if (ret <= 0) throw new SocketDisconnectedException();
-                return ret;
-            }
-            catch (SocketException e) when (CanUdpSocketErrorBeIgnored(e))
-            {
-                return buffer.Count;
-            }
-        }
-        public static Task<int> SendToSafeUdpErrorAsync(this Socket socket, Memory<byte> buffer, SocketFlags socketFlags, EndPoint remoteEP)
-            => SendToSafeUdpErrorAsync(socket, buffer.AsSegment(), socketFlags, remoteEP);
-
         public static async Task ConnectAsync(this TcpClient tc, string host, int port,
             int timeout = Timeout.Infinite, CancellationToken cancel = default(CancellationToken), params CancellationToken[] cancelTokens)
         {
@@ -4378,6 +4298,9 @@ namespace SoftEther.WebSocket.Helper
         {
             if (timeout < 0) timeout = Timeout.Infinite;
             if (timeout == 0) throw new TimeoutException("timeout == 0");
+
+            if (timeout == Timeout.Infinite && cancel == null && (cancelTokens == null || cancelTokens.Length == 0))
+                return await mainProc(default);
 
             List<Task> waitTasks = new List<Task>();
             List<IDisposable> disposes = new List<IDisposable>();
@@ -6120,7 +6043,7 @@ namespace SoftEther.WebSocket.Helper
 
     sealed class NonBlockSocket : IDisposable
     {
-        public Socket Sock { get; }
+        public PalSocket Sock { get; }
         public bool IsStream { get; }
         public bool IsDisconnected { get => Watcher.Canceled; }
         public CancellationToken CancelToken { get => Watcher.CancelToken; }
@@ -6146,7 +6069,7 @@ namespace SoftEther.WebSocket.Helper
 
         AsyncBulkReceiver<Datagram, int> UdpBulkReader;
 
-        public NonBlockSocket(Socket s, CancellationToken cancel = default(CancellationToken), int tmpBufferSize = 65536, int maxRecvBufferSize = 65536, int maxRecvUdpQueueSize = 4096)
+        public NonBlockSocket(PalSocket s, CancellationToken cancel = default(CancellationToken), int tmpBufferSize = 65536, int maxRecvBufferSize = 65536, int maxRecvUdpQueueSize = 4096)
         {
             if (tmpBufferSize < 65536) tmpBufferSize = 65536;
             TmpRecvBuffer = new byte[tmpBufferSize];
@@ -6169,7 +6092,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 UdpBulkReader = new AsyncBulkReceiver<Datagram, int>(async x =>
                 {
-                    SocketReceiveFromResult ret = await Sock.ReceiveFromSafeUdpErrorAsync(TmpRecvBuffer, SocketFlags.None);
+                    PalSocketReceiveFromResult ret = await Sock.ReceiveFromAsync(TmpRecvBuffer);
                     return new ValueOrClosed<Datagram>(new Datagram(TmpRecvBuffer.AsSpan().Slice(0, ret.ReceivedBytes).ToArray(), (IPEndPoint)ret.RemoteEndPoint));
                 });
 
@@ -6186,7 +6109,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     while (cancel.IsCancellationRequested == false)
                     {
-                        int r = await Sock.ReceiveAsync(TmpRecvBuffer, SocketFlags.None, cancel);
+                        int r = await Sock.ReceiveAsync(TmpRecvBuffer);
                         if (r <= 0) break;
 
                         while (cancel.IsCancellationRequested == false)
@@ -6301,7 +6224,7 @@ namespace SoftEther.WebSocket.Helper
                                 events: new AsyncAutoResetEvent[] { EventSendNow });
                         }
 
-                        int r = await Sock.SendAsync(sendData, SocketFlags.None, cancel);
+                        int r = await Sock.SendAsync(sendData);
                         if (r <= 0) break;
 
                         EventSendReady.Set();
@@ -6349,7 +6272,7 @@ namespace SoftEther.WebSocket.Helper
                                 events: new AsyncAutoResetEvent[] { EventSendNow });
                         }
 
-                        int r = await Sock.SendToSafeUdpErrorAsync(pkt.Data.AsSegment(), SocketFlags.None, pkt.IPEndPoint);
+                        int r = await Sock.SendToAsync(pkt.Data.AsSegment(), pkt.IPEndPoint);
                         if (r <= 0) break;
 
                         EventSendReady.Set();
@@ -7606,7 +7529,7 @@ namespace SoftEther.WebSocket.Helper
 
         public static bool IsUnix { get; } = (Environment.OSVersion.Platform != PlatformID.Win32NT);
 
-        static IPAddress[] GetLocalIPAddressBySocketApi() => Dns.GetHostAddresses(Dns.GetHostName());
+        static IPAddress[] GetLocalIPAddressBySocketApi() => PalDns.GetHostAddressesAsync(Dns.GetHostName()).Result;
 
         class ByteComparer : IComparer<byte[]>
         {
@@ -7646,13 +7569,13 @@ namespace SoftEther.WebSocket.Helper
                 catch { }
             }
 
-            if (Socket.OSSupportsIPv4)
+            if (PalSocket.OSSupportsIPv4)
             {
                 this.IsIPv4Supported = true;
                 hash.Add(IPAddress.Any);
                 hash.Add(IPAddress.Loopback);
             }
-            if (Socket.OSSupportsIPv6)
+            if (PalSocket.OSSupportsIPv6)
             {
                 this.IsIPv6Supported = true;
                 hash.Add(IPAddress.IPv6Any);
@@ -7725,19 +7648,19 @@ namespace SoftEther.WebSocket.Helper
         {
             try
             {
-                using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.IP))
+                using (PalSocket sock = new PalSocket(dest.AddressFamily, SocketType.Dgram, ProtocolType.IP))
                 {
                     sock.Connect(dest, 65530);
-                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
                     return ep.Address;
                 }
             }
             catch { }
 
-            using (Socket sock = new Socket(dest.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
+            using (PalSocket sock = new PalSocket(dest.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
             {
                 sock.Connect(dest, 65531);
-                IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
                 return ep.Address;
             }
         }
@@ -7752,12 +7675,12 @@ namespace SoftEther.WebSocket.Helper
 
             try
             {
-                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                using (PalSocket sock = new PalSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                 {
-                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
+                    var hostent = await PalDns.GetHostEntryAsync("www.msftncsi.com");
                     var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
                     await sock.ConnectAsync(addr, 443);
-                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
                     return ep.Address;
                 }
             }
@@ -7765,12 +7688,12 @@ namespace SoftEther.WebSocket.Helper
 
             try
             {
-                using (Socket sock = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                using (PalSocket sock = new PalSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
                 {
-                    var hostent = await Dns.GetHostEntryAsync("www.msftncsi.com");
+                    var hostent = await PalDns.GetHostEntryAsync("www.msftncsi.com");
                     var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
                     await sock.ConnectAsync(addr, 80);
-                    IPEndPoint ep = sock.LocalEndPoint as IPEndPoint;
+                    IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
                     return ep.Address;
                 }
             }
@@ -8044,308 +7967,6 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    enum IPVersion
-    {
-        IPv4 = 0,
-        IPv6 = 1,
-    }
-
-    enum ListenStatus
-    {
-        Trying,
-        Listening,
-        Stopped,
-    }
-
-    sealed class TcpListenManager : IAsyncCleanupable
-    {
-        public class Listener
-        {
-            public IPVersion IPVersion { get; }
-            public IPAddress IPAddress { get; }
-            public int Port { get; }
-
-            public ListenStatus Status { get; internal set; }
-            public Exception LastError { get; internal set; }
-
-            internal Task _InternalTask { get; }
-
-            internal CancellationTokenSource _InternalSelfCancelSource { get; }
-            internal CancellationToken _InternalSelfCancelToken { get => _InternalSelfCancelSource.Token; }
-
-            public TcpListenManager Manager { get; }
-
-            public const long RetryIntervalStandard = 1 * 512;
-            public const long RetryIntervalMax = 60 * 1000;
-
-            internal Listener(TcpListenManager manager, IPVersion ver, IPAddress addr, int port)
-            {
-                Manager = manager;
-                IPVersion = ver;
-                IPAddress = addr;
-                Port = port;
-                LastError = null;
-                Status = ListenStatus.Trying;
-                _InternalSelfCancelSource = new CancellationTokenSource();
-
-                _InternalTask = ListenLoop();
-            }
-
-            static internal string MakeHashKey(IPVersion ipVer, IPAddress ipAddress, int port)
-            {
-                return $"{port} / {ipAddress} / {ipAddress.AddressFamily} / {ipVer}";
-            }
-
-            async Task ListenLoop()
-            {
-                AsyncAutoResetEvent networkChangedEvent = new AsyncAutoResetEvent();
-                int eventRegisterId = BackgroundState<HostNetInfo>.EventListener.RegisterAsyncEvent(networkChangedEvent);
-
-                Status = ListenStatus.Trying;
-
-                int numRetry = 0;
-                int lastNetworkInfoVer = BackgroundState<HostNetInfo>.Current.Version;
-
-                try
-                {
-                    while (_InternalSelfCancelToken.IsCancellationRequested == false)
-                    {
-                        Status = ListenStatus.Trying;
-                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
-
-                        int sleepDelay = (int)Math.Min(RetryIntervalStandard * numRetry, RetryIntervalMax);
-                        if (sleepDelay >= 1)
-                            sleepDelay = WebSocketHelper.RandSInt31() % sleepDelay;
-                        await WebSocketHelper.WaitObjectsAsync(timeout: sleepDelay,
-                            cancels: new CancellationToken[] { _InternalSelfCancelToken },
-                            events: new AsyncAutoResetEvent[] { networkChangedEvent } );
-                        numRetry++;
-
-                        int networkInfoVer = BackgroundState<HostNetInfo>.Current.Version;
-                        if (lastNetworkInfoVer != networkInfoVer)
-                        {
-                            lastNetworkInfoVer = networkInfoVer;
-                            numRetry = 0;
-                        }
-
-                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
-
-                        try
-                        {
-                            TcpListener listener = new TcpListener(IPAddress, Port);
-                            listener.ExclusiveAddressUse = true;
-                            listener.Start();
-
-                            var reg = _InternalSelfCancelToken.Register(() =>
-                            {
-                                try { listener.Stop(); } catch { };
-                            });
-
-                            try
-                            {
-                                Status = ListenStatus.Listening;
-
-                                try
-                                {
-                                    while (true)
-                                    {
-                                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
-
-                                        var socket = await listener.AcceptSocketAsync();
-
-                                        Manager.SocketAccepted(this, socket);
-                                    }
-                                }
-                                finally
-                                {
-                                    try { listener.Stop(); } catch { };
-                                }
-                            }
-                            finally
-                            {
-                                reg.DisposeSafe();
-                            }
-                        }
-                        catch (Exception ex)
-                        {
-                            LastError = ex;
-                        }
-                    }
-                }
-                finally
-                {
-                    BackgroundState<HostNetInfo>.EventListener.UnregisterAsyncEvent(eventRegisterId);
-                    Status = ListenStatus.Stopped;
-                }
-            }
-
-            internal async Task _InternalStopAsync()
-            {
-                await _InternalSelfCancelSource.TryCancelAsync();
-                try
-                {
-                    await _InternalTask;
-                }
-                catch { }
-            }
-        }
-
-        readonly object LockObj = new object();
-
-        readonly Dictionary<string, Listener> List = new Dictionary<string, Listener>();
-
-        readonly Dictionary<Task, Socket> RunningAcceptedTasks = new Dictionary<Task, Socket>();
-
-        readonly CancellationTokenSource CancelSource = new CancellationTokenSource();
-
-        Func<TcpListenManager, Listener, Socket, Task> AcceptedProc { get; }
-
-        public int CurrentConnections
-        {
-            get
-            {
-                lock (RunningAcceptedTasks)
-                    return RunningAcceptedTasks.Count;
-            }
-        }
-
-        public TcpListenManager(Func<TcpListenManager, Listener, Socket, Task> acceptedProc)
-        {
-            AcceptedProc = acceptedProc;
-            AsyncCleanuper = new AsyncCleanuper(this);
-        }
-
-        public Listener Add(int port, IPVersion? ipVer = null, IPAddress addr = null)
-        {
-            if (addr == null)
-                addr = ((ipVer ?? IPVersion.IPv4) == IPVersion.IPv4) ? IPAddress.Any : IPAddress.IPv6Any;
-            if (ipVer == null)
-            {
-                if (addr.AddressFamily == AddressFamily.InterNetwork)
-                    ipVer = IPVersion.IPv4;
-                else if (addr.AddressFamily == AddressFamily.InterNetworkV6)
-                    ipVer = IPVersion.IPv6;
-                else
-                    throw new ArgumentException("Unsupported AddressFamily.");
-            }
-            if (port < 1 || port > 65535) throw new ArgumentOutOfRangeException("Port number is out of range.");
-
-            lock (LockObj)
-            {
-                if (DisposeFlag.IsSet) throw new ObjectDisposedException("TcpListenManager");
-
-                var s = Search(Listener.MakeHashKey((IPVersion)ipVer, addr, port));
-                if (s != null)
-                    return s;
-                s = new Listener(this, (IPVersion)ipVer, addr, port);
-                List.Add(Listener.MakeHashKey((IPVersion)ipVer, addr, port), s);
-                return s;
-            }
-        }
-
-        public async Task<bool> DeleteAsync(Listener listener)
-        {
-            Listener s;
-            lock (LockObj)
-            {
-                string hashKey = Listener.MakeHashKey(listener.IPVersion, listener.IPAddress, listener.Port);
-                s = Search(hashKey);
-                if (s == null)
-                    return false;
-                List.Remove(hashKey);
-            }
-            await s._InternalStopAsync();
-            return true;
-        }
-
-        Listener Search(string hashKey)
-        {
-            if (List.TryGetValue(hashKey, out Listener ret) == false)
-                return null;
-            return ret;
-        }
-
-        private void SocketAccepted(Listener listener, Socket s)
-        {
-            try
-            {
-                Task t = AcceptedProc(this, listener, s);
-
-                if (t.IsCompleted)
-                {
-                    s.DisposeSafe();
-                }
-                else
-                {
-                    lock (LockObj)
-                        RunningAcceptedTasks.Add(t, s);
-                    t.ContinueWith(x =>
-                    {
-                        s.DisposeSafe();
-                        lock (LockObj)
-                            RunningAcceptedTasks.Remove(t);
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Console.WriteLine("AcceptedProc error: " + ex.ToString());
-            }
-        }
-
-        public Listener[] Listeners
-        {
-            get
-            {
-                lock (LockObj)
-                    return List.Values.ToArray();
-            }
-        }
-
-        Once DisposeFlag;
-        public void Dispose()
-        {
-            if (DisposeFlag.IsFirstCall())
-            {
-            }
-        }
-
-        public async Task _CleanupAsyncInternal()
-        {
-            List<Listener> o = new List<Listener>();
-            lock (LockObj)
-            {
-                List.Values.ToList().ForEach(x => o.Add(x));
-                List.Clear();
-            }
-
-            foreach (Listener s in o)
-                await s._InternalStopAsync().TryWaitAsync();
-
-            List<Task> waitTasks = new List<Task>();
-            List<Socket> disconnectSockets = new List<Socket>();
-
-            lock (LockObj)
-            {
-                foreach (var v in RunningAcceptedTasks)
-                {
-                    disconnectSockets.Add(v.Value);
-                    waitTasks.Add(v.Key);
-                }
-                RunningAcceptedTasks.Clear();
-            }
-
-            foreach (var sock in disconnectSockets)
-                sock.DisposeSafe();
-
-            foreach (var task in waitTasks)
-                await task.TryWaitAsync();
-
-            Debug.Assert(CurrentConnections == 0);
-        }
-
-        public AsyncCleanuper AsyncCleanuper { get; }
-    }
 
     class DisconnectedException : Exception { }
     class FastBufferDisconnectedException : DisconnectedException { }
@@ -11358,31 +10979,19 @@ namespace SoftEther.WebSocket.Helper
 
     sealed class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapperBase
     {
-        public Socket Socket { get; }
+        public PalSocket Socket { get; }
         public int RecvTmpBufferSize { get; private set; }
         public override PipeSupportedDataTypes SupportedDataTypes { get; }
 
-        static bool UseDontLingerOption = true;
-
-        public FastPipeEndSocketWrapper(FastPipeEnd pipeEnd, Socket socket, CancellationToken cancel = default(CancellationToken)) : base(pipeEnd, cancel)
+        public FastPipeEndSocketWrapper(FastPipeEnd pipeEnd, PalSocket socket, CancellationToken cancel = default(CancellationToken)) : base(pipeEnd, cancel)
         {
             this.Socket = socket;
             SupportedDataTypes = (Socket.SocketType == SocketType.Stream) ? PipeSupportedDataTypes.Stream : PipeSupportedDataTypes.Datagram;
             if (Socket.SocketType == SocketType.Stream)
             {
-                Socket.LingerState = new LingerOption(false, 0);
-                try
-                {
-                    if (UseDontLingerOption)
-                        Socket.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
-                }
-                catch
-                {
-                    UseDontLingerOption = false;
-                }
-                Socket.NoDelay = true;
+                Socket.LingerTime.Value = 0;
+                Socket.NoDelay.Value = false;
             }
-            Socket.ReceiveTimeout = Socket.SendTimeout = Timeout.Infinite;
             this.AddOnDisconnected(() => Socket.DisposeSafe());
 
             this.BaseStart();
@@ -11397,12 +11006,6 @@ namespace SoftEther.WebSocket.Helper
             sendArray = fifo.DequeueAllWithLock(out long totalReadSize);
             fifo.CompleteRead();
 
-            List<ArraySegment<byte>> sendArray2 = new List<ArraySegment<byte>>();
-            foreach (Memory<byte> mem in sendArray)
-            {
-                sendArray2.Add(mem.AsSegment());
-            }
-
             //List<List<ArraySegment<byte>>> send_array3 = MemoryHelper.SplitMemoryArrayToArraySegment(send_array, int.MaxValue);
 
             await WebSocketHelper.DoAsyncWithTimeout(
@@ -11414,7 +11017,7 @@ namespace SoftEther.WebSocket.Helper
                     //    fifo.EventListeners.Fire(fifo, FastBufferCallbackEventType.PartialProcessReadData);
                     //}
 
-                    int ret = await Socket.SendAsync(sendArray2, SocketFlags.None);
+                    int ret = await Socket.SendAsync(sendArray);
                     return 0;
                 },
                 cancel: cancel);
@@ -11432,7 +11035,7 @@ namespace SoftEther.WebSocket.Helper
             }
 
             Memory<byte> tmp = me.FastMemoryAllocatorForStream.Reserve(me.RecvTmpBufferSize);
-            int r = await me.Socket.ReceiveAsync(tmp, SocketFlags.None);
+            int r = await me.Socket.ReceiveAsync(tmp);
             if (r < 0) throw new SocketDisconnectedException();
             me.FastMemoryAllocatorForStream.Commit(ref tmp, r);
             if (r == 0) return new ValueOrClosed<Memory<byte>>();
@@ -11472,7 +11075,7 @@ namespace SoftEther.WebSocket.Helper
                     foreach (Datagram data in sendList)
                     {
                         cancel.ThrowIfCancellationRequested();
-                        await Socket.SendToSafeUdpErrorAsync(data.Data.AsSegment(), SocketFlags.None, data.EndPoint);
+                        await Socket.SendToAsync(data.Data.AsSegment(), data.EndPoint);
                     }
                     return 0;
                 },
@@ -11485,7 +11088,7 @@ namespace SoftEther.WebSocket.Helper
         {
             Memory<byte> tmp = me.FastMemoryAllocatorForDatagram.Reserve(65536);
 
-            var ret = await me.Socket.ReceiveFromSafeUdpErrorAsync(tmp, SocketFlags.None);
+            var ret = await me.Socket.ReceiveFromAsync(tmp);
 
             me.FastMemoryAllocatorForDatagram.Commit(ref tmp, ret.ReceivedBytes);
 
@@ -11903,10 +11506,10 @@ namespace SoftEther.WebSocket.Helper
     class FastTcpSockProtocolOptions : FastTcpProtocolOptionsBase
     {
         public FastTcpSockProtocolInitMode InitMode { get; set; } = FastTcpSockProtocolInitMode.ByRemoteEndPoint;
-        public Socket SocketObject { get; set; } = null;
+        public PalSocket SocketObject { get; set; } = null;
     }
 
-    sealed class FastTcpSockProtocolStub : FastTcpProtocolStubBase
+    sealed class FastPalTcpProtocolStub : FastTcpProtocolStubBase
     {
         public class LayerInfo : LayerInfoBase, ILayerInfoTcpEndPoint
         {
@@ -11916,7 +11519,7 @@ namespace SoftEther.WebSocket.Helper
             public IPAddress RemoteIPAddress { get; set; }
         }
 
-        public FastTcpSockProtocolStub(FastPipeEnd upper, FastTcpSockProtocolOptions options, CancellationToken cancel = default) : base(upper, options, cancel)
+        public FastPalTcpProtocolStub(FastPipeEnd upper, FastTcpSockProtocolOptions options, CancellationToken cancel = default) : base(upper, options, cancel)
         {
             BaseStart();
         }
@@ -11925,14 +11528,14 @@ namespace SoftEther.WebSocket.Helper
         {
             FastTcpSockProtocolOptions opt = (FastTcpSockProtocolOptions)options;
 
-            Socket s = null;
+            PalSocket s = null;
 
             if (opt.InitMode == FastTcpSockProtocolInitMode.ByRemoteEndPoint)
             {
                 if (!(opt.RemoteEndPoint.AddressFamily == AddressFamily.InterNetwork || opt.RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6))
                     throw new ArgumentException("RemoteEndPoint.AddressFamily");
 
-                s = new Socket(opt.RemoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                s = new PalSocket(opt.RemoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
                 try
                 {
                     await WebSocketHelper.DoAsyncWithTimeout(async (c) =>
@@ -11975,16 +11578,18 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastTcpSock : IAsyncCleanupable
+    abstract class FastSockBase : IAsyncCleanupable
     {
         public AsyncCleanuper AsyncCleanuper { get; }
         public FastPipe Pipe { get; }
-        
+        FastBottomProtocolStubBase Stub;
+
         public FastPipeEnd UpperSidePipeEnd { get => Pipe.B_UpperSide; }
 
-        FastTcpSockProtocolStub Stub;
+        public FastAppProtocolStub GetFastAppProtocolStub(CancellationToken cancel = default(CancellationToken))
+            => new FastAppProtocolStub(this.UpperSidePipeEnd, cancel);
 
-        private FastTcpSock(FastPipe pipe, FastTcpSockProtocolStub stub)
+        public FastSockBase(FastPipe pipe, FastBottomProtocolStubBase stub)
         {
             this.Pipe = pipe;
             this.Stub = stub;
@@ -11995,31 +11600,42 @@ namespace SoftEther.WebSocket.Helper
         }
 
         Once DisposeFlag;
-        public void Dispose()
+        public void Dispose() => Dispose(true);
+        protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() == false) return;
-
-            this.Pipe.DisposeSafe();
-            this.Stub.DisposeSafe();
+            if (DisposeFlag.IsFirstCall() && disposing)
+            {
+                this.Pipe.DisposeSafe();
+                this.Stub.DisposeSafe();
+            }
         }
 
-        public async Task _CleanupAsyncInternal()
+        public virtual async Task _CleanupAsyncInternal()
         {
             await this.Pipe.AsyncCleanuper;
             await this.Stub.AsyncCleanuper;
         }
+    }
 
-        public FastAppProtocolStub GetFastAppProtocolStub(CancellationToken cancel = default(CancellationToken))
-            => new FastAppProtocolStub(this.UpperSidePipeEnd, cancel);
+    abstract class FastTcpSockBase : FastSockBase
+    {
+        public FastTcpSockBase(FastPipe pipe, FastTcpProtocolStubBase stub)
+            : base(pipe, stub) { }
 
+    }
 
-        public static async Task<FastTcpSock> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, CancellationToken cancel = default(CancellationToken), int timeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
+    class FastPalTcpSock : FastTcpSockBase
+    {
+        private FastPalTcpSock(FastPipe pipe, FastPalTcpProtocolStub stub)
+            : base(pipe, stub) { }
+
+        public static async Task<FastPalTcpSock> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, CancellationToken cancel = default(CancellationToken), int timeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
             => await ConnectAsync(await GetIPFromHostName(host, addressFamily, cancel, timeout), port, cancel, timeout);
 
-        public static Task<FastTcpSock> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default(CancellationToken), int connectTimeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
+        public static Task<FastPalTcpSock> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default(CancellationToken), int connectTimeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
             => ConnectAsync(new IPEndPoint(ip, port), cancel, connectTimeout);
 
-        public static async Task<FastTcpSock> ConnectAsync(IPEndPoint endPoint, CancellationToken cancel = default(CancellationToken), int connectTimeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
+        public static async Task<FastPalTcpSock> ConnectAsync(IPEndPoint endPoint, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
         {
             var options = new FastTcpSockProtocolOptions()
             {
@@ -12031,12 +11647,12 @@ namespace SoftEther.WebSocket.Helper
             var pipe = new FastPipe(cancel);
             try
             {
-                var stub = new FastTcpSockProtocolStub(pipe.A_LowerSide, options, cancel);
+                var stub = new FastPalTcpProtocolStub(pipe.A_LowerSide, options, cancel);
                 try
                 {
                     await stub.WaitInitSuccessOrFailAsync();
                     pipe.CheckDisconnected();
-                    return new FastTcpSock(pipe, stub);
+                    return new FastPalTcpSock(pipe, stub);
                 }
                 catch
                 {
@@ -12051,7 +11667,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public static async Task<FastTcpSock> FromSocketAsync(Socket socketObject, CancellationToken cancel = default(CancellationToken))
+        public static async Task<FastPalTcpSock> FromSocketAsync(PalSocket socketObject, CancellationToken cancel = default(CancellationToken))
         {
             var options = new FastTcpSockProtocolOptions()
             {
@@ -12062,12 +11678,12 @@ namespace SoftEther.WebSocket.Helper
             var pipe = new FastPipe(cancel);
             try
             {
-                var stub = new FastTcpSockProtocolStub(pipe.A_LowerSide, options, cancel);
+                var stub = new FastPalTcpProtocolStub(pipe.A_LowerSide, options, cancel);
                 try
                 {
                     await stub.WaitInitSuccessOrFailAsync();
                     pipe.CheckDisconnected();
-                    return new FastTcpSock(pipe, stub);
+                    return new FastPalTcpSock(pipe, stub);
                 }
                 catch
                 {
@@ -12092,14 +11708,9 @@ namespace SoftEther.WebSocket.Helper
             }
             else
             {
-                ip = await WebSocketHelper.DoAsyncWithTimeout(async c =>
-                {
-                    return (await Dns.GetHostAddressesAsync(host))
+                ip = (await PalDns.GetHostAddressesAsync(host, timeout, cancel))
                         .Where(x => x.AddressFamily == AddressFamily.InterNetwork || x.AddressFamily == AddressFamily.InterNetworkV6)
                         .Where(x => addressFamily == null || x.AddressFamily == addressFamily).First();
-                },
-                timeout: timeout,
-                cancel: cancel);
             }
 
             return ip;
@@ -12280,16 +11891,14 @@ namespace SoftEther.WebSocket.Helper
 
     sealed class FastPipeTcpListener : IAsyncCleanupable
     {
-        public TcpListenManager ListenerManager { get; }
+        public PalTcpListener PalListener { get; }
 
         public AsyncCleanuper AsyncCleanuper { get; }
-
-        public int? QueueThresholdLengthStream = null;
         public object UserState;
 
         CancellationTokenSource CancelSource = new CancellationTokenSource();
 
-        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastTcpSock sock);
+        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastPalTcpSock sock);
 
         FastPipeTcpListenerAcceptCallback AcceptProc;
 
@@ -12298,18 +11907,18 @@ namespace SoftEther.WebSocket.Helper
             this.UserState = userState;
             this.AcceptProc = acceptProc;
 
-            ListenerManager = new TcpListenManager(ListenManagerAcceptProc);
+            PalListener = new PalTcpListener(PalListenManagerAcceptProc);
 
             this.AsyncCleanuper = new AsyncCleanuper(this);
         }
 
-        async Task ListenManagerAcceptProc(TcpListenManager manager, TcpListenManager.Listener listener, Socket socket)
+        async Task PalListenManagerAcceptProc(PalTcpListener manager, PalTcpListener.Listener listener, PalSocket socket)
         {
             try
             {
                 using (LeakChecker.Enter())
                 {
-                    using (FastTcpSock sock = await FastTcpSock.FromSocketAsync(socket, CancelSource.Token))
+                    using (FastPalTcpSock sock = await FastPalTcpSock.FromSocketAsync(socket, CancelSource.Token))
                     {
                         try
                         {
@@ -12341,13 +11950,13 @@ namespace SoftEther.WebSocket.Helper
             {
                 CancelSource.TryCancel();
 
-                ListenerManager.DisposeSafe();
+                PalListener.DisposeSafe();
             }
         }
 
         public async Task _CleanupAsyncInternal()
         {
-            await ListenerManager.AsyncCleanuper;
+            await PalListener.AsyncCleanuper;
         }
     }
 }

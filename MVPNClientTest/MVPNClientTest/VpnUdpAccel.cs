@@ -105,7 +105,7 @@ namespace SoftEther.VpnClient
 
                 s.Client.Bind(new IPEndPoint(ip, 0));
 
-                Nb = new NonBlockSocket(Udp.Client, cancelWatcher.CancelToken);
+                Nb = new NonBlockSocket(new PalSocket(Udp.Client), cancelWatcher.CancelToken);
                 MyEndPoint = (IPEndPoint)s.Client.LocalEndPoint;
 
                 IsIPv6 = ip.AddressFamily == AddressFamily.InterNetworkV6;
@@ -169,7 +169,7 @@ namespace SoftEther.VpnClient
             {
                 try
                 {
-                    var hostent = await Dns.GetHostEntryAsync(hostname);
+                    var hostent = await PalDns.GetHostEntryAsync(hostname, cancel: cancelWatcher.CancelToken);
                     IPAddress ip = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
 
                     NatT_IP = ip;

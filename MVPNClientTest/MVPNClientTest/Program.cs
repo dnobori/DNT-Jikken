@@ -127,7 +127,7 @@ namespace MVPNClientTest
                 }
             });
 
-            listener.ListenerManager.Add(1);
+            listener.PalListener.Add(1);
 
             Console.ReadLine();
 
@@ -140,7 +140,7 @@ namespace MVPNClientTest
             LeakChecker.Print();
         }
 
-        static async Task TestPipeTcpProc(Socket socket, CancellationToken cancel)
+        static async Task TestPipeTcpProc(PalSocket socket, CancellationToken cancel)
         {
             using (FastPipe pipe = new FastPipe(cancel))
             {
@@ -203,7 +203,7 @@ namespace MVPNClientTest
             while (true)
             {
                 Socket socket = listener.AcceptSocket();
-                TestPipeTcpProc(socket, cts.Token).LaissezFaire();
+                TestPipeTcpProc(new PalSocket(socket), cts.Token).LaissezFaire();
             }
         }
 
@@ -720,7 +720,7 @@ namespace MVPNClientTest
 
             IPAddress server_ip = IPAddress.Parse("130.158.6.60");
 
-            using (NonBlockSocket b = new NonBlockSocket(uc.Client))
+            using (NonBlockSocket b = new NonBlockSocket(new PalSocket(uc.Client)))
             {
                 long next_send = 0;
                 while (b.IsDisconnected == false)
@@ -774,7 +774,7 @@ namespace MVPNClientTest
                 var reader = pipe.B_UpperSide.DatagramReader;
                 var writer = pipe.B_UpperSide.DatagramWriter;
 
-                using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.A_LowerSide, uc.Client))
+                using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.A_LowerSide, new PalSocket(uc.Client)))
                 {
                     try
                     {
@@ -836,7 +836,7 @@ namespace MVPNClientTest
 
         static async Task nb_socket_tcp_proc(Socket s)
         {
-            using (NonBlockSocket b = new NonBlockSocket(s))
+            using (NonBlockSocket b = new NonBlockSocket(new PalSocket(s)))
             {
                 while (b.IsDisconnected == false)
                 {
