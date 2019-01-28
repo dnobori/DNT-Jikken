@@ -11437,7 +11437,7 @@ namespace SoftEther.WebSocket.Helper
             Upper = upper;
         }
 
-        public abstract Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle upperAttach, FastBottomProtocolOptionsBase options);
+        protected abstract Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle upperAttach, FastBottomProtocolOptionsBase options);
 
         protected sealed override async Task MiddleMainAsync()
         {
@@ -11523,7 +11523,7 @@ namespace SoftEther.WebSocket.Helper
             BaseStart();
         }
 
-        public override async Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle upperAttach, FastBottomProtocolOptionsBase options)
+        protected override async Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle upperAttach, FastBottomProtocolOptionsBase options)
         {
             FastTcpSockProtocolOptions opt = (FastTcpSockProtocolOptions)options;
 
