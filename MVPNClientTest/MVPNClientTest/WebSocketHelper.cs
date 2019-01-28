@@ -36,7 +36,7 @@ namespace SoftEther.WebSocket.Helper
 {
     #region for_benchmark
 
-    public ref struct SpanBuffer<T>
+    ref struct SpanBuffer<T>
     {
         Span<T> InternalSpan;
         public int CurrentPosition { get; private set; }
@@ -206,7 +206,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public ref struct ReadOnlySpanBuffer<T>
+    ref struct ReadOnlySpanBuffer<T>
     {
         ReadOnlySpan<T> InternalSpan;
         public int CurrentPosition { get; private set; }
@@ -333,7 +333,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public ref struct FastMemoryBuffer<T>
+    ref struct FastMemoryBuffer<T>
     {
         Memory<T> InternalBuffer;
         Span<T> InternalSpan;
@@ -570,7 +570,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public ref struct FastReadOnlyMemoryBuffer<T>
+    ref struct FastReadOnlyMemoryBuffer<T>
     {
         ReadOnlyMemory<T> InternalBuffer;
         ReadOnlySpan<T> InternalSpan;
@@ -4959,7 +4959,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public struct FastReadList<T>
+    struct FastReadList<T>
     {
         static object GlobalWriteLock = new object();
         static volatile int IdSeed = 0;
@@ -5009,7 +5009,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public struct Once
+    struct Once
     {
         volatile private int flag;
         public bool IsFirstCall() => (Interlocked.CompareExchange(ref this.flag, 1, 0) == 0);
@@ -6319,7 +6319,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public struct ValueOrClosed<T>
+    struct ValueOrClosed<T>
     {
         bool InternalIsOpen;
         public T Value;
