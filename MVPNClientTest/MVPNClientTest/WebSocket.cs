@@ -52,7 +52,7 @@ namespace SoftEther.WebSocket
 
         Stream st;
 
-        public WebSocketStream(Stream innerStream, CancellationToken cancel = default(CancellationToken))
+        public WebSocketStream(Stream innerStream, CancellationToken cancel = default)
         {
             this.st = innerStream;
 

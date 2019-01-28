@@ -205,7 +205,7 @@ namespace MVPNClientTest
 
                             //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
-                            using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd))
+                            using (var app = sock.GetFastAppProtocolStub())
                             {
                                 lady.Add(app);
                                 using (var st = await app.GetStreamAsync())
@@ -449,7 +449,7 @@ namespace MVPNClientTest
                     {
                         lady.Add(sock);
 
-                        using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd))
+                        using (var app = sock.GetFastAppProtocolStub())
                         {
                             lady.Add(app);
 
@@ -630,7 +630,7 @@ namespace MVPNClientTest
 
                             await ssl.WaitInitSuccessOrFailAsync();
 
-                            using (var app = new FastAppProtocolStub(p2.B_UpperSide, cancel))
+                            using (var app = p2.B_UpperSide.GetFastAppProtocolStub(cancel))
                             {
                                 lady.Add(app);
 
@@ -676,7 +676,7 @@ namespace MVPNClientTest
                 {
                     lady.Add(sock);
 
-                    using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd, cancel))
+                    using (var app = sock.GetFastAppProtocolStub(cancel))
                     {
                         lady.Add(app);
 
@@ -732,7 +732,7 @@ namespace MVPNClientTest
                 {
                     lady.Add(sock);
 
-                    using (var app = new FastAppProtocolStub(sock.UpperSidePipeEnd, cancel))
+                    using (var app = sock.GetFastAppProtocolStub(cancel))
                     {
                         lady.Add(app);
 

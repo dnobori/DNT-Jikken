@@ -80,7 +80,7 @@ namespace SoftEther.VpnClient
         CancelWatcher cancelWatcher;
         public AsyncAutoResetEvent EventRecvReady { get => Nb.EventRecvReady; }
 
-        public UdpAccel(IPAddress ip = null, bool clientMode = true, bool noNatT = false, CancellationToken cancel = default(CancellationToken))
+        public UdpAccel(IPAddress ip = null, bool clientMode = true, bool noNatT = false, CancellationToken cancel = default)
         {
             if (ip == null) ip = IPAddress.Any;
             cancelWatcher = new CancelWatcher(cancel);
