@@ -15,6 +15,7 @@ using static System.Console;
 using SoftEther.WebSocket;
 using SoftEther.WebSocket.Helper;
 using SoftEther.VpnClient;
+using System.Diagnostics;
 
 #pragma warning disable CS0162, CS1998
 
@@ -22,25 +23,71 @@ namespace MVPNClientTest
 {
     class Program
     {
-        static async Task Task1()
+        static async Task AsyncProc1(AsyncAutoResetEvent ev, CancellationToken cancel, bool b)
         {
-            await Task.Yield();
-            await Task.Delay(12345678);
+            await WebSocketHelper.WaitObjectsAsync(events: ev.ToSingleArray(), cancels: cancel.ToSingleArray(),
+                timeout: 60 * 1000 * 1000);
         }
 
-        static async Task Task0()
+        static async Task AsyncTest1()
         {
-            Task t = Task1();
-            while (true)
+            int num = 1000000;
+
+            List<Task> tasksList = new List<Task>();
+            List<AsyncAutoResetEvent> eventsList = new List<AsyncAutoResetEvent>();
+            List<CancelWatcher> cancelsList = new List<CancelWatcher>();
+            CancellationTokenSource cts = new CancellationTokenSource();
+
+            WriteLine("initing...");
+
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+
+            for (int i = 0; i < num; i++)
             {
-                using (var wait = new WhenAll(t))
-                {
-                }
+                AsyncAutoResetEvent ev = new AsyncAutoResetEvent();
+                CancelWatcher w = new CancelWatcher(cts.Token);
+
+                Task t = AsyncProc1(ev, w.CancelToken, (i == (num - 2)));
+
+                tasksList.Add(t);
+                cancelsList.Add(w);
+                eventsList.Add(ev);
+
+                lady.Add(t);
+                lady.Add(w);
             }
+
+            WriteLine("ok.");
+            int index = num / 2;
+
+            WriteLine("Testing...");
+
+            Stopwatch sw = new Stopwatch();
+            sw.Start();
+            //eventsList[index].Set();
+            //cancelsList[index].Cancel();
+            cts.Cancel();
+            await tasksList[index];
+            sw.Stop();
+            WriteLine(sw.Elapsed);
+
+            WriteLine("Stopping...");
+            sw = new Stopwatch();
+            sw.Start();
+            await lady.CleanupAsync();
+            sw.Stop();
+            WriteLine(sw.Elapsed);
         }
 
         static void Main(string[] args)
         {
+            AsyncTest1().Wait();
+
+            GC.Collect();
+            WriteLine("completed.");
+            LeakChecker.Print();
+            Console.ReadLine();
+            return;
 
             PipeTest.TestMain();
 

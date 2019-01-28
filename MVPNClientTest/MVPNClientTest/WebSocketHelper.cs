@@ -5025,6 +5025,7 @@ namespace SoftEther.WebSocket.Helper
     public class AsyncCleanuperLady
     {
         ConcurrentQueue<AsyncCleanuper> CleanuperQueue = new ConcurrentQueue<AsyncCleanuper>();
+        ConcurrentQueue<Task> TaskQueue = new ConcurrentQueue<Task>();
 
         public void Add(IAsyncCleanupable cleanupable) => Add(cleanupable.AsyncCleanuper);
 
@@ -5034,12 +5035,28 @@ namespace SoftEther.WebSocket.Helper
                 CleanuperQueue.Enqueue(cleanuper);
         }
 
+        public void Add(Task t)
+        {
+            if (t != null)
+                TaskQueue.Enqueue(t);
+        }
+
         public async Task CleanupAsync()
         {
-            var array = CleanuperQueue.ToArray().Reverse();
+            var q1 = CleanuperQueue.ToArray().Reverse();
 
-            foreach (var c in array)
+            foreach (var c in q1)
                 await c;
+
+            var q2 = TaskQueue.ToArray().Reverse();
+            foreach (var t in q2)
+            {
+                try
+                {
+                    await t;
+                }
+                catch { }
+            }
         }
 
         public TaskAwaiter GetAwaiter()
