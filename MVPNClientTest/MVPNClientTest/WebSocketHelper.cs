@@ -5026,37 +5026,59 @@ namespace SoftEther.WebSocket.Helper
     {
         ConcurrentQueue<AsyncCleanuper> CleanuperQueue = new ConcurrentQueue<AsyncCleanuper>();
         ConcurrentQueue<Task> TaskQueue = new ConcurrentQueue<Task>();
+        ConcurrentQueue<IDisposable> DisposableQueue = new ConcurrentQueue<IDisposable>();
 
-        public void Add(IAsyncCleanupable cleanupable) => Add(cleanupable.AsyncCleanuper);
-
-        public void Add(AsyncCleanuper cleanuper)
+        void InternalAddMain(object obj)
         {
-            if (cleanuper != null)
-                CleanuperQueue.Enqueue(cleanuper);
+            IAsyncCleanupable cleanupable = obj as IAsyncCleanupable;
+            AsyncCleanuper cleanuper = obj as AsyncCleanuper;
+            Task task = obj as Task;
+            IDisposable disposable = obj as IDisposable;
+
+            if (cleanupable != null) CleanuperQueue.Enqueue(cleanupable.AsyncCleanuper);
+            if (cleanuper != null) CleanuperQueue.Enqueue(cleanuper);
+            if (task != null) TaskQueue.Enqueue(task);
+            if (disposable != null) DisposableQueue.Enqueue(disposable);
         }
 
-        public void Add(Task t)
-        {
-            if (t != null)
-                TaskQueue.Enqueue(t);
-        }
+        public void Add(IAsyncCleanupable cleanupable) => InternalAddMain(cleanupable);
+        public void Add(AsyncCleanuper cleanuper) => InternalAddMain(cleanuper);
+        public void Add(Task task) => InternalAddMain(task);
+        public void Add(IDisposable disposable) => InternalAddMain(disposable);
+
+        object LockObj = new object();
 
         public async Task CleanupAsync()
         {
-            var q1 = CleanuperQueue.ToArray().Reverse();
+            AsyncCleanuper[] cleanuperList;
+            Task[] taskList;
+            IDisposable[] disposableList;
 
-            foreach (var c in q1)
-                await c;
+            lock (LockObj)
+            {
+                cleanuperList = CleanuperQueue.Reverse().ToArray();
+                taskList = TaskQueue.Reverse().ToArray();
+                disposableList = DisposableQueue.Reverse().ToArray();
 
-            var q2 = TaskQueue.ToArray().Reverse();
-            foreach (var t in q2)
+                CleanuperQueue.Clear();
+                TaskQueue.Clear();
+                DisposableQueue.Clear();
+            }
+
+            foreach (var cleanuper in cleanuperList)
+                await cleanuper;
+
+            foreach (var task in taskList)
             {
                 try
                 {
-                    await t;
+                    await task;
                 }
                 catch { }
             }
+
+            foreach (var disposable in disposableList)
+                disposable.DisposeSafe();
         }
 
         public TaskAwaiter GetAwaiter()
@@ -11297,7 +11319,8 @@ namespace SoftEther.WebSocket.Helper
 
         public virtual async Task _CleanupAsyncInternal()
         {
-            await rootMainTask.TryWaitAsync(true);
+            if (rootMainTask != null)
+                await rootMainTask.TryWaitAsync(true);
 
             await CancelWatcher.AsyncCleanuper;
         }
@@ -11727,12 +11750,18 @@ namespace SoftEther.WebSocket.Helper
 
     abstract class FastLinearMiddleProtocolStackBase : FastProtocolStackBase
     {
-        public FastPipeEnd Lower { get; }
-        public FastPipeEnd Upper { get; }
+        protected FastPipeEnd Lower { get; }
+        protected FastPipeEnd Upper { get; }
+
+        object LockObj = new object();
+        protected FastPipeEnd.AttachHandle LowerAttach { get; private set; }
+        protected FastPipeEnd.AttachHandle UpperAttach { get; private set; }
 
         public FastLinearMiddleProtocolOptionsBase MiddleOptions { get; }
 
-        public abstract Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle lowerAttach, FastPipeEnd.AttachHandle upperAttach, FastLinearMiddleProtocolOptionsBase options);
+        protected abstract Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle lowerAttach, FastPipeEnd.AttachHandle upperAttach, FastLinearMiddleProtocolOptionsBase options);
+
+        AsyncCleanuperLady CleanupLady = null;
 
         public FastLinearMiddleProtocolStackBase(FastPipeEnd lower, FastPipeEnd upper, FastLinearMiddleProtocolOptionsBase options, CancellationToken cancel = default)
             : base(options, cancel)
@@ -11742,8 +11771,54 @@ namespace SoftEther.WebSocket.Helper
             Upper = upper;
         }
 
+        protected async Task EnsureAttachAsync()
+        {
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+
+            try
+            {
+                lock (LockObj)
+                {
+                    if (LowerAttach != null && UpperAttach != null)
+                    {
+                        Debug.Assert(LowerAttach != null); Debug.Assert(UpperAttach != null);
+                        return;
+                    }
+
+                    using (var upperAttach = Upper.Attach(FastPipeEndAttachDirection.FromLowerToA_LowerSide))
+                    {
+                        lady.Add(upperAttach);
+
+                        using (var lowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide))
+                        {
+                            lady.Add(lowerAttach);
+
+                            Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
+                            Lower.LayerStack.Encounter(Upper.LayerStack);
+
+                            Lower.AddOnDisconnected(() => Upper.Disconnect());
+                            Upper.AddOnDisconnected(() => Lower.Disconnect());
+
+                            LowerAttach = lowerAttach;
+                            UpperAttach = upperAttach;
+
+                            CleanupLady = lady;
+
+                            return;
+                        }
+                    }
+                }
+            }
+            catch
+            {
+                await lady;
+                throw;
+            }
+        }
+
         protected sealed override async Task MiddleMainAsync()
         {
+            return;
             try
             {
                 Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
@@ -11804,6 +11879,13 @@ namespace SoftEther.WebSocket.Helper
                 Upper.Disconnect();
             }
         }
+
+        public override async Task _CleanupAsyncInternal()
+        {
+            if (CleanupLady != null)
+                await CleanupLady;
+            await base._CleanupAsyncInternal().TryWaitAsync();
+        }
     }
 
     class FastSslProtocolOptions : FastLinearMiddleProtocolOptionsBase
@@ -11840,7 +11922,34 @@ namespace SoftEther.WebSocket.Helper
             BaseStart();
         }
 
-        public override async Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle lowerAttach, FastPipeEnd.AttachHandle upperAttach, FastLinearMiddleProtocolOptionsBase options)
+        public async Task AuthenticateAsClientAsync(SslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken = default)
+        {
+            await EnsureAttachAsync();
+
+            var lowerStream = LowerAttach.GetStream(autoFlush: false);
+
+            try
+            {
+                var ssl = new SslStream(lowerStream, true);
+
+                try
+                {
+                    await ssl.AuthenticateAsClientAsync(sslClientAuthenticationOptions, CancelWatcher.CancelToken);
+                }
+                catch
+                {
+                    ssl.DisposeSafe();
+                    throw;
+                }
+            }
+            catch
+            {
+                lowerStream.DisposeSafe();
+                throw;
+            }
+        }
+
+        protected override async Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle lowerAttach, FastPipeEnd.AttachHandle upperAttach, FastLinearMiddleProtocolOptionsBase options)
         {
             var lowerStream = lowerAttach.GetStream(autoFlush: false);
             try
