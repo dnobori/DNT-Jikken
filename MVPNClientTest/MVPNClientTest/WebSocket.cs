@@ -19,7 +19,7 @@ using System.Security.Cryptography;
 
 namespace SoftEther.WebSocket
 {
-    public enum WebSocketOpcode
+    enum WebSocketOpcode
     {
         Continue = 0x00,
         Text = 0x01,

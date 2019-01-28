@@ -3699,7 +3699,7 @@ namespace SoftEther.WebSocket.Helper
     }
 
     [Flags]
-    public enum ExceptionWhen
+    enum ExceptionWhen
     {
         None = 0,
         TaskException = 1,
@@ -7967,13 +7967,13 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public enum IPVersion
+    enum IPVersion
     {
         IPv4 = 0,
         IPv6 = 1,
     }
 
-    public enum ListenStatus
+    enum ListenStatus
     {
         Trying,
         Listening,
@@ -8356,7 +8356,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public enum FastBufferCallbackEventType
+    enum FastBufferCallbackEventType
     {
         Init,
         Written,
@@ -10064,14 +10064,14 @@ namespace SoftEther.WebSocket.Helper
     }
 
     [Flags]
-    public enum FastPipeEndSide
+    enum FastPipeEndSide
     {
         A_LowerSide,
         B_UpperSide,
     }
 
     [Flags]
-    public enum FastPipeEndAttachDirection
+    enum FastPipeEndAttachDirection
     {
         NoAttach,
         FromLowerToA_LowerSide,
@@ -10997,7 +10997,7 @@ namespace SoftEther.WebSocket.Helper
     }
 
     [Flags]
-    public enum PipeSupportedDataTypes
+    enum PipeSupportedDataTypes
     {
         Stream = 1,
         Datagram = 2,
@@ -11817,7 +11817,7 @@ namespace SoftEther.WebSocket.Helper
         public FastTcpProtocolStubBase(FastPipeEnd upper, FastTcpProtocolOptionsBase options, CancellationToken cancel = default) : base(upper, options, cancel) { }
     }
 
-    public enum FastTcpSockProtocolInitMode
+    enum FastTcpSockProtocolInitMode
     {
         ByRemoteEndPoint,
         ByConnectedSocketObject,
