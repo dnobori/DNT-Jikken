@@ -106,38 +106,38 @@ namespace MVPNClientTest
                 TestPipeTcp();
             }
 
-            FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, sock) =>
-            {
-                try
-                {
-                    //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
+            //FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, sock) =>
+            //{
+            //    try
+            //    {
+            //        //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
-                    using (var st = sock.UpperSidePipeEnd._InternalGetStream())
-                    {
-                        while (true)
-                        {
-                            byte[] tmp = (await st.ReceiveAllAsync(1)).ToArray();
-                            await st.SendAsync(tmp);
-                        }
-                    }
-                }
-                catch (Exception ex)
-                {
-                    WriteLine(ex.GetSingleException());
-                }
-            });
+            //        using (var st = sock.UpperSidePipeEnd._InternalGetStream())
+            //        {
+            //            while (true)
+            //            {
+            //                byte[] tmp = (await st.ReceiveAllAsync(1)).ToArray();
+            //                await st.SendAsync(tmp);
+            //            }
+            //        }
+            //    }
+            //    catch (Exception ex)
+            //    {
+            //        WriteLine(ex.GetSingleException());
+            //    }
+            //});
 
-            listener.PalListener.Add(1);
+            //listener.PalListener.Add(1);
 
-            Console.ReadLine();
+            //Console.ReadLine();
 
-            Console.WriteLine("Stopping...");
+            //Console.WriteLine("Stopping...");
 
-            listener.Dispose();
+            //listener.Dispose();
 
-            Console.WriteLine("Stopped.");
+            //Console.WriteLine("Stopped.");
 
-            LeakChecker.Print();
+            //LeakChecker.Print();
         }
 
         static async Task TestPipeTcpProc(PalSocket socket, CancellationToken cancel)

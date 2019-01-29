@@ -5022,13 +5022,23 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    static class AsyncCleanuperLadyHelper
+    {
+        public static T AddToLady<T>(this T obj, AsyncCleanuperLady lady) where T: IDisposable
+        {
+            if (obj == null || lady == null) return obj;
+            lady.Add(obj);
+            return obj;
+        }
+    }
+
     class AsyncCleanuperLady
     {
         ConcurrentQueue<AsyncCleanuper> CleanuperQueue = new ConcurrentQueue<AsyncCleanuper>();
         ConcurrentQueue<Task> TaskQueue = new ConcurrentQueue<Task>();
         ConcurrentQueue<IDisposable> DisposableQueue = new ConcurrentQueue<IDisposable>();
 
-        void InternalAddMain(object obj)
+        void InternalCollectMain(object obj)
         {
             IAsyncCleanupable cleanupable = obj as IAsyncCleanupable;
             AsyncCleanuper cleanuper = obj as AsyncCleanuper;
@@ -5041,12 +5051,44 @@ namespace SoftEther.WebSocket.Helper
             if (disposable != null) DisposableQueue.Enqueue(disposable);
         }
 
-        public void Add(IAsyncCleanupable cleanupable) => InternalAddMain(cleanupable);
-        public void Add(AsyncCleanuper cleanuper) => InternalAddMain(cleanuper);
-        public void Add(Task task) => InternalAddMain(task);
-        public void Add(IDisposable disposable) => InternalAddMain(disposable);
+        public void Add(IAsyncCleanupable cleanupable) => InternalCollectMain(cleanupable);
+        public void Add(AsyncCleanuper cleanuper) => InternalCollectMain(cleanuper);
+        public void Add(Task task) => InternalCollectMain(task);
+        public void Add(IDisposable disposable) => InternalCollectMain(disposable);
+
+        public void MergeFrom(AsyncCleanuperLady fromLady)
+        {
+            lock (LockObj)
+            {
+                lock (fromLady.LockObj)
+                {
+                    fromLady.CleanuperQueue.ToList().ForEach(x => this.CleanuperQueue.Enqueue(x));
+                    fromLady.TaskQueue.ToList().ForEach(x => this.TaskQueue.Enqueue(x));
+                    fromLady.DisposableQueue.ToList().ForEach(x => this.DisposableQueue.Enqueue(x));
+
+                    fromLady.CleanuperQueue.Clear();
+                    fromLady.TaskQueue.Clear();
+                    fromLady.DisposableQueue.Clear();
+                }
+            }
+        }
+
+        public void MergeTo(AsyncCleanuperLady toLady)
+            => toLady.MergeFrom(this);
 
         object LockObj = new object();
+
+        public void DisposeAllSafe()
+        {
+            IDisposable[] disposableList;
+            lock (LockObj)
+            {
+                disposableList = DisposableQueue.Reverse().ToArray();
+            }
+
+            foreach (var disposable in disposableList)
+                disposable.DisposeSafe();
+        }
 
         public async Task CleanupAsync()
         {
@@ -5065,6 +5107,9 @@ namespace SoftEther.WebSocket.Helper
                 DisposableQueue.Clear();
             }
 
+            foreach (var disposable in disposableList)
+                disposable.DisposeSafe();
+
             foreach (var cleanuper in cleanuperList)
                 await cleanuper;
 
@@ -5076,9 +5121,6 @@ namespace SoftEther.WebSocket.Helper
                 }
                 catch { }
             }
-
-            foreach (var disposable in disposableList)
-                disposable.DisposeSafe();
         }
 
         public TaskAwaiter GetAwaiter()
@@ -5091,7 +5133,33 @@ namespace SoftEther.WebSocket.Helper
         Task _CleanupAsyncInternal();
     }
 
-    class AsyncCleanuper
+    abstract class AsyncCleanupable : IAsyncCleanupable
+    {
+        public AsyncCleanuper AsyncCleanuper { get; }
+        protected AsyncCleanuperLady GrandLady = new AsyncCleanuperLady();
+
+        public AsyncCleanupable()
+        {
+            this.AsyncCleanuper = new AsyncCleanuper(this);
+        }
+
+        Once DisposeFlag;
+        public void Dispose() => Dispose(true);
+        protected virtual void Dispose(bool disposing)
+        {
+            if (disposing && DisposeFlag.IsFirstCall())
+            {
+                GrandLady.DisposeAllSafe();
+            }
+        }
+
+        public virtual async Task _CleanupAsyncInternal()
+        {
+            await GrandLady;
+        }
+    }
+
+    class AsyncCleanuper : IDisposable
     {
         IAsyncCleanupable Target { get; }
 
@@ -5118,6 +5186,8 @@ namespace SoftEther.WebSocket.Helper
 
         public TaskAwaiter GetAwaiter()
             => CleanupAsync().GetAwaiter();
+
+        public void Dispose() { }
     }
 
     delegate bool TimeoutDetectorCallback(TimeoutDetector detector);
@@ -5469,7 +5539,7 @@ namespace SoftEther.WebSocket.Helper
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposing && DisposeFlag.IsFirstCall())
             {
                 try
                 {
@@ -5499,7 +5569,7 @@ namespace SoftEther.WebSocket.Helper
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposing && DisposeFlag.IsFirstCall())
             {
                 try
                 {
@@ -5539,7 +5609,7 @@ namespace SoftEther.WebSocket.Helper
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposing && DisposeFlag.IsFirstCall())
             {
                 try
                 {
@@ -5593,7 +5663,7 @@ namespace SoftEther.WebSocket.Helper
         public void Dispose() => Dispose(true);
         protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            if (disposing && DisposeFlag.IsFirstCall())
             {
                 try
                 {
@@ -6771,7 +6841,7 @@ namespace SoftEther.WebSocket.Helper
         internal SharedHierarchy<LayerInfoBase>.HierarchyBodyItem _InternalHierarchyBodyItem = null;
         internal LayerStack _InternalLayerStack = null;
 
-        public FastProtocolStackBase ProtocolStack { get; private set; } = null;
+        public FastStackBase ProtocolStack { get; private set; } = null;
 
         public bool IsInstalled => Position.IsInstalled;
 
@@ -6781,7 +6851,7 @@ namespace SoftEther.WebSocket.Helper
         public void Uninstall()
             => _InternalLayerStack.Uninstall(this);
 
-        internal void _InternalSetProtocolStack(FastProtocolStackBase protocolStack)
+        internal void _InternalSetProtocolStack(FastStackBase protocolStack)
             => ProtocolStack = protocolStack;
     }
 
@@ -7198,7 +7268,7 @@ namespace SoftEther.WebSocket.Helper
 
             internal Holder(string name, string stackTrace)
             {
-                stackTrace = "";
+                //stackTrace = "";
 
                 if (string.IsNullOrEmpty(name)) name = "<untitled>";
 
@@ -9606,7 +9676,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastPipe : IAsyncCleanupable
+    sealed class FastPipe : AsyncCleanupable
     {
         public CancelWatcher CancelWatcher { get; }
 
@@ -9621,6 +9691,19 @@ namespace SoftEther.WebSocket.Helper
         public FastPipeEnd A_LowerSide { get; }
         public FastPipeEnd B_UpperSide { get; }
 
+        public FastPipeEnd this[FastPipeEndSide side]
+        {
+            get
+            {
+                if (side == FastPipeEndSide.A_LowerSide)
+                    return A_LowerSide;
+                else if (side == FastPipeEndSide.B_UpperSide)
+                    return B_UpperSide;
+                else
+                    throw new ArgumentOutOfRangeException("side");
+            }
+        }
+
         public List<Action> OnDisconnected { get; } = new List<Action>();
 
         public AsyncManualResetEvent OnDisconnectedEvent { get; } = new AsyncManualResetEvent();
@@ -9628,51 +9711,59 @@ namespace SoftEther.WebSocket.Helper
         Once internalDisconnectedFlag;
         public bool IsDisconnected { get => internalDisconnectedFlag.IsSet; }
 
-        public AsyncCleanuper AsyncCleanuper { get; }
-
         public FastPipe(CancellationToken cancel = default, long? thresholdLengthStream = null, long? thresholdLengthDatagram = null)
         {
-            CancelWatcher = new CancelWatcher(cancel);
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
-            if (thresholdLengthStream == null) thresholdLengthStream = FastPipeGlobalConfig.MaxStreamBufferLength;
-            if (thresholdLengthDatagram == null) thresholdLengthDatagram = FastPipeGlobalConfig.MaxDatagramQueueLength;
-
-            StreamAtoB = new FastStreamFifo(true, thresholdLengthStream);
-            StreamBtoA = new FastStreamFifo(true, thresholdLengthStream);
-
-            DatagramAtoB = new FastDatagramFifo(true, thresholdLengthDatagram);
-            DatagramBtoA = new FastDatagramFifo(true, thresholdLengthDatagram);
-
-            StreamAtoB.ExceptionQueue.Encounter(ExceptionQueue);
-            StreamBtoA.ExceptionQueue.Encounter(ExceptionQueue);
-
-            DatagramAtoB.ExceptionQueue.Encounter(ExceptionQueue);
-            DatagramBtoA.ExceptionQueue.Encounter(ExceptionQueue);
-
-            StreamAtoB.LayerStack.Encounter(LayerStack);
-            StreamBtoA.LayerStack.Encounter(LayerStack);
-
-            DatagramAtoB.LayerStack.Encounter(LayerStack);
-            DatagramBtoA.LayerStack.Encounter(LayerStack);
-
-            StreamAtoB.OnDisconnected.Add(() => Disconnect());
-            StreamBtoA.OnDisconnected.Add(() => Disconnect());
-
-            DatagramAtoB.OnDisconnected.Add(() => Disconnect());
-            DatagramBtoA.OnDisconnected.Add(() => Disconnect());
-
-            A_LowerSide = new FastPipeEnd(this, FastPipeEndSide.A_LowerSide, CancelWatcher, StreamAtoB, StreamBtoA, DatagramAtoB, DatagramBtoA);
-            B_UpperSide = new FastPipeEnd(this, FastPipeEndSide.B_UpperSide, CancelWatcher, StreamBtoA, StreamAtoB, DatagramBtoA, DatagramAtoB);
-
-            A_LowerSide._InternalSetCounterPart(B_UpperSide);
-            B_UpperSide._InternalSetCounterPart(A_LowerSide);
-
-            CancelWatcher.CancelToken.Register(() =>
+            try
             {
-                Disconnect(new OperationCanceledException());
-            });
+                CancelWatcher = new CancelWatcher(cancel);
 
-            AsyncCleanuper = new AsyncCleanuper(this);
+                if (thresholdLengthStream == null) thresholdLengthStream = FastPipeGlobalConfig.MaxStreamBufferLength;
+                if (thresholdLengthDatagram == null) thresholdLengthDatagram = FastPipeGlobalConfig.MaxDatagramQueueLength;
+
+                StreamAtoB = new FastStreamFifo(true, thresholdLengthStream);
+                StreamBtoA = new FastStreamFifo(true, thresholdLengthStream);
+
+                DatagramAtoB = new FastDatagramFifo(true, thresholdLengthDatagram);
+                DatagramBtoA = new FastDatagramFifo(true, thresholdLengthDatagram);
+
+                StreamAtoB.ExceptionQueue.Encounter(ExceptionQueue);
+                StreamBtoA.ExceptionQueue.Encounter(ExceptionQueue);
+
+                DatagramAtoB.ExceptionQueue.Encounter(ExceptionQueue);
+                DatagramBtoA.ExceptionQueue.Encounter(ExceptionQueue);
+
+                StreamAtoB.LayerStack.Encounter(LayerStack);
+                StreamBtoA.LayerStack.Encounter(LayerStack);
+
+                DatagramAtoB.LayerStack.Encounter(LayerStack);
+                DatagramBtoA.LayerStack.Encounter(LayerStack);
+
+                StreamAtoB.OnDisconnected.Add(() => Disconnect());
+                StreamBtoA.OnDisconnected.Add(() => Disconnect());
+
+                DatagramAtoB.OnDisconnected.Add(() => Disconnect());
+                DatagramBtoA.OnDisconnected.Add(() => Disconnect());
+
+                A_LowerSide = new FastPipeEnd(this, FastPipeEndSide.A_LowerSide, CancelWatcher, StreamAtoB, StreamBtoA, DatagramAtoB, DatagramBtoA);
+                B_UpperSide = new FastPipeEnd(this, FastPipeEndSide.B_UpperSide, CancelWatcher, StreamBtoA, StreamAtoB, DatagramBtoA, DatagramAtoB);
+
+                A_LowerSide._InternalSetCounterPart(B_UpperSide);
+                B_UpperSide._InternalSetCounterPart(A_LowerSide);
+
+                CancelWatcher.CancelToken.Register(() =>
+                {
+                    Disconnect(new OperationCanceledException());
+                });
+
+                GrandLady.MergeFrom(lady);
+            }
+            catch
+            {
+                lady.DisposeAllSafe();
+                throw;
+            }
         }
 
         object LayerInfoLock = new object();
@@ -9760,18 +9851,14 @@ namespace SoftEther.WebSocket.Helper
         }
 
         Once DisposeFlag;
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall())
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
                 Disconnect();
-                CancelWatcher.DisposeSafe();
             }
-        }
-
-        public async Task _CleanupAsyncInternal()
-        {
-            await CancelWatcher.AsyncCleanuper;
+            finally { base.Dispose(disposing); }
         }
 
         public void CheckDisconnected()
@@ -9800,7 +9887,7 @@ namespace SoftEther.WebSocket.Helper
 
     class FastPipeEnd
     {
-        FastPipe Pipe { get; }
+        public FastPipe Pipe { get; }
 
         public FastPipeEndSide Side { get; }
 
@@ -9825,6 +9912,12 @@ namespace SoftEther.WebSocket.Helper
                 Pipe.OnDisconnected.Add(action);
         }
 
+        public static FastPipeEnd NewFastPipeAndGetOneSide(FastPipeEndSide createNewPipeAndReturnThisSide, AsyncCleanuperLady lady, CancellationToken cancel = default, long? thresholdLengthStream = null, long? thresholdLengthDatagram = null)
+        {
+            var pipe = new FastPipe(cancel, thresholdLengthStream, thresholdLengthDatagram).AddToLady(lady);
+            return pipe[createNewPipeAndReturnThisSide];
+        }
+
         internal FastPipeEnd(FastPipe pipe, FastPipeEndSide side,
             CancelWatcher cancelWatcher,
             FastStreamFifo streamToWrite, FastStreamFifo streamToRead,
@@ -9842,13 +9935,11 @@ namespace SoftEther.WebSocket.Helper
         internal void _InternalSetCounterPart(FastPipeEnd p)
             => this.CounterPart = p;
 
-        public sealed class AttachHandle : IAsyncCleanupable
+        public sealed class AttachHandle : AsyncCleanupable
         {
             public FastPipeEnd PipeEnd { get; }
             public object UserState { get; }
             public FastPipeEndAttachDirection Direction { get; }
-
-            public AsyncCleanuper AsyncCleanuper { get; }
 
             FastPipe.InstalledLayerHolder InstalledLayerHolder = null;
 
@@ -9878,11 +9969,9 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 Leak = LeakChecker.Enter();
-
-                AsyncCleanuper = new AsyncCleanuper(this);
             }
 
-            public void SetLayerInfo(LayerInfoBase info, FastProtocolStackBase protocolStack = null)
+            public void SetLayerInfo(LayerInfoBase info, FastStackBase protocolStack = null)
             {
                 lock (LockObj)
                 {
@@ -9993,10 +10082,12 @@ namespace SoftEther.WebSocket.Helper
                 => PipeEnd._InternalGetStream(autoFlush);
 
             Once DisposeFlag;
-            public void Dispose()
+            protected override void Dispose(bool disposing)
             {
-                if (DisposeFlag.IsFirstCall())
+                try
                 {
+                    if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+
                     lock (LockObj)
                     {
                         if (Direction == FastPipeEndAttachDirection.FromUpperToB_UpperSide)
@@ -10008,24 +10099,29 @@ namespace SoftEther.WebSocket.Helper
                         if (InstalledLayerHolder != null)
                             InstalledLayerHolder.Dispose();
                         InstalledLayerHolder = null;
+
+                        receiveTimeoutDetector.DisposeSafe();
+                        sendTimeoutDetector.DisposeSafe();
+
+                        Leak.Dispose();
                     }
 
                     lock (PipeEnd.AttachHandleLock)
                     {
                         PipeEnd.CurrentAttachHandle = null;
                     }
-
-                    receiveTimeoutDetector.DisposeSafe();
-                    sendTimeoutDetector.DisposeSafe();
-
-                    Leak.Dispose();
                 }
+                finally { base.Dispose(disposing); }
             }
 
-            public async Task _CleanupAsyncInternal()
+            public override async Task _CleanupAsyncInternal()
             {
-                await receiveTimeoutDetector.AsyncCleanuper;
-                await sendTimeoutDetector.AsyncCleanuper;
+                try
+                {
+                    await receiveTimeoutDetector.AsyncCleanuper;
+                    await sendTimeoutDetector.AsyncCleanuper;
+                }
+                finally { await base._CleanupAsyncInternal(); }
             }
         }
 
@@ -10037,8 +10133,8 @@ namespace SoftEther.WebSocket.Helper
         internal FastPipeEndStream _InternalGetStream(bool autoFlush = true)
             => FastPipeEndStream._InternalNew(this, autoFlush);
 
-        public FastAppProtocolStub GetFastAppProtocolStub(CancellationToken cancel = default)
-            => new FastAppProtocolStub(this, cancel);
+        public FastAppStub GetFastAppProtocolStub(CancellationToken cancel = default)
+            => new FastAppStub(this, cancel);
 
         public void CheckDisconnected() => Pipe.CheckDisconnected();
     }
@@ -10502,14 +10598,6 @@ namespace SoftEther.WebSocket.Helper
         public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
         public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
 
-        Once DisposeFlag;
-        protected override void Dispose(bool disposing)
-        {
-            if (DisposeFlag.IsFirstCall() && disposing)
-            {
-            }
-        }
-
         public override bool Equals(object obj) => object.Equals(this, obj);
 
         public override int GetHashCode() => 0;
@@ -10723,7 +10811,7 @@ namespace SoftEther.WebSocket.Helper
         Datagram = 2,
     }
 
-    abstract class FastPipeEndAsyncObjectWrapperBase : IAsyncCleanupable
+    abstract class FastPipeEndAsyncObjectWrapperBase : AsyncCleanupable
     {
         public CancelWatcher CancelWatcher { get; }
         public FastPipeEnd PipeEnd { get; }
@@ -10733,20 +10821,21 @@ namespace SoftEther.WebSocket.Helper
         public ExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
         public LayerStack LayerStack { get => PipeEnd.LayerStack; }
 
-        public AsyncCleanuper AsyncCleanuper { get; }
-
         public FastPipeEndAsyncObjectWrapperBase(FastPipeEnd pipeEnd, CancellationToken cancel = default)
         {
             PipeEnd = pipeEnd;
             CancelWatcher = new CancelWatcher(cancel);
-            AsyncCleanuper = new AsyncCleanuper(this);
         }
 
-        public async Task _CleanupAsyncInternal()
+        public override async Task _CleanupAsyncInternal()
         {
-            await MainLoopTask.TryWaitAsync(true);
+            try
+            {
+                await MainLoopTask.TryWaitAsync(true);
 
-            await CancelWatcher.AsyncCleanuper;
+                await CancelWatcher.AsyncCleanuper;
+            }
+            finally { await base._CleanupAsyncInternal(); }
         }
 
         Once ConnectedFlag;
@@ -10988,14 +11077,16 @@ namespace SoftEther.WebSocket.Helper
         }
 
         Once DisposeFlag;
-        public void Dispose() => Dispose(true);
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+
                 Disconnect();
                 CancelWatcher.DisposeSafe();
             }
+            finally { base.Dispose(disposing); }
         }
     }
 
@@ -11132,11 +11223,12 @@ namespace SoftEther.WebSocket.Helper
         Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
                 Socket.DisposeSafe();
             }
-            base.Dispose(disposing);
+            finally { base.Dispose(disposing); }
         }
     }
 
@@ -11246,292 +11338,219 @@ namespace SoftEther.WebSocket.Helper
         Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
                 Stream.DisposeSafe();
             }
-            base.Dispose(disposing);
+            finally { base.Dispose(disposing); }
         }
     }
 
-    abstract class FastProtocolOptionsBase { }
+    abstract class FastStackOptionsBase { }
 
-    abstract class FastProtocolStackBase : IAsyncCleanupable
+    abstract class FastStackBase : AsyncCleanupable
     {
-        public virtual AsyncCleanuper AsyncCleanuper { get; }
+        public CancelWatcher CancelWatcher { get; }
 
-        public CancelWatcher CancelWatcher;
+        public CancellationToken GrandCancel { get => CancelWatcher.CancelToken; }
 
-        public AsyncManualResetEvent InitSuccessOrFailEvent = new AsyncManualResetEvent();
+        public FastStackOptionsBase StackOptions { get; }
 
-        public FastProtocolOptionsBase ProtocolOptions { get; }
-
-        public FastProtocolStackBase(FastProtocolOptionsBase options, CancellationToken cancel = default)
+        public FastStackBase(FastStackOptionsBase options, CancellationToken cancel = default)
         {
-            ProtocolOptions = options;
+            StackOptions = options;
             CancelWatcher = new CancelWatcher(cancel);
-            AsyncCleanuper = new AsyncCleanuper(this);
         }
-
-        Task rootMainTask;
-
-        Once startLoopFlag;
-
-        protected void BaseStart()
-        {
-            if (startLoopFlag.IsFirstCall() == false) return;
-
-            rootMainTask = RootMainAsync();
-        }
-
-        protected void CheckPointInitSuccessOrFail() => InitSuccessOrFailEvent.Set(true);
-
-        public Task WaitInitSuccessOrFailAsync() => InitSuccessOrFailEvent.WaitAsync();
-
-        async Task RootMainAsync()
-        {
-            using (LeakChecker.Enter())
-            {
-                try
-                {
-                    await MiddleMainAsync();
-                }
-                finally
-                {
-                    CheckPointInitSuccessOrFail();
-                }
-            }
-        }
-
-        protected abstract Task MiddleMainAsync();
-
         Once DisposeFlag;
-
-        public void Dispose() => Dispose(true);
-
-        protected virtual void Dispose(bool disposing)
+        protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+
                 CancelWatcher.DisposeSafe();
             }
+            finally { base.Dispose(disposing); }
         }
 
-        public virtual async Task _CleanupAsyncInternal()
+        public override async Task _CleanupAsyncInternal()
         {
-            if (rootMainTask != null)
-                await rootMainTask.TryWaitAsync(true);
-
-            await CancelWatcher.AsyncCleanuper;
+            try
+            {
+                await CancelWatcher.AsyncCleanuper;
+            }
+            finally { await base._CleanupAsyncInternal(); }
         }
     }
 
-    abstract class FastTopProtocolOptionsBase : FastProtocolOptionsBase { }
+    abstract class FastAppStubOptionsBase : FastStackOptionsBase { }
 
-    abstract class FastTopProtocolStubBase : FastProtocolStackBase
+    abstract class FastAppStubBase : FastStackBase
     {
         public FastPipeEnd Lower { get; }
+        protected FastPipeEnd.AttachHandle LowerAttach { get; private set; }
 
-        public FastTopProtocolOptionsBase TopOptions { get; }
+        object LockObj = new object();
 
-        public FastTopProtocolStubBase(FastPipeEnd lower, FastTopProtocolOptionsBase options, CancellationToken cancel = default) : base(options, cancel)
+        public FastAppStubOptionsBase TopOptions { get; }
+
+        public FastAppStubBase(FastPipeEnd lower, FastAppStubOptionsBase options, CancellationToken cancel = default) : base(options, cancel)
         {
             TopOptions = options;
             Lower = lower;
+
+            LowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide);
+
+            GrandLady.Add(LowerAttach);
         }
 
-        public abstract void Init(FastPipeEnd.AttachHandle attachHandle);
-
-        public abstract void Free();
-
-        protected sealed override async Task MiddleMainAsync()
+        public virtual void Disconnect(Exception ex)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
-
-            try
-            {
-                using (var lowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide))
-                {
-                    lady.Add(lowerAttach);
-
-                    CheckPointInitSuccessOrFail();
-
-                    Init(lowerAttach);
-
-                    await WebSocketHelper.WaitObjectsAsync(
-                        cancels: CancelWatcher.CancelToken.ToSingleArray(),
-                        manualEvents: new AsyncManualResetEvent[] { Lower.OnDisconnectedEvent },
-                        exceptions: ExceptionWhen.CancelException
-                        );
-                }
-            }
-            catch (Exception ex)
-            {
-                Lower.Disconnect(ex);
-
-                throw ex;
-            }
-            finally
-            {
-                CheckPointInitSuccessOrFail();
-
-                Lower.Disconnect();
-
-                await lady;
-            }
+            Lower.Disconnect(ex);
         }
     }
 
-    class FastAppProtocolOptions : FastTopProtocolOptionsBase { }
+    class FastAppStubOptions : FastAppStubOptionsBase { }
 
-    class FastAppProtocolStub : FastTopProtocolStubBase
+    class FastAppStub : FastAppStubBase
     {
-        public FastAppProtocolStub(FastPipeEnd lower, CancellationToken cancel = default, FastAppProtocolOptions options = null) : base(lower, options, cancel)
+        public FastAppStub(FastPipeEnd lower, CancellationToken cancel = default, FastAppStubOptions options = null)
+            : base(lower, options ?? new FastAppStubOptions(), cancel)
         {
-            BaseStart();
         }
 
         object LockObj = new object();
 
         FastPipeEndStream StreamCache = null;
 
-        FastPipeEnd.AttachHandle AttachHandleCache = null;
-
-        public override void Init(FastPipeEnd.AttachHandle attachHandle)
+        public FastPipeEndStream GetStream(bool autoFlash = true)
         {
-            AttachHandleCache = attachHandle;
-        }
-
-        public override void Free() { }
-
-        public async Task<FastPipeEndStream> GetStreamAsync(bool autoFlash = true)
-        {
-            await WaitInitSuccessOrFailAsync();
-            Lower.CheckDisconnected();
-
             lock (LockObj)
             {
                 if (StreamCache == null)
-                    StreamCache = AttachHandleCache.GetStream(autoFlash);
+                    StreamCache = AttachHandle.GetStream(autoFlash);
 
                 return StreamCache;
             }
         }
 
-        public async Task<FastPipeEnd> GetPipeEndAsync()
+        public FastPipeEnd GetPipeEnd()
         {
-            await WaitInitSuccessOrFailAsync();
             Lower.CheckDisconnected();
 
             return Lower;
         }
 
-        public async Task<FastPipeEnd.AttachHandle> GetAttachHandleAsync()
+        public FastPipeEnd.AttachHandle AttachHandle
         {
-            await WaitInitSuccessOrFailAsync();
-            Lower.CheckDisconnected();
-
-            return AttachHandleCache;
+            get
+            {
+                Lower.CheckDisconnected();
+                return this.LowerAttach;
+            }
         }
 
         Once DisposeFlag;
         protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
                 StreamCache.DisposeSafe();
             }
-            base.Dispose(disposing);
+            finally { base.Dispose(disposing); }
         }
     }
 
-    abstract class FastBottomProtocolOptionsBase : FastProtocolOptionsBase { }
+    abstract class FastProtocolOptionsBase : FastStackOptionsBase { }
 
-    abstract class FastBottomProtocolStubBase : FastProtocolStackBase
+    abstract class FastProtocolBase : FastStackBase
     {
         public FastPipeEnd Upper { get; }
 
-        public FastBottomProtocolOptionsBase BottomOptions { get; }
+        protected FastPipeEnd.AttachHandle UpperAttach { get; private set; }
 
-        public FastBottomProtocolStubBase(FastPipeEnd upper, FastBottomProtocolOptionsBase options, CancellationToken cancel = default)
+        public FastProtocolOptionsBase ProtocolOptions { get; }
+
+        public FastProtocolBase(FastPipeEnd upper, FastProtocolOptionsBase options, CancellationToken cancel = default)
             : base(options, cancel)
-        {
-            BottomOptions = options;
-            Upper = upper;
-        }
-
-        protected abstract Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle upperAttach, FastBottomProtocolOptionsBase options);
-
-        protected sealed override async Task MiddleMainAsync()
         {
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
             try
             {
-                using (var upperAttach = Upper.Attach(FastPipeEndAttachDirection.FromLowerToA_LowerSide))
+                if (upper == null)
                 {
-                    lady.Add(upperAttach);
-
-                    using (var holder = await ConnectAsync(upperAttach, BottomOptions))
-                    {
-                        lady.Add(holder);
-
-                        upperAttach.SetLayerInfo(holder.UserData, this);
-
-                        CheckPointInitSuccessOrFail();
-
-                        await WebSocketHelper.WaitObjectsAsync(
-                            cancels: CancelWatcher.CancelToken.ToSingleArray(),
-                            manualEvents: new AsyncManualResetEvent[] { Upper.OnDisconnectedEvent },
-                            exceptions: ExceptionWhen.CancelException
-                            );
-                    }
+                    upper = FastPipeEnd.NewFastPipeAndGetOneSide(FastPipeEndSide.A_LowerSide, GrandLady, cancel);
+                    lady.Add(upper.Pipe);
                 }
+
+                ProtocolOptions = options;
+                Upper = upper;
+
+                UpperAttach = Upper.Attach(FastPipeEndAttachDirection.FromLowerToA_LowerSide);
+                lady.Add(UpperAttach);
+
+                GrandLady.MergeFrom(lady);
             }
-            catch (Exception ex)
+            catch
             {
-                Upper.Disconnect(ex);
-
-                throw ex;
-            }
-            finally
-            {
-                CheckPointInitSuccessOrFail();
-
-                Upper.Disconnect();
-
-                await lady;
+                lady.DisposeAllSafe();
+                throw;
             }
         }
+
+        public virtual void Disconnect(Exception ex = null)
+        {
+            Upper.Disconnect(ex);
+        }
+    }
+
+    abstract class FastBottomProtocolOptionsBase : FastProtocolOptionsBase { }
+
+    abstract class FastBottomProtocolStubBase : FastProtocolBase
+    {
+        public FastBottomProtocolStubBase(FastPipeEnd upper, FastProtocolOptionsBase options, CancellationToken cancel = default) : base(upper, options, cancel) { }
     }
 
     abstract class FastTcpProtocolOptionsBase : FastBottomProtocolOptionsBase
     {
-        public const int DefaultTcpConnectTimeout = 15 * 1000;
-
-        public IPEndPoint LocalEndPoint { get; set; } = null;
-        public IPEndPoint RemoteEndPoint { get; set; } = null;
-        public int ConnectTimeout { get; set; } = DefaultTcpConnectTimeout;
+        public FastDnsClientStub DnsClient { get; set; }
     }
 
     abstract class FastTcpProtocolStubBase : FastBottomProtocolStubBase
     {
-        public FastTcpProtocolStubBase(FastPipeEnd upper, FastTcpProtocolOptionsBase options, CancellationToken cancel = default) : base(upper, options, cancel) { }
+        public const int DefaultTcpConnectTimeout = 15 * 1000;
+
+        FastTcpProtocolOptionsBase Options { get; }
+
+        public FastTcpProtocolStubBase(FastPipeEnd upper, FastTcpProtocolOptionsBase options, CancellationToken cancel = default) : base(upper, options, cancel)
+        {
+            Options = options;
+        }
+
+        public FastSock<FastTcpProtocolStubBase> GetSock() => new FastSock<FastTcpProtocolStubBase>(this);
+
+        public abstract Task ConnectAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout);
+
+        public virtual Task ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+            => ConnectAsync(new IPEndPoint(ip, port), connectTimeout);
+
+        public virtual async Task ConnectAsync(string host, int port, AddressFamily? addressFamily = null, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+            => await ConnectAsync(await Options.DnsClient.GetIPFromHostName(host, addressFamily, GrandCancel, connectTimeout), port, default, connectTimeout);
+
     }
 
-    enum FastTcpSockProtocolInitMode
+    class FastPalTcpProtocolOptions : FastTcpProtocolOptionsBase
     {
-        ByRemoteEndPoint,
-        ByConnectedSocketObject,
+        public FastPalTcpProtocolOptions()
+        {
+            this.DnsClient = FastPalDnsClient.Shared;
+        }
     }
 
-    class FastTcpSockProtocolOptions : FastTcpProtocolOptionsBase
-    {
-        public FastTcpSockProtocolInitMode InitMode { get; set; } = FastTcpSockProtocolInitMode.ByRemoteEndPoint;
-        public PalSocket SocketObject { get; set; } = null;
-    }
-
-    sealed class FastPalTcpProtocolStub : FastTcpProtocolStubBase
+    class FastPalTcpProtocolStub : FastTcpProtocolStubBase
     {
         public class LayerInfo : LayerInfoBase, ILayerInfoTcpEndPoint
         {
@@ -11541,187 +11560,127 @@ namespace SoftEther.WebSocket.Helper
             public IPAddress RemoteIPAddress { get; set; }
         }
 
-        public FastPalTcpProtocolStub(FastPipeEnd upper, FastTcpSockProtocolOptions options, CancellationToken cancel = default) : base(upper, options, cancel)
+        public FastPalTcpProtocolStub(FastPipeEnd upper = null, FastPalTcpProtocolOptions options = null, CancellationToken cancel = default)
+            : base(upper, options ?? new FastPalTcpProtocolOptions(), cancel)
         {
-            BaseStart();
         }
 
-        protected override async Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle upperAttach, FastBottomProtocolOptionsBase options)
+        public virtual async Task FromSocket(PalSocket s)
         {
-            FastTcpSockProtocolOptions opt = (FastTcpSockProtocolOptions)options;
-
-            PalSocket s = null;
-
-            if (opt.InitMode == FastTcpSockProtocolInitMode.ByRemoteEndPoint)
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+            try
             {
-                if (!(opt.RemoteEndPoint.AddressFamily == AddressFamily.InterNetwork || opt.RemoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6))
-                    throw new ArgumentException("RemoteEndPoint.AddressFamily");
+                var socketWrapper = new FastPipeEndSocketWrapper(Upper, s, GrandCancel);
+                lady.Add(socketWrapper);
 
-                s = new PalSocket(opt.RemoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                try
+                UpperAttach.SetLayerInfo(new LayerInfo()
                 {
-                    await WebSocketHelper.DoAsyncWithTimeout(async (c) =>
-                    {
-                        await s.ConnectAsync(opt.RemoteEndPoint);
-                        return 0;
-                    },
-                    cancelProc: () =>
-                    {
-                        s.DisposeSafe();
-                    },
-                    timeout: opt.ConnectTimeout,
-                    cancel: CancelWatcher.CancelToken);
-                }
-                catch
+                    LocalPort = ((IPEndPoint)s.LocalEndPoint).Port,
+                    LocalIPAddress = ((IPEndPoint)s.LocalEndPoint).Address,
+                    RemotePort = ((IPEndPoint)s.RemoteEndPoint).Port,
+                    RemoteIPAddress = ((IPEndPoint)s.RemoteEndPoint).Address,
+                }, this);
+
+                GrandLady.MergeFrom(lady);
+            }
+            catch
+            {
+                await lady;
+                throw;
+            }
+        }
+
+        public override async Task ConnectAsync(IPEndPoint remoteEndPoint, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+        {
+            if (!(remoteEndPoint.AddressFamily == AddressFamily.InterNetwork || remoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6))
+                throw new ArgumentException("RemoteEndPoint.AddressFamily");
+
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+            try
+            {
+                PalSocket s = new PalSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
+                lady.Add(s);
+
+                await WebSocketHelper.DoAsyncWithTimeout(async localCancel =>
                 {
-                    s.DisposeSafe();
-                    throw;
-                }
-            }
-            else
-            {
-                s = opt.SocketObject;
-            }
+                    await s.ConnectAsync(remoteEndPoint);
+                    return 0;
+                },
+                cancelProc: () => s.DisposeSafe(),
+                timeout: connectTimeout,
+                cancel: GrandCancel);
 
-            var socketWrapper = new FastPipeEndSocketWrapper(upperAttach.PipeEnd, s, CancelWatcher.CancelToken);
+                await FromSocket(s);
 
-            return new AsyncHolder<LayerInfoBase>(async x =>
+                GrandLady.MergeFrom(lady);
+            }
+            catch
             {
-                s.DisposeSafe();
-                await socketWrapper.AsyncCleanuper;
-            },
-            userData: new LayerInfo()
-            {
-                LocalPort = ((IPEndPoint)s.LocalEndPoint).Port,
-                LocalIPAddress = ((IPEndPoint)s.LocalEndPoint).Address,
-                RemotePort = ((IPEndPoint)s.RemoteEndPoint).Port,
-                RemoteIPAddress = ((IPEndPoint)s.RemoteEndPoint).Address,
-            });
+                await lady;
+                throw;
+            }
         }
     }
 
-    abstract class FastSockBase : IAsyncCleanupable
+    class FastSock<TProtocolStack> : AsyncCleanupable where TProtocolStack : FastProtocolBase
     {
-        public AsyncCleanuper AsyncCleanuper { get; }
+        public TProtocolStack Stack { get; }
         public FastPipe Pipe { get; }
-        FastBottomProtocolStubBase Stub;
+        public FastPipeEnd LowerEnd { get; }
+        public FastPipeEnd UpperEnd { get; }
 
-        public FastPipeEnd UpperSidePipeEnd { get => Pipe.B_UpperSide; }
+        public LayerStack LayerStack { get => this.LowerEnd.LayerStack; }
 
-        public FastAppProtocolStub GetFastAppProtocolStub(CancellationToken cancel = default)
-            => this.UpperSidePipeEnd.GetFastAppProtocolStub(cancel);
-
-        public FastSockBase(FastPipe pipe, FastBottomProtocolStubBase stub)
+        public FastSock(TProtocolStack protocolStack)
         {
-            this.Pipe = pipe;
-            this.Stub = stub;
+            Stack = protocolStack;
+            LowerEnd = Stack.Upper;
+            Pipe = LowerEnd.Pipe;
+            UpperEnd = LowerEnd.CounterPart;
 
-            this.Pipe.CheckDisconnected();
-
-            AsyncCleanuper = new AsyncCleanuper(this);
+            GrandLady.Add(Stack);
+            GrandLady.Add(Pipe);
         }
 
-        Once DisposeFlag;
-        public void Dispose() => Dispose(true);
-        protected virtual void Dispose(bool disposing)
+        public FastAppStub GetFastAppProtocolStub(CancellationToken cancel = default)
         {
-            if (DisposeFlag.IsFirstCall() && disposing)
-            {
-                this.Pipe.DisposeSafe();
-                this.Stub.DisposeSafe();
-            }
+            FastAppStub ret = UpperEnd.GetFastAppProtocolStub(cancel);
+
+            GrandLady.Add(ret);
+
+            return ret;
         }
 
-        public virtual async Task _CleanupAsyncInternal()
+        public void Disconnect(Exception ex = null)
         {
-            await this.Pipe.AsyncCleanuper;
-            await this.Stub.AsyncCleanuper;
+            Pipe.Disconnect(ex);
         }
     }
 
-    abstract class FastTcpSockBase : FastSockBase
-    {
-        public FastTcpSockBase(FastPipe pipe, FastTcpProtocolStubBase stub)
-            : base(pipe, stub) { }
+    class FastDnsClientOptions : FastStackOptionsBase { }
 
+    abstract class FastDnsClientStub : FastStackBase
+    {
+        public const int DefaultDnsResolveTimeout = 5 * 1000;
+
+        public FastDnsClientStub(FastDnsClientOptions options, CancellationToken cancel = default) : base(options, cancel)
+        {
+        }
+
+        public abstract Task<IPAddress> GetIPFromHostName(string host, AddressFamily? addressFamily = null, CancellationToken cancel = default,
+            int timeout = DefaultDnsResolveTimeout);
     }
 
-    class FastPalTcpSock : FastTcpSockBase
+    class FastPalDnsClient : FastDnsClientStub
     {
-        private FastPalTcpSock(FastPipe pipe, FastPalTcpProtocolStub stub)
-            : base(pipe, stub) { }
+        public static FastPalDnsClient Shared { get; } = new FastPalDnsClient(new FastDnsClientOptions());
 
-        public static async Task<FastPalTcpSock> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, CancellationToken cancel = default, int timeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
-            => await ConnectAsync(await GetIPFromHostName(host, addressFamily, cancel, timeout), port, cancel, timeout);
-
-        public static Task<FastPalTcpSock> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
-            => ConnectAsync(new IPEndPoint(ip, port), cancel, connectTimeout);
-
-        public static async Task<FastPalTcpSock> ConnectAsync(IPEndPoint endPoint, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
+        public FastPalDnsClient(FastDnsClientOptions options, CancellationToken cancel = default) : base(options, cancel)
         {
-            var options = new FastTcpSockProtocolOptions()
-            {
-                InitMode = FastTcpSockProtocolInitMode.ByRemoteEndPoint,
-                ConnectTimeout = connectTimeout,
-                RemoteEndPoint = endPoint,
-            };
-
-            var pipe = new FastPipe(cancel);
-            try
-            {
-                var stub = new FastPalTcpProtocolStub(pipe.A_LowerSide, options, cancel);
-                try
-                {
-                    await stub.WaitInitSuccessOrFailAsync();
-                    pipe.CheckDisconnected();
-                    return new FastPalTcpSock(pipe, stub);
-                }
-                catch
-                {
-                    await stub.AsyncCleanuper;
-                    throw;
-                }
-            }
-            catch
-            {
-                await pipe.AsyncCleanuper;
-                throw;
-            }
         }
 
-        public static async Task<FastPalTcpSock> FromSocketAsync(PalSocket socketObject, CancellationToken cancel = default)
-        {
-            var options = new FastTcpSockProtocolOptions()
-            {
-                InitMode = FastTcpSockProtocolInitMode.ByConnectedSocketObject,
-                SocketObject = socketObject,
-            };
-
-            var pipe = new FastPipe(cancel);
-            try
-            {
-                var stub = new FastPalTcpProtocolStub(pipe.A_LowerSide, options, cancel);
-                try
-                {
-                    await stub.WaitInitSuccessOrFailAsync();
-                    pipe.CheckDisconnected();
-                    return new FastPalTcpSock(pipe, stub);
-                }
-                catch
-                {
-                    await stub.AsyncCleanuper;
-                    throw;
-                }
-            }
-            catch
-            {
-                await pipe.AsyncCleanuper;
-                throw;
-            }
-        }
-
-        public static async Task<IPAddress> GetIPFromHostName(string host, AddressFamily? addressFamily = null, CancellationToken cancel = default,
-            int timeout = FastTcpProtocolOptionsBase.DefaultTcpConnectTimeout)
+        public override async Task<IPAddress> GetIPFromHostName(string host, AddressFamily? addressFamily = null, CancellationToken cancel = default,
+            int timeout = FastDnsClientStub.DefaultDnsResolveTimeout)
         {
             if (IPAddress.TryParse(host, out IPAddress ip))
             {
@@ -11739,7 +11698,49 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    abstract class FastLinearMiddleProtocolOptionsBase : FastProtocolOptionsBase
+    abstract class FastSockBase : AsyncCleanupable
+    {
+        public FastPipe Pipe { get; }
+        FastBottomProtocolStubBase Stub;
+
+        public FastPipeEnd UpperSidePipeEnd { get => Pipe.B_UpperSide; }
+
+        public FastAppStub GetFastAppProtocolStub(CancellationToken cancel = default)
+            => this.UpperSidePipeEnd.GetFastAppProtocolStub(cancel);
+
+        public FastSockBase(FastPipe pipe, FastBottomProtocolStubBase stub)
+        {
+            this.Pipe = pipe;
+            this.Stub = stub;
+
+            this.Pipe.CheckDisconnected();
+        }
+
+        Once DisposeFlag;
+        protected override void Dispose(bool disposing)
+        {
+            try
+            {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+
+                this.Pipe.DisposeSafe();
+                this.Stub.DisposeSafe();
+            }
+            finally { base.Dispose(disposing); }
+        }
+
+        public override async Task _CleanupAsyncInternal()
+        {
+            try
+            {
+                await this.Pipe.AsyncCleanuper;
+                await this.Stub.AsyncCleanuper;
+            }
+            finally { await base._CleanupAsyncInternal(); }
+        }
+    }
+
+    abstract class FastMiddleProtocolOptionsBase : FastProtocolOptionsBase
     {
         public int LowerReceiveTimeoutOnInit { get; set; } = 5 * 1000;
         public int LowerSendTimeoutOnInit { get; set; } = 60 * 1000;
@@ -11748,153 +11749,52 @@ namespace SoftEther.WebSocket.Helper
         public int LowerSendTimeoutAfterInit { get; set; } = Timeout.Infinite;
     }
 
-    abstract class FastLinearMiddleProtocolStackBase : FastProtocolStackBase
+    abstract class FastMiddleProtocolStackBase : FastProtocolBase
     {
         protected FastPipeEnd Lower { get; }
-        protected FastPipeEnd Upper { get; }
 
         object LockObj = new object();
         protected FastPipeEnd.AttachHandle LowerAttach { get; private set; }
-        protected FastPipeEnd.AttachHandle UpperAttach { get; private set; }
 
-        public FastLinearMiddleProtocolOptionsBase MiddleOptions { get; }
+        public FastMiddleProtocolOptionsBase MiddleOptions { get; }
 
-        protected abstract Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle lowerAttach, FastPipeEnd.AttachHandle upperAttach, FastLinearMiddleProtocolOptionsBase options);
-
-        AsyncCleanuperLady CleanupLady = null;
-
-        public FastLinearMiddleProtocolStackBase(FastPipeEnd lower, FastPipeEnd upper, FastLinearMiddleProtocolOptionsBase options, CancellationToken cancel = default)
-            : base(options, cancel)
+        public FastMiddleProtocolStackBase(FastPipeEnd lower, FastPipeEnd upper, FastMiddleProtocolOptionsBase options, CancellationToken cancel = default)
+            : base(upper, options, cancel)
         {
             MiddleOptions = options;
             Lower = lower;
-            Upper = upper;
-        }
-
-        protected async Task EnsureAttachAsync()
-        {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
             try
             {
-                lock (LockObj)
-                {
-                    if (LowerAttach != null && UpperAttach != null)
-                    {
-                        Debug.Assert(LowerAttach != null); Debug.Assert(UpperAttach != null);
-                        return;
-                    }
+                var LowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide);
+                GrandLady.Add(LowerAttach);
 
-                    using (var upperAttach = Upper.Attach(FastPipeEndAttachDirection.FromLowerToA_LowerSide))
-                    {
-                        lady.Add(upperAttach);
+                Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
+                Lower.LayerStack.Encounter(Upper.LayerStack);
 
-                        using (var lowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide))
-                        {
-                            lady.Add(lowerAttach);
-
-                            Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
-                            Lower.LayerStack.Encounter(Upper.LayerStack);
-
-                            Lower.AddOnDisconnected(() => Upper.Disconnect());
-                            Upper.AddOnDisconnected(() => Lower.Disconnect());
-
-                            LowerAttach = lowerAttach;
-                            UpperAttach = upperAttach;
-
-                            CleanupLady = lady;
-
-                            return;
-                        }
-                    }
-                }
+                Lower.AddOnDisconnected(() => Upper.Disconnect());
+                Upper.AddOnDisconnected(() => Lower.Disconnect());
             }
             catch
             {
-                await lady;
+                GrandLady.DisposeAllSafe();
                 throw;
             }
         }
 
-        protected sealed override async Task MiddleMainAsync()
+        public override void Disconnect(Exception ex = null)
         {
-            return;
             try
             {
-                Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
-                Lower.LayerStack.Encounter(Upper.LayerStack);
-                Lower.AddOnDisconnected(() => Upper.Disconnect());
-                Upper.AddOnDisconnected(() => Lower.Disconnect());
-
-                AsyncCleanuperLady lady = new AsyncCleanuperLady();
-
-                try
-                {
-                    using (var upperAttach = Upper.Attach(FastPipeEndAttachDirection.FromLowerToA_LowerSide))
-                    {
-                        lady.Add(upperAttach);
-
-                        using (var lowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide))
-                        {
-                            lady.Add(lowerAttach);
-
-                            lowerAttach.SetStreamTimeout(MiddleOptions.LowerReceiveTimeoutOnInit, MiddleOptions.LowerSendTimeoutOnInit);
-
-                            using (AsyncHolder<LayerInfoBase> holder = await ConnectAsync(lowerAttach, upperAttach, MiddleOptions))
-                            {
-                                lady.Add(holder);
-
-                                lowerAttach.SetStreamTimeout(MiddleOptions.LowerReceiveTimeoutAfterInit, MiddleOptions.LowerSendTimeoutAfterInit);
-
-                                lowerAttach.SetLayerInfo(holder.UserData, this);
-
-                                CheckPointInitSuccessOrFail();
-
-                                await WebSocketHelper.WaitObjectsAsync(
-                                    cancels: CancelWatcher.CancelToken.ToSingleArray(),
-                                    manualEvents: new AsyncManualResetEvent[] { Lower.OnDisconnectedEvent, Upper.OnDisconnectedEvent },
-                                    exceptions: ExceptionWhen.CancelException
-                                    );
-                            }
-                        }
-                    }
-                }
-                finally
-                {
-                    await lady;
-                }
-            }
-            catch (Exception ex)
-            {
                 Lower.Disconnect(ex);
-                Upper.Disconnect(ex);
-
-                CheckPointInitSuccessOrFail();
-
-                throw ex;
             }
-            finally
-            {
-                Lower.Disconnect();
-                Upper.Disconnect();
-            }
-        }
-
-        public override async Task _CleanupAsyncInternal()
-        {
-            if (CleanupLady != null)
-                await CleanupLady;
-            await base._CleanupAsyncInternal().TryWaitAsync();
+            finally { base.Disconnect(ex); }
         }
     }
 
-    class FastSslProtocolOptions : FastLinearMiddleProtocolOptionsBase
-    {
-        public bool IsServerMode { get; set; } = false;
-        public SslClientAuthenticationOptions SslClientOptions { get; set; } = new SslClientAuthenticationOptions();
-    }
+    class FastSslProtocolOptions : FastMiddleProtocolOptionsBase { }
 
-    class FastSslProtocolStack : FastLinearMiddleProtocolStackBase
+    class FastSslProtocolStack : FastMiddleProtocolStackBase
     {
         public class LayerInfo : LayerInfoBase, ILayerInfoSsl
         {
@@ -11910,103 +11810,62 @@ namespace SoftEther.WebSocket.Helper
             public X509Certificate RemoteCertificate { get; internal set; }
         }
 
-        public bool IsServerMode { get => SslOptions.IsServerMode; }
-
         public FastSslProtocolOptions SslOptions { get; }
 
         public FastSslProtocolStack(FastPipeEnd lower, FastPipeEnd upper, FastSslProtocolOptions options,
-            CancellationToken cancel = default) : base(lower, upper, options, cancel)
-        {
-            SslOptions = options;
-
-            BaseStart();
-        }
+            CancellationToken cancel = default) : base(lower, upper, options ?? new FastSslProtocolOptions(), cancel) { }
 
         public async Task AuthenticateAsClientAsync(SslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken = default)
         {
-            await EnsureAttachAsync();
-
-            var lowerStream = LowerAttach.GetStream(autoFlush: false);
-
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                var ssl = new SslStream(lowerStream, true);
+                var lowerStream = LowerAttach.GetStream(autoFlush: false);
+                lady.Add(lowerStream);
 
-                try
+                var ssl = new SslStream(lowerStream, true);
+                lady.Add(ssl);
+
+                await ssl.AuthenticateAsClientAsync(sslClientAuthenticationOptions, CancelWatcher.CancelToken);
+
+                LowerAttach.SetLayerInfo(new LayerInfo()
                 {
-                    await ssl.AuthenticateAsClientAsync(sslClientAuthenticationOptions, CancelWatcher.CancelToken);
-                }
-                catch
-                {
-                    ssl.DisposeSafe();
-                    throw;
-                }
+                    IsServerMode = false,
+                    SslProtocol = ssl.SslProtocol.ToString(),
+                    CipherAlgorithm = ssl.CipherAlgorithm.ToString(),
+                    CipherStrength = ssl.CipherStrength,
+                    HashAlgorithm = ssl.HashAlgorithm.ToString(),
+                    HashStrength = ssl.HashStrength,
+                    KeyExchangeAlgorithm = ssl.KeyExchangeAlgorithm.ToString(),
+                    KeyExchangeStrength = ssl.KeyExchangeStrength,
+                    LocalCertificate = ssl.LocalCertificate,
+                    RemoteCertificate = ssl.RemoteCertificate,
+                }, this);
+
+                var upperStreamWrapper = new FastPipeEndStreamWrapper(UpperAttach.PipeEnd, ssl, CancelWatcher.CancelToken);
+                lady.Add(upperStreamWrapper);
+
+                GrandLady.MergeFrom(lady);
             }
             catch
             {
-                lowerStream.DisposeSafe();
+                await lady;
                 throw;
             }
         }
 
-        protected override async Task<AsyncHolder<LayerInfoBase>> ConnectAsync(FastPipeEnd.AttachHandle lowerAttach, FastPipeEnd.AttachHandle upperAttach, FastLinearMiddleProtocolOptionsBase options)
-        {
-            var lowerStream = lowerAttach.GetStream(autoFlush: false);
-            try
-            {
-                var ssl = new SslStream(lowerStream, true);
-
-                try
-                {
-                    await ssl.AuthenticateAsClientAsync(SslOptions.SslClientOptions, CancelWatcher.CancelToken);
-
-                    LayerInfo info = new LayerInfo()
-                    {
-                        IsServerMode = this.IsServerMode,
-                        SslProtocol = ssl.SslProtocol.ToString(),
-                        CipherAlgorithm = ssl.CipherAlgorithm.ToString(),
-                        CipherStrength = ssl.CipherStrength,
-                        HashAlgorithm = ssl.HashAlgorithm.ToString(),
-                        HashStrength = ssl.HashStrength,
-                        KeyExchangeAlgorithm = ssl.KeyExchangeAlgorithm.ToString(),
-                        KeyExchangeStrength = ssl.KeyExchangeStrength,
-                        LocalCertificate = ssl.LocalCertificate,
-                        RemoteCertificate = ssl.RemoteCertificate,
-                    };
-
-                    var upperStreamWrapper = new FastPipeEndStreamWrapper(upperAttach.PipeEnd, ssl, CancelWatcher.CancelToken);
-
-                    return new AsyncHolder<LayerInfoBase>(async x =>
-                    {
-                        ssl.DisposeSafe();
-                        await upperStreamWrapper.AsyncCleanuper;
-                    },
-                    userData: info);
-                }
-                catch
-                {
-                    ssl.DisposeSafe();
-                    throw;
-                }
-            }
-            catch
-            {
-                lowerStream.DisposeSafe();
-                throw;
-            }
-        }
+        public FastSock<FastSslProtocolStack> GetSock() => new FastSock<FastSslProtocolStack>(this);
     }
 
-    sealed class FastPipeTcpListener : IAsyncCleanupable
+    sealed class FastPipeTcpListener : AsyncCleanupable
     {
         public PalTcpListener PalListener { get; }
 
-        public AsyncCleanuper AsyncCleanuper { get; }
         public object UserState;
 
         CancellationTokenSource CancelSource = new CancellationTokenSource();
 
-        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastPalTcpSock sock);
+        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastPalTcpProtocolStub stub);
 
         FastPipeTcpListenerAcceptCallback AcceptProc;
 
@@ -12017,7 +11876,7 @@ namespace SoftEther.WebSocket.Helper
 
             PalListener = new PalTcpListener(PalListenManagerAcceptProc);
 
-            this.AsyncCleanuper = new AsyncCleanuper(this);
+            GrandLady.Add(PalListener);
         }
 
         async Task PalListenManagerAcceptProc(PalTcpListener manager, PalTcpListener.Listener listener, PalSocket socket)
@@ -12026,21 +11885,18 @@ namespace SoftEther.WebSocket.Helper
             {
                 using (LeakChecker.Enter())
                 {
-                    using (FastPalTcpSock sock = await FastPalTcpSock.FromSocketAsync(socket, CancelSource.Token))
+                    AsyncCleanuperLady lady = new AsyncCleanuperLady();
+                    try
                     {
-                        try
-                        {
-                            await AcceptProc(this, sock);
-                        }
-                        catch (Exception ex)
-                        {
-                            Console.WriteLine("FastPipeTcpListener AcceptProc exception: " + ex.ToString());
-                            throw;
-                        }
-                        finally
-                        {
-                            await sock.AsyncCleanuper;
-                        }
+                        FastPalTcpProtocolStub stub = new FastPalTcpProtocolStub(cancel: CancelSource.Token).AddToLady(lady);
+
+                        await stub.FromSocket(socket);
+
+                        await AcceptProc(this, stub);
+                    }
+                    finally
+                    {
+                        await lady;
                     }
                 }
             }
@@ -12052,19 +11908,15 @@ namespace SoftEther.WebSocket.Helper
         }
 
         Once DisposeFlag;
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall())
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+
                 CancelSource.TryCancel();
-
-                PalListener.DisposeSafe();
             }
-        }
-
-        public async Task _CleanupAsyncInternal()
-        {
-            await PalListener.AsyncCleanuper;
+            finally { base.Dispose(disposing); }
         }
     }
 }
