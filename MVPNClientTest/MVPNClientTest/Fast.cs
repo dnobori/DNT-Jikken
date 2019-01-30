@@ -5,10 +5,8 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics;
 using System.Net;
 using System.Net.Sockets;
-using System.Net.Security;
 using System.Collections.Generic;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 
 #pragma warning disable CS0162
 
@@ -16,7 +14,7 @@ namespace SoftEther.WebSocket.Helper
 {
     struct FastReadList<T>
     {
-        static object GlobalWriteLock = new object();
+        static CriticalSection GlobalWriteLock = new CriticalSection();
         static volatile int IdSeed = 0;
 
         SortedDictionary<int, T> Hash;
@@ -1432,7 +1430,7 @@ namespace SoftEther.WebSocket.Helper
 
         HierarchyBody First;
 
-        public static readonly object GlobalLock = new object();
+        public static readonly CriticalSection GlobalLock = new CriticalSection();
 
         public SharedHierarchy()
         {
@@ -1511,8 +1509,8 @@ namespace SoftEther.WebSocket.Helper
         int HashStrength { get; }
         string KeyExchangeAlgorithm { get; }
         int KeyExchangeStrength { get; }
-        X509Certificate LocalCertificate { get; }
-        X509Certificate RemoteCertificate { get; }
+        PalX509Certificate LocalCertificate { get; }
+        PalX509Certificate RemoteCertificate { get; }
     }
 
     interface ILayerInfoIpEndPoint
@@ -1669,7 +1667,7 @@ namespace SoftEther.WebSocket.Helper
 
         QueueBody First;
 
-        public static readonly object GlobalLock = new object();
+        public static readonly CriticalSection GlobalLock = new CriticalSection();
 
         public bool Distinct { get; }
 
@@ -2392,7 +2390,7 @@ namespace SoftEther.WebSocket.Helper
         ExceptionQueue ExceptionQueue { get; }
         LayerInfo Info { get; }
 
-        object LockObj { get; }
+        CriticalSection LockObj { get; }
 
         bool IsReadyToWrite { get; }
         bool IsReadyToRead { get; }
@@ -2640,7 +2638,7 @@ namespace SoftEther.WebSocket.Helper
 
         public List<Action> OnDisconnected { get; } = new List<Action>();
 
-        public object LockObj { get; } = new object();
+        public CriticalSection LockObj { get; } = new CriticalSection();
 
         public ExceptionQueue ExceptionQueue { get; } = new ExceptionQueue();
         public LayerInfo Info { get; } = new LayerInfo();
@@ -3567,7 +3565,7 @@ namespace SoftEther.WebSocket.Helper
 
         public const long DefaultThreshold = 65536;
 
-        public object LockObj { get; } = new object();
+        public CriticalSection LockObj { get; } = new CriticalSection();
 
         public ExceptionQueue ExceptionQueue { get; } = new ExceptionQueue();
         public LayerInfo Info { get; } = new LayerInfo();
@@ -3987,7 +3985,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        object LayerInfoLock = new object();
+        CriticalSection LayerInfoLock = new CriticalSection();
 
         public LayerInfoBase LayerInfo_A_LowerSide { get; private set; } = null;
         public LayerInfoBase LayerInfo_B_UpperSide { get; private set; } = null;
@@ -4156,7 +4154,7 @@ namespace SoftEther.WebSocket.Helper
         internal void _InternalSetCounterPart(FastPipeEnd p)
             => this.CounterPart = p;
 
-        internal object _InternalAttachHandleLock = new object();
+        internal CriticalSection _InternalAttachHandleLock = new CriticalSection();
         internal FastAttachHandle _InternalCurrentAttachHandle = null;
 
         public FastAttachHandle Attach(AsyncCleanuperLady lady, FastPipeEndAttachDirection attachDirection, object userState = null) => new FastAttachHandle(lady, this, attachDirection, userState);
@@ -5640,7 +5638,7 @@ namespace SoftEther.WebSocket.Helper
         public async Task<FastSock> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
             => await ConnectAsync(await Options.DnsClient.GetIPFromHostName(host, addressFamily, GrandCancel, connectTimeout), port, default, connectTimeout);
 
-        object ListenLock = new object();
+        CriticalSection ListenLock = new CriticalSection();
 
         public void Listen(IPEndPoint localEndPoint)
         {
@@ -5964,14 +5962,14 @@ namespace SoftEther.WebSocket.Helper
             public int HashStrength { get; internal set; }
             public string KeyExchangeAlgorithm { get; internal set; }
             public int KeyExchangeStrength { get; internal set; }
-            public X509Certificate LocalCertificate { get; internal set; }
-            public X509Certificate RemoteCertificate { get; internal set; }
+            public PalX509Certificate LocalCertificate { get; internal set; }
+            public PalX509Certificate RemoteCertificate { get; internal set; }
         }
 
         public FastSslProtocolStack(AsyncCleanuperLady lady, FastPipeEnd lower, FastPipeEnd upper, FastSslProtocolOptions options,
             CancellationToken cancel = default) : base(lady, lower, upper, options ?? new FastSslProtocolOptions(), cancel) { }
 
-        public async Task<FastSock> SslStartClient(SslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken = default)
+        public async Task<FastSock> SslStartClient(PalSslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken = default)
         {
             try
             {

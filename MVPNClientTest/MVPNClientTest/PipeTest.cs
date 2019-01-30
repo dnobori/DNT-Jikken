@@ -57,10 +57,10 @@ namespace MVPNClientTest
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
 
-                //Test_Pipe_SslStream_Client(cancel.Token).Wait();
+                Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
-                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -608,11 +608,10 @@ namespace MVPNClientTest
 
                 FastSslProtocolStack ssl = new FastSslProtocolStack(lady, sock.UpperEnd, null, null, cancel);
 
-                var sslClientOptions = new SslClientAuthenticationOptions()
+                var sslClientOptions = new PalSslClientAuthenticationOptions()
                 {
                     TargetHost = hostname,
-                    AllowRenegotiation = true,
-                    RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
+                    ValidateRemoteCertificateProc = (cert) => { return true; },
                 };
 
                 var ssl_sock = await ssl.SslStartClient(sslClientOptions, cancel);

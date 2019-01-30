@@ -34,6 +34,16 @@ using System.Security.Authentication;
 
 namespace SoftEther.WebSocket.Helper
 {
+    class PalX509Certificate
+    {
+        public X509Certificate NativeCertificate;
+
+        public PalX509Certificate(X509Certificate nativeCertificate)
+        {
+            NativeCertificate = nativeCertificate;
+        }
+    }
+
     struct PalSocketReceiveFromResult
     {
         public int ReceivedBytes;
@@ -422,42 +432,70 @@ namespace SoftEther.WebSocket.Helper
 
     class PalStream : FastStream
     {
-        protected Stream SystemStream;
-        protected NetworkStream NetworkStream;
+        protected Stream NativeStream;
+        protected NetworkStream NativeNetworkStream;
 
-        public bool IsNetworkStream => (NetworkStream != null);
+        public bool IsNetworkStream => (NativeNetworkStream != null);
 
-        public PalStream(Stream systemStream)
+        public PalStream(Stream nativeStream)
         {
-            SystemStream = systemStream;
+            NativeStream = nativeStream;
 
-            NetworkStream = SystemStream as NetworkStream;
+            NativeNetworkStream = NativeStream as NetworkStream;
         }
 
         public override ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancel = default)
-            => SystemStream.ReadAsync(buffer, cancel);
+            => NativeStream.ReadAsync(buffer, cancel);
 
         public override ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancel = default)
-            => SystemStream.WriteAsync(buffer, cancel);
+            => NativeStream.WriteAsync(buffer, cancel);
 
         Once DisposeFlag;
 
-        public override int ReadTimeout { get => SystemStream.ReadTimeout; set => SystemStream.ReadTimeout = value; }
-        public override int WriteTimeout { get => SystemStream.WriteTimeout; set => SystemStream.WriteTimeout = value; }
+        public override int ReadTimeout { get => NativeStream.ReadTimeout; set => NativeStream.ReadTimeout = value; }
+        public override int WriteTimeout { get => NativeStream.WriteTimeout; set => NativeStream.WriteTimeout = value; }
 
-        public override bool DataAvailable => NetworkStream?.DataAvailable ?? true;
+        public override bool DataAvailable => NativeNetworkStream?.DataAvailable ?? true;
 
         protected override void Dispose(bool disposing)
         {
             try
             {
                 if (!disposing || DisposeFlag.IsFirstCall() == false) return;
-                SystemStream.DisposeSafe();
+                NativeStream.DisposeSafe();
             }
             finally { base.Dispose(disposing); }
         }
 
-        public override Task FlushAsync(CancellationToken cancel = default) => SystemStream.FlushAsync(cancel);
+        public override Task FlushAsync(CancellationToken cancel = default) => NativeStream.FlushAsync(cancel);
+    }
+
+    class PalSslClientAuthenticationOptions
+    {
+        public delegate bool ValidateRemoteCertificateCallback(PalX509Certificate cert);
+
+        public PalSslClientAuthenticationOptions() { }
+
+        public string TargetHost { get; set; }
+        public ValidateRemoteCertificateCallback ValidateRemoteCertificateProc { get; set; }
+        public PalX509Certificate ClientCertificate { get; set; }
+
+        public SslClientAuthenticationOptions GetNativeOptions()
+        {
+            SslClientAuthenticationOptions ret = new SslClientAuthenticationOptions()
+            {
+                TargetHost = TargetHost,
+                AllowRenegotiation = true,
+                RemoteCertificateValidationCallback = new RemoteCertificateValidationCallback((sender, cert, chain, err) => ValidateRemoteCertificateProc(new PalX509Certificate(cert))),
+                EncryptionPolicy = EncryptionPolicy.RequireEncryption,
+                CertificateRevocationCheckMode = X509RevocationMode.NoCheck,
+            };
+
+            if (this.ClientCertificate != null)
+                ret.ClientCertificates.Add(this.ClientCertificate.NativeCertificate);
+
+            return ret;
+        }
     }
 
     class PalSslStream : PalStream
@@ -465,11 +503,11 @@ namespace SoftEther.WebSocket.Helper
         SslStream ssl;
         public PalSslStream(FastStream innerStream) : base(new SslStream(innerStream.GetPalNetworkStream(), true))
         {
-            ssl = (SslStream)SystemStream;
+            ssl = (SslStream)NativeStream;
         }
 
-        public Task AuthenticateAsClientAsync(SslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken)
-            => ssl.AuthenticateAsClientAsync(sslClientAuthenticationOptions, cancellationToken);
+        public Task AuthenticateAsClientAsync(PalSslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken)
+            => ssl.AuthenticateAsClientAsync(sslClientAuthenticationOptions.GetNativeOptions(), cancellationToken);
 
         public string SslProtocol => ssl.SslProtocol.ToString();
         public string CipherAlgorithm => ssl.CipherAlgorithm.ToString();
@@ -478,8 +516,8 @@ namespace SoftEther.WebSocket.Helper
         public int HashStrength => ssl.HashStrength;
         public string KeyExchangeAlgorithm => ssl.KeyExchangeAlgorithm.ToString();
         public int KeyExchangeStrength => ssl.KeyExchangeStrength;
-        public X509Certificate LocalCertificate => ssl.LocalCertificate;
-        public X509Certificate RemoteCertificate => ssl.RemoteCertificate;
+        public PalX509Certificate LocalCertificate => new PalX509Certificate(ssl.LocalCertificate);
+        public PalX509Certificate RemoteCertificate => new PalX509Certificate(ssl.RemoteCertificate);
     }
 
     static class PalDns
