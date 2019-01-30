@@ -617,7 +617,11 @@ namespace MVPNClientTest
 
                 await ssl.SslStartClient(sslClientOptions, cancel);
 
-                var st = ssl.GetSock().GetFastAppProtocolStub(cancel).GetStream();
+                var app = ssl.GetSock().GetFastAppProtocolStub(cancel);
+
+                app.AttachHandle.SetStreamReceiveTimeout(1000);
+
+                var st = app.GetStream().GetPalNetworkStream();
 
                 WriteLine("Connected.");
                 StreamWriter w = new StreamWriter(st);
@@ -653,7 +657,7 @@ namespace MVPNClientTest
 
                 var app = sock.GetFastAppProtocolStub(cancel);
 
-                var st = app.GetStream();
+                var st = app.GetStream().GetPalNetworkStream();
 
                 app.AttachHandle.SetStreamTimeout(2000, -1);
                 WriteLine("Connected.");

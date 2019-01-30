@@ -5171,6 +5171,9 @@ namespace SoftEther.WebSocket.Helper
 
         public AsyncCleanupable(AsyncCleanuperLady lady)
         {
+            if (lady == null)
+                throw new ArgumentNullException("lady == null");
+
             Lady = lady;
             this.AsyncCleanuper = new AsyncCleanuper(this);
             Lady.Add(this);
@@ -9964,7 +9967,7 @@ namespace SoftEther.WebSocket.Helper
         public FastAttachHandle Attach(AsyncCleanuperLady lady, FastPipeEndAttachDirection attachDirection, object userState = null) => new FastAttachHandle(lady, this, attachDirection, userState);
 
         internal FastPipeEndStream _InternalGetStream(AsyncCleanuperLady lady, bool autoFlush = true)
-            => FastPipeEndStream._InternalNew(lady, this, autoFlush);
+            => new FastPipeEndStream(this, autoFlush);
 
         public FastAppStub GetFastAppProtocolStub(AsyncCleanuperLady lady, CancellationToken cancel = default)
             => new FastAppStub(lady, this, cancel);
@@ -10048,8 +10051,6 @@ namespace SoftEther.WebSocket.Helper
 
             lock (LockObj)
             {
-                if (DisposeFlag.IsSet) return;
-
                 if (timeout < 0 || timeout == int.MaxValue)
                 {
                     if (receiveTimeoutProcId != 0)
@@ -10061,9 +10062,11 @@ namespace SoftEther.WebSocket.Helper
                 }
                 else
                 {
+                    if (DisposeFlag.IsSet) return;
+
                     SetStreamReceiveTimeout(Timeout.Infinite);
 
-                    receiveTimeoutDetector = new TimeoutDetector(this.Lady, timeout, callback: (x) =>
+                    receiveTimeoutDetector = new TimeoutDetector(new AsyncCleanuperLady(), timeout, callback: (x) =>
                     {
                         if (PipeEnd.StreamReader.IsReadyToWrite == false)
                             return true;
@@ -10090,8 +10093,6 @@ namespace SoftEther.WebSocket.Helper
 
             lock (LockObj)
             {
-                if (DisposeFlag.IsSet) return;
-
                 if (timeout < 0 || timeout == int.MaxValue)
                 {
                     if (sendTimeoutProcId != 0)
@@ -10103,9 +10104,11 @@ namespace SoftEther.WebSocket.Helper
                 }
                 else
                 {
+                    if (DisposeFlag.IsSet) return;
+
                     SetStreamSendTimeout(Timeout.Infinite);
 
-                    sendTimeoutDetector = new TimeoutDetector(this.Lady, timeout, callback: (x) =>
+                    sendTimeoutDetector = new TimeoutDetector(new AsyncCleanuperLady(), timeout, callback: (x) =>
                     {
                         if (PipeEnd.StreamWriter.IsReadyToRead == false)
                             return true;
@@ -10152,33 +10155,21 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastPipeEndStream : NetworkStream
+    class FastPipeEndStream : FastStream
     {
         public bool AutoFlush { get; set; }
         public FastPipeEnd End { get; private set; }
 
-        private FastPipeEndStream() : base(null) { }
-
-        internal void _InternalInit(FastPipeEnd end, bool autoFlush = true)
+        public FastPipeEndStream(FastPipeEnd end, bool autoFlush = true)
         {
+            end.CheckDisconnected();
+
             End = end;
             AutoFlush = autoFlush;
 
             ReadTimeout = Timeout.Infinite;
             WriteTimeout = Timeout.Infinite;
         }
-
-        internal static FastPipeEndStream _InternalNew(AsyncCleanuperLady lady, FastPipeEnd end, bool autoFlush = true)
-        {
-            end.CheckDisconnected();
-
-            FastPipeEndStream ret = WebSocketHelper.NewWithoutConstructor<FastPipeEndStream>().AddToLady(lady);
-
-            ret._InternalInit(end, autoFlush);
-
-            return ret;
-        }
-
 
         #region Stream
         public bool IsReadyToSend => End.StreamReader.IsReadyToWrite;
@@ -10572,21 +10563,12 @@ namespace SoftEther.WebSocket.Helper
 
         public void Disconnect() => End.Disconnect();
 
-        public override bool CanRead => true;
-        public override bool CanSeek => false;
-        public override bool CanWrite => true;
-        public override long Length => throw new NotImplementedException();
-        public override long Position { get => throw new NotImplementedException(); set => throw new NotImplementedException(); }
-        public override long Seek(long offset, SeekOrigin origin) => throw new NotImplementedException();
-        public override void SetLength(long value) => throw new NotImplementedException();
-
-        public override bool CanTimeout => true;
         public override int ReadTimeout { get; set; }
         public override int WriteTimeout { get; set; }
 
         public override bool DataAvailable => IsReadyToReceive;
 
-        public override void Flush() => FastFlush();
+        public virtual void Flush() => FastFlush();
 
         public override Task FlushAsync(CancellationToken cancellationToken)
         {
@@ -10595,131 +10577,28 @@ namespace SoftEther.WebSocket.Helper
         }
 
 
-        public override Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public virtual Task WriteAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             => SendAsync(buffer.AsReadOnlyMemory(offset, count), cancellationToken);
 
-        public override Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
+        public virtual Task<int> ReadAsync(byte[] buffer, int offset, int count, CancellationToken cancellationToken)
             => ReceiveAsync(buffer.AsMemory(offset, count), cancellationToken);
-
-        public override void Write(byte[] buffer, int offset, int count) => WriteAsync(buffer, offset, count, CancellationToken.None).Wait();
-        public override int Read(byte[] buffer, int offset, int count) => ReadAsync(buffer, offset, count, CancellationToken.None).Result;
-
-        public override IAsyncResult BeginRead(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
-            => ReadAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
-        public override IAsyncResult BeginWrite(byte[] buffer, int offset, int count, AsyncCallback callback, object state)
-            => WriteAsync(buffer, offset, count, CancellationToken.None).AsApm(callback, state);
-        public override int EndRead(IAsyncResult asyncResult) => ((Task<int>)asyncResult).Result;
-        public override void EndWrite(IAsyncResult asyncResult) => ((Task)asyncResult).Wait();
-
-        public override bool Equals(object obj) => object.Equals(this, obj);
-
-        public override int GetHashCode() => 0;
-
-        public override string ToString() => "FastPipeEndStream";
-
-        public override object InitializeLifetimeService() => base.InitializeLifetimeService();
-
-        public override void Close() => Dispose(true);
-
-        public override void CopyTo(Stream destination, int bufferSize)
-        {
-            byte[] array = ArrayPool<byte>.Shared.Rent(bufferSize);
-            try
-            {
-                int count;
-                while ((count = this.Read(array, 0, array.Length)) != 0)
-                {
-                    destination.Write(array, 0, count);
-                }
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(array, false);
-            }
-        }
-
-        public override async Task CopyToAsync(Stream destination, int bufferSize, CancellationToken cancellationToken)
-        {
-            byte[] buffer = ArrayPool<byte>.Shared.Rent(bufferSize);
-            try
-            {
-                for (; ; )
-                {
-                    int num = await this.ReadAsync(new Memory<byte>(buffer), cancellationToken).ConfigureAwait(false);
-                    int num2 = num;
-                    if (num2 == 0)
-                    {
-                        break;
-                    }
-                    await destination.WriteAsync(new ReadOnlyMemory<byte>(buffer, 0, num2), cancellationToken).ConfigureAwait(false);
-                }
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(buffer, false);
-            }
-        }
-
-        [Obsolete]
-        protected override WaitHandle CreateWaitHandle() => new ManualResetEvent(false);
-
-        [Obsolete]
-        protected override void ObjectInvariant() { }
-
-        public override int Read(Span<byte> buffer)
-        {
-            byte[] array = ArrayPool<byte>.Shared.Rent(buffer.Length);
-            int result;
-            try
-            {
-                int num = this.Read(array, 0, buffer.Length);
-                if ((ulong)num > (ulong)((long)buffer.Length))
-                {
-                    throw new IOException("StreamTooLong");
-                }
-                new Span<byte>(array, 0, num).CopyTo(buffer);
-                result = num;
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(array, false);
-            }
-            return result;
-        }
 
         public override async ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancellationToken = default)
             => await ReceiveAsync(buffer, cancellationToken);
 
-        public override int ReadByte()
-        {
-            byte[] array = new byte[1];
-            if (this.Read(array, 0, 1) == 0)
-            {
-                return -1;
-            }
-            return (int)array[0];
-        }
-
-        public override void Write(ReadOnlySpan<byte> buffer)
-        {
-            byte[] array = ArrayPool<byte>.Shared.Rent(buffer.Length);
-            try
-            {
-                buffer.CopyTo(array);
-                this.Write(array, 0, buffer.Length);
-            }
-            finally
-            {
-                ArrayPool<byte>.Shared.Return(array, false);
-            }
-        }
-
         public override async ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancellationToken = default)
             => await this.SendAsync(buffer, cancellationToken);
 
-        public override void WriteByte(byte value)
-            => this.Write(new byte[] { value }, 0, 1);
-
+        Once DisposeFlag;
+        protected override void Dispose(bool disposing)
+        {
+            try
+            {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+                Disconnect();
+            }
+            finally { base.Dispose(disposing); }
+        }
     }
 
     class FastPipeNonblockStateHelper
@@ -11240,7 +11119,7 @@ namespace SoftEther.WebSocket.Helper
 
     sealed class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapperBase
     {
-        public Stream Stream { get; }
+        public FastStream Stream { get; }
         public int RecvTmpBufferSize { get; private set; }
         public const int SendTmpBufferSize = 65536;
         public override PipeSupportedDataTypes SupportedDataTypes { get; }
@@ -11249,29 +11128,11 @@ namespace SoftEther.WebSocket.Helper
 
         //static bool UseDontLingerOption = true;
 
-        public FastPipeEndStreamWrapper(AsyncCleanuperLady lady, FastPipeEnd pipeEnd, Stream stream, CancellationToken cancel = default) : base(lady, pipeEnd, cancel)
+        public FastPipeEndStreamWrapper(AsyncCleanuperLady lady, FastPipeEnd pipeEnd, FastStream stream, CancellationToken cancel = default) : base(lady, pipeEnd, cancel)
         {
             this.Stream = stream;
             SupportedDataTypes = PipeSupportedDataTypes.Stream;
 
-            NetworkStream net = Stream as NetworkStream;
-            if (net != null)
-            {
-
-                //Socket socket = null;
-
-                //Stream.LingerState = new LingerOption(false, 0);
-                //try
-                //{
-                //    if (UseDontLingerOption)
-                //        Stream.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.DontLinger, true);
-                //}
-                //catch
-                //{
-                //    UseDontLingerOption = false;
-                //}
-                //Stream.NoDelay = true;
-            }
             Stream.ReadTimeout = Stream.WriteTimeout = Timeout.Infinite;
             this.AddOnDisconnected(() => Stream.DisposeSafe());
 
@@ -11353,14 +11214,31 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    abstract class FastStream : IDisposable
+    interface IFastStream
     {
-        public abstract Task WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancel = default);
-        public abstract Task<int> ReadAsync(Memory<byte> buffer, CancellationToken cancel = default);
+        ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancel = default);
+        ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancel = default);
+        int ReadTimeout { get; set; }
+        int WriteTimeout { get; set; }
+        bool DataAvailable { get; }
+        Task FlushAsync(CancellationToken cancel = default);
+    }
+
+    abstract class FastStream : IDisposable, IFastStream
+    {
+        public abstract int ReadTimeout { get; set; }
+        public abstract int WriteTimeout { get; set; }
+        public abstract bool DataAvailable { get; }
+
+        public abstract ValueTask WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancel = default);
+        public abstract ValueTask<int> ReadAsync(Memory<byte> buffer, CancellationToken cancel = default);
+        public abstract Task FlushAsync(CancellationToken cancel = default);
 
         public void Dispose() => Dispose(true);
-
         protected virtual void Dispose(bool disposing) { }
+
+        public FastStreamToPalNetworkStream GetPalNetworkStream()
+            => FastStreamToPalNetworkStream.CreateFromFastStream(this);
     }
 
     abstract class FastStackOptionsBase { }
@@ -11829,8 +11707,6 @@ namespace SoftEther.WebSocket.Helper
             public X509Certificate RemoteCertificate { get; internal set; }
         }
 
-        public FastSslProtocolOptions SslOptions { get; }
-
         public FastSslProtocolStack(AsyncCleanuperLady lady, FastPipeEnd lower, FastPipeEnd upper, FastSslProtocolOptions options,
             CancellationToken cancel = default) : base(lady, lower, upper, options ?? new FastSslProtocolOptions(), cancel) { }
 
@@ -11840,7 +11716,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 var lowerStream = LowerAttach.GetStream(autoFlush: false);
 
-                var ssl = new SslStream(lowerStream, true).AddToLady(this);
+                var ssl = new PalSslStream(lowerStream).AddToLady(this);
 
                 await ssl.AuthenticateAsClientAsync(sslClientAuthenticationOptions, CancelWatcher.CancelToken);
 
