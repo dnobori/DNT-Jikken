@@ -203,7 +203,7 @@ namespace MVPNClientTest
                         try
                         {
 
-                            Console.WriteLine($"Connected {sock.LayerInfo.TcpEndPoint.RemoteIPAddress}:{sock.LayerInfo.TcpEndPoint.RemotePort} -> {sock.LayerInfo.TcpEndPoint.LocalIPAddress}:{sock.LayerInfo.TcpEndPoint.LocalPort}");
+                            Console.WriteLine($"Connected {sock.Info.Tcp.RemoteIPAddress}:{sock.Info.Tcp.RemotePort} -> {sock.Info.Tcp.LocalIPAddress}:{sock.Info.Tcp.LocalPort}");
 
                             var app = sock.GetFastAppProtocolStub();
 
@@ -623,8 +623,8 @@ namespace MVPNClientTest
 
                 var st = app.GetStream().GetPalNetworkStream();
 
-                var tcp_info = ssl_sock.LayerInfo.GetValue<ILayerInfoTcpEndPoint>();
-                var ssl_info = ssl_sock.LayerInfo.GetValue<ILayerInfoSsl>();
+                var tcp_info = ssl_sock.Info.GetValue<ILayerInfoTcpEndPoint>();
+                var ssl_info = ssl_sock.Info.GetValue<ILayerInfoSsl>();
 
                 WriteLine($"Connected. {tcp_info.LocalIPAddress}:{tcp_info.LocalPort} -> {tcp_info.RemoteIPAddress}:{tcp_info.RemotePort}");
                 StreamWriter w = new StreamWriter(st);

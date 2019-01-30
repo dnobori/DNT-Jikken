@@ -6870,8 +6870,8 @@ namespace SoftEther.WebSocket.Helper
 
         public bool IsInstalled => Position.IsInstalled;
 
-        public void Install(LayerInfo stack, LayerInfoBase targetLayer, bool joinAsSuperior)
-            => stack.Install(this, targetLayer, joinAsSuperior);
+        public void Install(LayerInfo info, LayerInfoBase targetLayer, bool joinAsSuperior)
+            => info.Install(this, targetLayer, joinAsSuperior);
 
         public void Uninstall()
             => _InternalLayerStack.Uninstall(this);
@@ -6947,8 +6947,8 @@ namespace SoftEther.WebSocket.Helper
         public void Encounter(LayerInfo other) => this.Hierarchy.Encounter(other.Hierarchy);
 
         public ILayerInfoSsl Ssl => GetValue<ILayerInfoSsl>();
-        public ILayerInfoIpEndPoint IpEndPoint => GetValue<ILayerInfoIpEndPoint>();
-        public ILayerInfoTcpEndPoint TcpEndPoint => GetValue<ILayerInfoTcpEndPoint>();
+        public ILayerInfoIpEndPoint Ip => GetValue<ILayerInfoIpEndPoint>();
+        public ILayerInfoTcpEndPoint Tcp => GetValue<ILayerInfoTcpEndPoint>();
     }
 
     class SharedQueue<T>
@@ -8212,7 +8212,7 @@ namespace SoftEther.WebSocket.Helper
         long Length { get; }
 
         ExceptionQueue ExceptionQueue { get; }
-        LayerInfo LayerStack { get; }
+        LayerInfo Info { get; }
 
         object LockObj { get; }
 
@@ -8465,7 +8465,7 @@ namespace SoftEther.WebSocket.Helper
         public object LockObj { get; } = new object();
 
         public ExceptionQueue ExceptionQueue { get; } = new ExceptionQueue();
-        public LayerInfo LayerStack { get; } = new LayerInfo();
+        public LayerInfo Info { get; } = new LayerInfo();
 
         public FastStreamBuffer(bool enableEvents = false, long? thresholdLength = null)
         {
@@ -9392,7 +9392,7 @@ namespace SoftEther.WebSocket.Helper
         public object LockObj { get; } = new object();
 
         public ExceptionQueue ExceptionQueue { get; } = new ExceptionQueue();
-        public LayerInfo LayerStack { get; } = new LayerInfo();
+        public LayerInfo Info { get; } = new LayerInfo();
 
         public FastDatagramBuffer(bool enableEvents = false, long? thresholdLength = null)
         {
@@ -9732,7 +9732,7 @@ namespace SoftEther.WebSocket.Helper
         FastDatagramFifo DatagramBtoA;
 
         public ExceptionQueue ExceptionQueue { get; } = new ExceptionQueue();
-        public LayerInfo LayerStack { get; } = new LayerInfo();
+        public LayerInfo Info { get; } = new LayerInfo();
 
         public FastPipeEnd A_LowerSide { get; }
         public FastPipeEnd B_UpperSide { get; }
@@ -9779,11 +9779,11 @@ namespace SoftEther.WebSocket.Helper
                 DatagramAtoB.ExceptionQueue.Encounter(ExceptionQueue);
                 DatagramBtoA.ExceptionQueue.Encounter(ExceptionQueue);
 
-                StreamAtoB.LayerStack.Encounter(LayerStack);
-                StreamBtoA.LayerStack.Encounter(LayerStack);
+                StreamAtoB.Info.Encounter(Info);
+                StreamBtoA.Info.Encounter(Info);
 
-                DatagramAtoB.LayerStack.Encounter(LayerStack);
-                DatagramBtoA.LayerStack.Encounter(LayerStack);
+                DatagramAtoB.Info.Encounter(Info);
+                DatagramBtoA.Info.Encounter(Info);
 
                 StreamAtoB.OnDisconnected.Add(() => Disconnect());
                 StreamBtoA.OnDisconnected.Add(() => Disconnect());
@@ -9829,13 +9829,13 @@ namespace SoftEther.WebSocket.Helper
                 if (side == FastPipeEndSide.A_LowerSide)
                 {
                     if (LayerInfo_A_LowerSide != null) throw new ApplicationException("LayerInfo_A_LowerSide is already installed.");
-                    LayerStack.Install(info, LayerInfo_B_UpperSide, false);
+                    Info.Install(info, LayerInfo_B_UpperSide, false);
                     LayerInfo_A_LowerSide = info;
                 }
                 else
                 {
                     if (LayerInfo_B_UpperSide != null) throw new ApplicationException("LayerInfo_B_UpperSide is already installed.");
-                    LayerStack.Install(info, LayerInfo_A_LowerSide, true);
+                    Info.Install(info, LayerInfo_A_LowerSide, true);
                     LayerInfo_B_UpperSide = info;
                 }
 
@@ -9846,13 +9846,13 @@ namespace SoftEther.WebSocket.Helper
                         if (side == FastPipeEndSide.A_LowerSide)
                         {
                             Debug.Assert(LayerInfo_A_LowerSide != null);
-                            LayerStack.Uninstall(LayerInfo_A_LowerSide);
+                            Info.Uninstall(LayerInfo_A_LowerSide);
                             LayerInfo_A_LowerSide = null;
                         }
                         else
                         {
                             Debug.Assert(LayerInfo_B_UpperSide != null);
-                            LayerStack.Uninstall(LayerInfo_B_UpperSide);
+                            Info.Uninstall(LayerInfo_B_UpperSide);
                             LayerInfo_B_UpperSide = null;
                         }
                     }
@@ -9945,7 +9945,7 @@ namespace SoftEther.WebSocket.Helper
         public AsyncManualResetEvent OnDisconnectedEvent { get => Pipe.OnDisconnectedEvent; }
 
         public ExceptionQueue ExceptionQueue { get => Pipe.ExceptionQueue; }
-        public LayerInfo LayerStack { get => Pipe.LayerStack; }
+        public LayerInfo LayerInfo { get => Pipe.Info; }
 
         public bool IsDisconnected { get => this.Pipe.IsDisconnected; }
         public void Disconnect(Exception ex = null) { this.Pipe.Disconnect(ex); }
@@ -10723,7 +10723,7 @@ namespace SoftEther.WebSocket.Helper
         Task MainLoopTask = Task.CompletedTask;
 
         public ExceptionQueue ExceptionQueue { get => PipeEnd.ExceptionQueue; }
-        public LayerInfo LayerStack { get => PipeEnd.LayerStack; }
+        public LayerInfo LayerInfo { get => PipeEnd.LayerInfo; }
 
         public FastPipeEndAsyncObjectWrapperBase(AsyncCleanuperLady lady, FastPipeEnd pipeEnd, CancellationToken cancel = default)
             : base (lady)
@@ -11542,7 +11542,7 @@ namespace SoftEther.WebSocket.Helper
         public FastPipe Pipe { get; }
         public FastPipeEnd LowerEnd { get; }
         public FastPipeEnd UpperEnd { get; }
-        public LayerInfo LayerInfo { get => this.LowerEnd.LayerStack; }
+        public LayerInfo Info { get => this.LowerEnd.LayerInfo; }
 
         internal FastSock(AsyncCleanuperLady lady, TProtocolStack protocolStack)
             : base (lady)
@@ -11678,7 +11678,7 @@ namespace SoftEther.WebSocket.Helper
                 LowerAttach = Lower.Attach(this.Lady, FastPipeEndAttachDirection.B_UpperSide);
 
                 Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
-                Lower.LayerStack.Encounter(Upper.LayerStack);
+                Lower.LayerInfo.Encounter(Upper.LayerInfo);
 
                 Lower.AddOnDisconnected(() => Upper.Disconnect());
                 Upper.AddOnDisconnected(() => Lower.Disconnect());
