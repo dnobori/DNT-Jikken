@@ -51,7 +51,7 @@ namespace SoftEther.WebSocket.Helper
         public SocketType SocketType { get; }
         public ProtocolType ProtocolType { get; }
 
-        object LockObj = new object();
+        CriticalSection LockObj = new CriticalSection();
 
         public CachedProperty<bool> NoDelay { get; }
         public CachedProperty<int> LingerTime { get; }
@@ -492,4 +492,202 @@ namespace SoftEther.WebSocket.Helper
             => WebSocketHelper.DoAsyncWithTimeout(c => Dns.GetHostEntryAsync(hostNameOrAddress),
                 timeout: timeout, cancel: cancel);
     }
+
+    class PalHostNetInfo : BackgroundStateDataBase
+    {
+        public override BackgroundStateDataUpdatePolicy DataUpdatePolicy =>
+            new BackgroundStateDataUpdatePolicy(300, 6000, 2000);
+
+        public string HostName;
+        public string DomainName;
+        public string FqdnHostName => HostName + (string.IsNullOrEmpty(DomainName) ? "" : "." + DomainName);
+        public bool IsIPv4Supported;
+        public bool IsIPv6Supported;
+        public List<IPAddress> IPAddressList = new List<IPAddress>();
+
+        public static bool IsUnix { get; } = (Environment.OSVersion.Platform != PlatformID.Win32NT);
+
+        static IPAddress[] GetLocalIPAddressBySocketApi() => PalDns.GetHostAddressesAsync(Dns.GetHostName()).Result;
+
+        class ByteComparer : IComparer<byte[]>
+        {
+            public int Compare(byte[] x, byte[] y) => x.AsSpan().SequenceCompareTo(y.AsSpan());
+        }
+
+        public PalHostNetInfo()
+        {
+            IPGlobalProperties prop = IPGlobalProperties.GetIPGlobalProperties();
+            this.HostName = prop.HostName;
+            this.DomainName = prop.DomainName;
+            HashSet<IPAddress> hash = new HashSet<IPAddress>();
+
+            if (IsUnix)
+            {
+                UnicastIPAddressInformationCollection info = prop.GetUnicastAddresses();
+                foreach (UnicastIPAddressInformation ip in info)
+                {
+                    if (ip.Address.AddressFamily == AddressFamily.InterNetwork || ip.Address.AddressFamily == AddressFamily.InterNetworkV6)
+                        hash.Add(ip.Address);
+                }
+            }
+            else
+            {
+                try
+                {
+                    IPAddress[] info = GetLocalIPAddressBySocketApi();
+                    if (info.Length >= 1)
+                    {
+                        foreach (IPAddress ip in info)
+                        {
+                            if (ip.AddressFamily == AddressFamily.InterNetwork || ip.AddressFamily == AddressFamily.InterNetworkV6)
+                                hash.Add(ip);
+                        }
+                    }
+                }
+                catch { }
+            }
+
+            if (PalSocket.OSSupportsIPv4)
+            {
+                this.IsIPv4Supported = true;
+                hash.Add(IPAddress.Any);
+                hash.Add(IPAddress.Loopback);
+            }
+            if (PalSocket.OSSupportsIPv6)
+            {
+                this.IsIPv6Supported = true;
+                hash.Add(IPAddress.IPv6Any);
+                hash.Add(IPAddress.IPv6Loopback);
+            }
+
+            try
+            {
+                var cmp = new ByteComparer();
+                this.IPAddressList = hash.OrderBy(x => x.AddressFamily)
+                    .ThenBy(x => x.GetAddressBytes(), cmp)
+                    .ThenBy(x => (x.AddressFamily == AddressFamily.InterNetworkV6 ? x.ScopeId : 0))
+                    .ToList();
+            }
+            catch { }
+        }
+
+        public Memory<byte> IPAddressListBinary
+        {
+            get
+            {
+                FastMemoryBuffer<byte> ret = new FastMemoryBuffer<byte>();
+                foreach (IPAddress addr in IPAddressList)
+                {
+                    ret.WriteSInt32((int)addr.AddressFamily);
+                    ret.Write(addr.GetAddressBytes());
+                    if (addr.AddressFamily == AddressFamily.InterNetworkV6)
+                        ret.WriteSInt64(addr.ScopeId);
+                }
+                return ret;
+            }
+        }
+
+        public override bool Equals(BackgroundStateDataBase otherArg)
+        {
+            PalHostNetInfo other = otherArg as PalHostNetInfo;
+            if (string.Equals(this.HostName, other.HostName) == false) return false;
+            if (string.Equals(this.DomainName, other.DomainName) == false) return false;
+            if (this.IsIPv4Supported != other.IsIPv4Supported) return false;
+            if (this.IsIPv6Supported != other.IsIPv6Supported) return false;
+            if (this.IPAddressListBinary.Span.SequenceEqual(other.IPAddressListBinary.Span) == false) return false;
+            return true;
+        }
+
+        Action callMeCache = null;
+
+        public override void RegisterSystemStateChangeNotificationCallbackOnlyOnce(Action callMe)
+        {
+            callMeCache = callMe;
+
+            NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
+            NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
+        }
+
+        private void NetworkChange_NetworkAddressChanged(object sender, EventArgs e)
+        {
+            callMeCache();
+
+            NetworkChange.NetworkAddressChanged += NetworkChange_NetworkAddressChanged;
+        }
+
+        private void NetworkChange_NetworkAvailabilityChanged(object sender, NetworkAvailabilityEventArgs e)
+        {
+            callMeCache();
+
+            NetworkChange.NetworkAvailabilityChanged += NetworkChange_NetworkAvailabilityChanged;
+        }
+
+        public static IPAddress GetLocalIPForDestinationHost(IPAddress dest)
+        {
+            try
+            {
+                using (PalSocket sock = new PalSocket(dest.AddressFamily, SocketType.Dgram, ProtocolType.IP))
+                {
+                    sock.Connect(dest, 65530);
+                    IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            using (PalSocket sock = new PalSocket(dest.AddressFamily, SocketType.Dgram, ProtocolType.Udp))
+            {
+                sock.Connect(dest, 65531);
+                IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
+                return ep.Address;
+            }
+        }
+
+        public static async Task<IPAddress> GetLocalIPv4ForInternetAsync()
+        {
+            try
+            {
+                return GetLocalIPForDestinationHost(IPAddress.Parse("8.8.8.8"));
+            }
+            catch { }
+
+            try
+            {
+                using (PalSocket sock = new PalSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                {
+                    var hostent = await PalDns.GetHostEntryAsync("www.msftncsi.com");
+                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+                    await sock.ConnectAsync(addr, 443);
+                    IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            try
+            {
+                using (PalSocket sock = new PalSocket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
+                {
+                    var hostent = await PalDns.GetHostEntryAsync("www.msftncsi.com");
+                    var addr = hostent.AddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork).First();
+                    await sock.ConnectAsync(addr, 80);
+                    IPEndPoint ep = sock.LocalEndPoint.Value as IPEndPoint;
+                    return ep.Address;
+                }
+            }
+            catch { }
+
+            try
+            {
+                return BackgroundState<PalHostNetInfo>.Current.Data.IPAddressList.Where(x => x.AddressFamily == AddressFamily.InterNetwork)
+                    .Where(x => IPAddress.IsLoopback(x) == false).Where(x => x != IPAddress.Any).First();
+            }
+            catch { }
+
+            return IPAddress.Any;
+        }
+
+    }
 }
+
+
