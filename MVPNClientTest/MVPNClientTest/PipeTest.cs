@@ -59,10 +59,10 @@ namespace MVPNClientTest
 
                 //Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
-                Test_Pipe_SslStream_Client2(cancel.Token).Wait();
+                //Test_Pipe_SslStream_Client2(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
-                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -196,7 +196,7 @@ namespace MVPNClientTest
                         Dbg.Where($"Delete session: {key}");
                     }))
                 {
-                    FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, tcp) =>
+                    FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, sock) =>
                     {
                         AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
@@ -205,7 +205,7 @@ namespace MVPNClientTest
 
                             //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
-                            var app = tcp.GetSock().AddToLady(lady).GetFastAppProtocolStub().AddToLady(lady);
+                            var app = sock.AddToLady(lady).GetFastAppProtocolStub().AddToLady(lady);
 
                             var st = app.GetStream().AddToLady(lady);
 
@@ -444,9 +444,7 @@ namespace MVPNClientTest
                 {
                     var tcp = new FastPalTcpProtocolStub(cancel: cancel).AddToLady(lady);
 
-                    await tcp.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout);
-
-                    var sock = tcp.GetSock().AddToLady(lady);
+                    var sock = await tcp.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout);
 
                     var app = sock.GetFastAppProtocolStub().AddToLady(lady);
 
@@ -599,11 +597,11 @@ namespace MVPNClientTest
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                var sock = new FastPalTcpProtocolStub(cancel: cancel).AddToLady(lady);
+                var tcp = new FastPalTcpProtocolStub(cancel: cancel).AddToLady(lady);
 
-                await sock.ConnectAsync(hostname, port);
+                var sock = await tcp.ConnectAsync(hostname, port);
 
-                FastSslProtocolStack ssl = new FastSslProtocolStack(sock.Upper, null, null, cancel).AddToLady(lady);
+                FastSslProtocolStack ssl = new FastSslProtocolStack(sock.UpperEnd, null, null, cancel).AddToLady(lady);
 
                 var sslClientOptions = new SslClientAuthenticationOptions()
                 {
@@ -646,9 +644,9 @@ namespace MVPNClientTest
             {
                 var tcp = new FastPalTcpProtocolStub(cancel: cancel).AddToLady(lady);
 
-                await tcp.ConnectAsync("www.google.com", 80, null);
+                var sock = await tcp.ConnectAsync("www.google.com", 80, null);
 
-                var app = tcp.GetSock().AddToLady(lady).GetFastAppProtocolStub(cancel).AddToLady(lady);
+                var app = sock.GetFastAppProtocolStub(cancel).AddToLady(lady);
 
                 var st = app.GetStream().AddToLady(lady);
 

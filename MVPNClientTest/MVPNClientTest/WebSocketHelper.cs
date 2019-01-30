@@ -5030,6 +5030,13 @@ namespace SoftEther.WebSocket.Helper
             lady.Add(obj);
             return obj;
         }
+
+        public static T AddToLady<T>(this T obj, AsyncCleanupable cleanupable) where T : IDisposable
+        {
+            if (obj == null || cleanupable == null) return obj;
+            cleanupable.Lady.Add(obj);
+            return obj;
+        }
     }
 
     class AsyncCleanuperLady
@@ -5049,6 +5056,9 @@ namespace SoftEther.WebSocket.Helper
             if (cleanuper != null) CleanuperQueue.Enqueue(cleanuper);
             if (task != null) TaskQueue.Enqueue(task);
             if (disposable != null) DisposableQueue.Enqueue(disposable);
+
+            if (IsDisposed)
+                DisposeAllSafe();
         }
 
         public void Add(IAsyncCleanupable cleanupable) => InternalCollectMain(cleanupable);
@@ -5077,9 +5087,13 @@ namespace SoftEther.WebSocket.Helper
             => toLady.MergeFrom(this);
 
         object LockObj = new object();
+        volatile bool _disposed = false;
+        public bool IsDisposed { get => _disposed; }
 
         public void DisposeAllSafe()
         {
+            _disposed = true;
+
             IDisposable[] disposableList;
             lock (LockObj)
             {
@@ -5090,8 +5104,14 @@ namespace SoftEther.WebSocket.Helper
                 disposable.DisposeSafe();
         }
 
+        volatile bool _cleanuped = false;
+        public bool IsCleanuped { get => _cleanuped; }
+
         public async Task CleanupAsync()
         {
+            _disposed = true;
+            _cleanuped = true;
+
             AsyncCleanuper[] cleanuperList;
             Task[] taskList;
             IDisposable[] disposableList;
@@ -5136,7 +5156,9 @@ namespace SoftEther.WebSocket.Helper
     abstract class AsyncCleanupable : IAsyncCleanupable
     {
         public AsyncCleanuper AsyncCleanuper { get; }
-        protected AsyncCleanuperLady GrandLady = new AsyncCleanuperLady();
+        public AsyncCleanuperLady Lady = new AsyncCleanuperLady();
+
+        ConcurrentStack<Action> OnDisposeStack = new ConcurrentStack<Action>();
 
         public AsyncCleanupable()
         {
@@ -5149,13 +5171,19 @@ namespace SoftEther.WebSocket.Helper
         {
             if (disposing && DisposeFlag.IsFirstCall())
             {
-                GrandLady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
             }
         }
 
         public virtual async Task _CleanupAsyncInternal()
         {
-            await GrandLady;
+            await Lady;
+        }
+
+        public void AddOnDispose(Action action)
+        {
+            if (action != null)
+                OnDisposeStack.Push(action);
         }
     }
 
@@ -5192,7 +5220,7 @@ namespace SoftEther.WebSocket.Helper
 
     delegate bool TimeoutDetectorCallback(TimeoutDetector detector);
 
-    sealed class TimeoutDetector : IAsyncCleanupable
+    sealed class TimeoutDetector : AsyncCleanupable
     {
         Task mainLoop;
 
@@ -5218,8 +5246,6 @@ namespace SoftEther.WebSocket.Helper
 
         public bool TimedOut { get; private set; } = false;
 
-        public AsyncCleanuper AsyncCleanuper { get; }
-
         TimeoutDetectorCallback Callback;
 
         public TimeoutDetector(int timeout, CancelWatcher watcher = null, AutoResetEvent eventAuto = null, ManualResetEvent eventManual = null,
@@ -5231,16 +5257,14 @@ namespace SoftEther.WebSocket.Helper
             }
 
             this.Timeout = timeout;
-            this.cancelWatcher = watcher;
+            this.cancelWatcher = watcher.AddToLady(this);
             this.eventAuto = eventAuto;
             this.eventManual = eventManual;
             this.Callback = callback;
             this.UserState = userState;
 
             NextTimeout = FastTick64.Now + this.Timeout;
-            mainLoop = TimeoutDetectorMainLooop();
-
-            AsyncCleanuper = new AsyncCleanuper(this);
+            mainLoop = TimeoutDetectorMainLooop().AddToLady(this);
         }
 
         public void Keep()
@@ -5294,25 +5318,19 @@ namespace SoftEther.WebSocket.Helper
         }
 
         Once DisposeFlag;
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall())
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
                 cancelWatcher.DisposeSafe();
                 halt.TryCancelAsync().LaissezFaire();
             }
-        }
-
-        public async Task _CleanupAsyncInternal()
-        {
-            await mainLoop.TryWaitAsync(true);
-
-            if (cancelWatcher != null)
-                await cancelWatcher.AsyncCleanuper;
+            finally { base.Dispose(disposing); }
         }
     }
 
-    sealed class CancelWatcher : IAsyncCleanupable
+    sealed class CancelWatcher : AsyncCleanupable
     {
         CancellationTokenSource cts = new CancellationTokenSource();
         public CancellationToken CancelToken { get => cts.Token; }
@@ -5320,8 +5338,6 @@ namespace SoftEther.WebSocket.Helper
         public bool Canceled { get; private set; } = false;
 
         Task mainLoop;
-
-        public AsyncCleanuper AsyncCleanuper { get; }
 
         CancellationTokenSource canceller = new CancellationTokenSource();
 
@@ -5338,9 +5354,7 @@ namespace SoftEther.WebSocket.Helper
             AddWatch(canceller.Token);
             AddWatch(cancels);
 
-            this.mainLoop = CancelWatcherMainLoop();
-
-            AsyncCleanuper = new AsyncCleanuper(this);
+            this.mainLoop = CancelWatcherMainLoop().AddToLady(this);
         }
 
         public void Cancel()
@@ -5425,22 +5439,18 @@ namespace SoftEther.WebSocket.Helper
         }
 
         Once DisposeFlag;
-
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall())
+            try
             {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
                 this.halt = true;
                 this.Canceled = true;
                 this.ev.Set();
                 this.cts.TryCancelAsync().LaissezFaire();
                 this.EventWaitMe.Set(true);
             }
-        }
-
-        public async Task _CleanupAsyncInternal()
-        {
-            await this.mainLoop.TryWaitAsync(true);
+            finally { base.Dispose(disposing); }
         }
     }
 
@@ -5795,7 +5805,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class DelayAction : IAsyncCleanupable
+    sealed class DelayAction : AsyncCleanupable
     {
         public Action<object> Action { get; }
         public object UserState { get; }
@@ -5809,8 +5819,6 @@ namespace SoftEther.WebSocket.Helper
 
         public Exception Exception { get; private set; } = null;
 
-        public AsyncCleanuper AsyncCleanuper { get; }
-
         CancellationTokenSource CancelSource = new CancellationTokenSource();
 
         public DelayAction(int timeout, Action<object> action, object userState = null)
@@ -5821,9 +5829,7 @@ namespace SoftEther.WebSocket.Helper
             this.Action = action;
             this.UserState = userState;
 
-            this.MainTask = MainTaskProc();
-
-            this.AsyncCleanuper = new AsyncCleanuper(this);
+            this.MainTask = MainTaskProc().AddToLady(this);
         }
 
         void InternalInvokeAction()
@@ -5868,17 +5874,14 @@ namespace SoftEther.WebSocket.Helper
         public void Cancel() => Dispose();
 
         Once DisposeFlag;
-        public void Dispose()
+        protected override void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() == false)
-                return;
-
-            CancelSource.Cancel();
-        }
-
-        public async Task _CleanupAsyncInternal()
-        {
-            await MainTask.TryWaitAsync(true);
+            try
+            {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+                CancelSource.Cancel();
+            }
+            finally { base.Dispose(disposing); }
         }
     }
 
@@ -9717,12 +9720,9 @@ namespace SoftEther.WebSocket.Helper
 
         public FastPipe(CancellationToken cancel = default, long? thresholdLengthStream = null, long? thresholdLengthDatagram = null)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
-
             try
             {
-                CancelWatcher = new CancelWatcher(cancel);
-                lady.Add(CancelWatcher);
+                CancelWatcher = new CancelWatcher(cancel).AddToLady(this);
 
                 if (thresholdLengthStream == null) thresholdLengthStream = FastPipeGlobalConfig.MaxStreamBufferLength;
                 if (thresholdLengthDatagram == null) thresholdLengthDatagram = FastPipeGlobalConfig.MaxDatagramQueueLength;
@@ -9761,12 +9761,10 @@ namespace SoftEther.WebSocket.Helper
                 {
                     Disconnect(new OperationCanceledException());
                 });
-
-                GrandLady.MergeFrom(lady);
             }
             catch
             {
-                lady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
                 throw;
             }
         }
@@ -9967,27 +9965,35 @@ namespace SoftEther.WebSocket.Helper
 
         public FastAttachHandle(FastPipeEnd end, FastPipeEndAttachDirection attachDirection, object userState = null)
         {
-            if (end.Side == FastPipeEndSide.A_LowerSide)
-                Direction = FastPipeEndAttachDirection.FromLowerToA_LowerSide;
-            else
-                Direction = FastPipeEndAttachDirection.FromUpperToB_UpperSide;
-
-            if (attachDirection != Direction)
-                throw new ArgumentException($"attachDirection ({attachDirection}) != {Direction}");
-
-            end.CheckDisconnected();
-
-            lock (end._InternalAttachHandleLock)
+            try
             {
-                if (end._InternalCurrentAttachHandle != null)
-                    throw new ApplicationException("The FastPipeEnd is already attached.");
+                if (end.Side == FastPipeEndSide.A_LowerSide)
+                    Direction = FastPipeEndAttachDirection.FromLowerToA_LowerSide;
+                else
+                    Direction = FastPipeEndAttachDirection.FromUpperToB_UpperSide;
 
-                this.UserState = userState;
-                this.PipeEnd = end;
-                this.PipeEnd._InternalCurrentAttachHandle = this;
+                if (attachDirection != Direction)
+                    throw new ArgumentException($"attachDirection ({attachDirection}) != {Direction}");
+
+                end.CheckDisconnected();
+
+                lock (end._InternalAttachHandleLock)
+                {
+                    if (end._InternalCurrentAttachHandle != null)
+                        throw new ApplicationException("The FastPipeEnd is already attached.");
+
+                    this.UserState = userState;
+                    this.PipeEnd = end;
+                    this.PipeEnd._InternalCurrentAttachHandle = this;
+                }
+
+                Leak = LeakChecker.Enter().AddToLady(this);
             }
-
-            Leak = LeakChecker.Enter();
+            catch
+            {
+                Lady.DisposeAllSafe();
+                throw;
+            }
         }
 
         public void SetLayerInfo(LayerInfoBase info, FastStackBase protocolStack = null)
@@ -10001,7 +10007,7 @@ namespace SoftEther.WebSocket.Helper
 
                 info._InternalSetProtocolStack(protocolStack);
 
-                InstalledLayerHolder = PipeEnd.Pipe._InternalInstallLayerInfo(PipeEnd.Side, info);
+                InstalledLayerHolder = PipeEnd.Pipe._InternalInstallLayerInfo(PipeEnd.Side, info).AddToLady(Lady);
             }
         }
 
@@ -10042,7 +10048,7 @@ namespace SoftEther.WebSocket.Helper
                             return true;
                         PipeEnd.Pipe.Disconnect(new TimeoutException("StreamReceiveTimeout"));
                         return false;
-                    });
+                    }).AddToLady(Lady);
 
                     receiveTimeoutProcId = PipeEnd.StreamReader.EventListeners.RegisterCallback((buffer, type, state) =>
                     {
@@ -10085,7 +10091,7 @@ namespace SoftEther.WebSocket.Helper
 
                         PipeEnd.Pipe.Disconnect(new TimeoutException("StreamSendTimeout"));
                         return false;
-                    });
+                    }).AddToLady(Lady);
 
                     sendTimeoutProcId = PipeEnd.StreamWriter.EventListeners.RegisterCallback((buffer, type, state) =>
                     {
@@ -10114,15 +10120,6 @@ namespace SoftEther.WebSocket.Helper
                         SetStreamReceiveTimeout(Timeout.Infinite);
                         SetStreamSendTimeout(Timeout.Infinite);
                     }
-
-                    if (InstalledLayerHolder != null)
-                        InstalledLayerHolder.Dispose();
-                    InstalledLayerHolder = null;
-
-                    receiveTimeoutDetector.DisposeSafe();
-                    sendTimeoutDetector.DisposeSafe();
-
-                    Leak.Dispose();
                 }
 
                 lock (PipeEnd._InternalAttachHandleLock)
@@ -10131,16 +10128,6 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
             finally { base.Dispose(disposing); }
-        }
-
-        public override async Task _CleanupAsyncInternal()
-        {
-            try
-            {
-                await receiveTimeoutDetector.AsyncCleanuper;
-                await sendTimeoutDetector.AsyncCleanuper;
-            }
-            finally { await base._CleanupAsyncInternal(); }
         }
     }
 
@@ -11356,18 +11343,15 @@ namespace SoftEther.WebSocket.Helper
 
         public FastStackBase(FastStackOptionsBase options, CancellationToken cancel = default)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
                 StackOptions = options;
 
-                CancelWatcher = new CancelWatcher(cancel).AddToLady(lady);
-
-                GrandLady.MergeFrom(lady);
+                CancelWatcher = new CancelWatcher(cancel).AddToLady(this);
             }
             catch
             {
-                lady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
                 throw;
             }
         }
@@ -11377,7 +11361,7 @@ namespace SoftEther.WebSocket.Helper
 
     abstract class FastAppStubBase : FastStackBase
     {
-        public FastPipeEnd Lower { get; }
+        protected FastPipeEnd Lower { get; }
         protected FastAttachHandle LowerAttach { get; private set; }
 
         object LockObj = new object();
@@ -11386,19 +11370,16 @@ namespace SoftEther.WebSocket.Helper
 
         public FastAppStubBase(FastPipeEnd lower, FastAppStubOptionsBase options, CancellationToken cancel = default) : base(options, cancel)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
                 TopOptions = options;
                 Lower = lower;
 
-                LowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide).AddToLady(lady);
-
-                GrandLady.MergeFrom(lady);
+                LowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide).AddToLady(this);
             }
             catch
             {
-                lady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
                 throw;
             }
         }
@@ -11465,7 +11446,9 @@ namespace SoftEther.WebSocket.Helper
 
     abstract class FastProtocolBase : FastStackBase
     {
-        public FastPipeEnd Upper { get; }
+        protected FastPipeEnd Upper { get; }
+
+        protected internal FastPipeEnd _InternalUpper { get => Upper; }
 
         protected FastAttachHandle UpperAttach { get; private set; }
 
@@ -11474,26 +11457,22 @@ namespace SoftEther.WebSocket.Helper
         public FastProtocolBase(FastPipeEnd upper, FastProtocolOptionsBase options, CancellationToken cancel = default)
             : base(options, cancel)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
-
             try
             {
                 if (upper == null)
                 {
-                    upper = FastPipeEnd.NewFastPipeAndGetOneSide(FastPipeEndSide.A_LowerSide, GrandLady, cancel);
-                    lady.Add(upper.Pipe);
+                    upper = FastPipeEnd.NewFastPipeAndGetOneSide(FastPipeEndSide.A_LowerSide, Lady, cancel);
+                    Lady.Add(upper.Pipe);
                 }
 
                 ProtocolOptions = options;
                 Upper = upper;
 
-                UpperAttach = Upper.Attach(FastPipeEndAttachDirection.FromLowerToA_LowerSide).AddToLady(lady);
-
-                GrandLady.MergeFrom(lady);
+                UpperAttach = Upper.Attach(FastPipeEndAttachDirection.FromLowerToA_LowerSide).AddToLady(this);
             }
             catch
             {
-                lady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
                 throw;
             }
         }
@@ -11527,8 +11506,6 @@ namespace SoftEther.WebSocket.Helper
             Options = options;
         }
 
-        public FastSock<FastTcpProtocolStubBase> GetSock() => new FastSock<FastTcpProtocolStubBase>(this);
-
         public abstract Task ConnectMainAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout);
 
         public bool IsConnected { get; private set; }
@@ -11536,7 +11513,7 @@ namespace SoftEther.WebSocket.Helper
 
         AsyncLock ConnectLock = new AsyncLock();
 
-        public async Task ConnectAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout)
+        public async Task<FastSock<FastTcpProtocolStubBase>> ConnectAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout)
         {
             using (await ConnectLock.LockWithAwait())
             {
@@ -11546,13 +11523,15 @@ namespace SoftEther.WebSocket.Helper
 
                 IsConnected = true;
                 IsServerMode = false;
+
+                return new FastSock<FastTcpProtocolStubBase>(this).AddToLady(this);
             }
         }
 
-        public Task ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+        public Task<FastSock<FastTcpProtocolStubBase>> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
             => ConnectAsync(new IPEndPoint(ip, port), connectTimeout);
 
-        public async Task ConnectAsync(string host, int port, AddressFamily? addressFamily = null, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+        public async Task<FastSock<FastTcpProtocolStubBase>> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
             => await ConnectAsync(await Options.DnsClient.GetIPFromHostName(host, addressFamily, GrandCancel, connectTimeout), port, default, connectTimeout);
 
     }
@@ -11582,11 +11561,9 @@ namespace SoftEther.WebSocket.Helper
 
         public virtual async Task FromSocket(PalSocket s)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                var socketWrapper = new FastPipeEndSocketWrapper(Upper, s, GrandCancel);
-                lady.Add(socketWrapper);
+                var socketWrapper = new FastPipeEndSocketWrapper(Upper, s, GrandCancel).AddToLady(this);
 
                 UpperAttach.SetLayerInfo(new LayerInfo()
                 {
@@ -11595,12 +11572,10 @@ namespace SoftEther.WebSocket.Helper
                     RemotePort = ((IPEndPoint)s.RemoteEndPoint).Port,
                     RemoteIPAddress = ((IPEndPoint)s.RemoteEndPoint).Address,
                 }, this);
-
-                GrandLady.MergeFrom(lady);
             }
             catch
             {
-                await lady;
+                await Lady;
                 throw;
             }
         }
@@ -11610,11 +11585,9 @@ namespace SoftEther.WebSocket.Helper
             if (!(remoteEndPoint.AddressFamily == AddressFamily.InterNetwork || remoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6))
                 throw new ArgumentException("RemoteEndPoint.AddressFamily");
 
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                PalSocket s = new PalSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp);
-                lady.Add(s);
+                PalSocket s = new PalSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp).AddToLady(this);
 
                 await WebSocketHelper.DoAsyncWithTimeout(async localCancel =>
                 {
@@ -11626,12 +11599,10 @@ namespace SoftEther.WebSocket.Helper
                 cancel: GrandCancel);
 
                 await FromSocket(s);
-
-                GrandLady.MergeFrom(lady);
             }
             catch
             {
-                await lady;
+                await Lady;
                 throw;
             }
         }
@@ -11646,33 +11617,28 @@ namespace SoftEther.WebSocket.Helper
 
         public LayerStack LayerStack { get => this.LowerEnd.LayerStack; }
 
-        public FastSock(TProtocolStack protocolStack)
+        internal FastSock(TProtocolStack protocolStack)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
                 Stack = protocolStack;
-                LowerEnd = Stack.Upper;
+                LowerEnd = Stack._InternalUpper;
                 Pipe = LowerEnd.Pipe;
                 UpperEnd = LowerEnd.CounterPart;
 
-                lady.Add(Stack);
-                lady.Add(Pipe);
-
-                GrandLady.MergeFrom(lady);
+                Lady.Add(Stack);
+                Lady.Add(Pipe);
             }
             catch
             {
-                lady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
                 throw;
             }
         }
 
         public FastAppStub GetFastAppProtocolStub(CancellationToken cancel = default)
         {
-            FastAppStub ret = UpperEnd.GetFastAppProtocolStub(cancel);
-
-            GrandLady.Add(ret);
+            FastAppStub ret = UpperEnd.GetFastAppProtocolStub(cancel).AddToLady(this);
 
             return ret;
         }
@@ -11742,33 +11708,16 @@ namespace SoftEther.WebSocket.Helper
 
         public FastSockBase(FastPipe pipe, FastBottomProtocolStubBase stub)
         {
-            this.Pipe = pipe;
-            this.Stub = stub;
-
-            this.Pipe.CheckDisconnected();
-        }
-
-        Once DisposeFlag;
-        protected override void Dispose(bool disposing)
-        {
             try
             {
-                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
-
-                this.Pipe.DisposeSafe();
-                this.Stub.DisposeSafe();
+                this.Pipe = pipe.AddToLady(this);
+                this.Stub = stub.AddToLady(this);
             }
-            finally { base.Dispose(disposing); }
-        }
-
-        public override async Task _CleanupAsyncInternal()
-        {
-            try
+            catch
             {
-                await this.Pipe.AsyncCleanuper;
-                await this.Stub.AsyncCleanuper;
+                Lady.DisposeAllSafe();
+                throw;
             }
-            finally { await base._CleanupAsyncInternal(); }
         }
     }
 
@@ -11793,25 +11742,22 @@ namespace SoftEther.WebSocket.Helper
         public FastMiddleProtocolStackBase(FastPipeEnd lower, FastPipeEnd upper, FastMiddleProtocolOptionsBase options, CancellationToken cancel = default)
             : base(upper, options, cancel)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
                 MiddleOptions = options;
                 Lower = lower;
 
-                var LowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide).AddToLady(lady);
+                LowerAttach = Lower.Attach(FastPipeEndAttachDirection.FromUpperToB_UpperSide).AddToLady(this);
 
                 Lower.ExceptionQueue.Encounter(Upper.ExceptionQueue);
                 Lower.LayerStack.Encounter(Upper.LayerStack);
 
                 Lower.AddOnDisconnected(() => Upper.Disconnect());
                 Upper.AddOnDisconnected(() => Lower.Disconnect());
-
-                GrandLady.MergeFrom(lady);
             }
             catch
             {
-                lady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
                 throw;
             }
         }
@@ -11851,14 +11797,11 @@ namespace SoftEther.WebSocket.Helper
 
         public async Task AuthenticateAsClientAsync(SslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken = default)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                var lowerStream = LowerAttach.GetStream(autoFlush: false);
-                lady.Add(lowerStream);
+                var lowerStream = LowerAttach.GetStream(autoFlush: false).AddToLady(this);
 
-                var ssl = new SslStream(lowerStream, true);
-                lady.Add(ssl);
+                var ssl = new SslStream(lowerStream, true).AddToLady(this);
 
                 await ssl.AuthenticateAsClientAsync(sslClientAuthenticationOptions, CancelWatcher.CancelToken);
 
@@ -11876,14 +11819,11 @@ namespace SoftEther.WebSocket.Helper
                     RemoteCertificate = ssl.RemoteCertificate,
                 }, this);
 
-                var upperStreamWrapper = new FastPipeEndStreamWrapper(UpperAttach.PipeEnd, ssl, CancelWatcher.CancelToken);
-                lady.Add(upperStreamWrapper);
-
-                GrandLady.MergeFrom(lady);
+                var upperStreamWrapper = new FastPipeEndStreamWrapper(UpperAttach.PipeEnd, ssl, CancelWatcher.CancelToken).AddToLady(this);
             }
             catch
             {
-                await lady;
+                await Lady;
                 throw;
             }
         }
@@ -11899,25 +11839,22 @@ namespace SoftEther.WebSocket.Helper
 
         CancellationTokenSource CancelSource = new CancellationTokenSource();
 
-        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastPalTcpProtocolStub stub);
+        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastSock<FastTcpProtocolStubBase> sock);
 
         FastPipeTcpListenerAcceptCallback AcceptProc;
 
         public FastPipeTcpListener(FastPipeTcpListenerAcceptCallback acceptProc, object userState = null)
         {
-            AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
                 this.UserState = userState;
                 this.AcceptProc = acceptProc;
 
-                PalListener = new PalTcpListener(PalListenManagerAcceptProc).AddToLady(lady);
-
-                GrandLady.MergeFrom(lady);
+                PalListener = new PalTcpListener(PalListenManagerAcceptProc).AddToLady(this);
             }
             catch
             {
-                lady.DisposeAllSafe();
+                Lady.DisposeAllSafe();
                 throw;
             }
         }
@@ -11935,7 +11872,7 @@ namespace SoftEther.WebSocket.Helper
 
                         await stub.FromSocket(socket);
 
-                        await AcceptProc(this, stub);
+                        await AcceptProc(this, new FastSock<FastTcpProtocolStubBase>(stub));
                     }
                     finally
                     {
