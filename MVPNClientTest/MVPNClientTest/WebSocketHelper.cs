@@ -2750,7 +2750,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastMemoryAllocator<T>
+    class FastMemoryAllocator<T>
     {
         Memory<T> Pool;
         int CurrentPos;
@@ -3639,7 +3639,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class CachedProperty<T>
+    class CachedProperty<T>
     {
         object LockObj = new object();
         bool IsCached = false;
@@ -3714,9 +3714,9 @@ namespace SoftEther.WebSocket.Helper
         public static implicit operator T(CachedProperty<T> r) => r.Value;
     }
 
-    sealed class AsyncLock : IDisposable
+    class AsyncLock : IDisposable
     {
-        public sealed class LockHolder : IDisposable
+        public class LockHolder : IDisposable
         {
             AsyncLock parent;
             internal LockHolder(AsyncLock parent)
@@ -3735,7 +3735,6 @@ namespace SoftEther.WebSocket.Helper
         }
 
         SemaphoreSlim semaphone = new SemaphoreSlim(1, 1);
-        Once DisposeFlag;
 
         public async Task<LockHolder> LockWithAwait()
         {
@@ -3747,13 +3746,13 @@ namespace SoftEther.WebSocket.Helper
         public Task LockAsync() => semaphone.WaitAsync();
         public void Unlock() => semaphone.Release();
 
-        public void Dispose()
+        public void Dispose() => Dispose(true);
+        Once DisposeFlag;
+        protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall())
-            {
-                semaphone.DisposeSafe();
-                semaphone = null;
-            }
+            if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+            semaphone.DisposeSafe();
+            semaphone = null;
         }
     }
 
@@ -4881,7 +4880,7 @@ namespace SoftEther.WebSocket.Helper
             => System.Runtime.Serialization.FormatterServices.GetUninitializedObject(t);
     }
 
-    sealed class WhenAll : IDisposable
+    class WhenAll : IDisposable
     {
         public Task WaitMe { get; }
         public bool AllOk { get; private set; } = false;
@@ -4949,13 +4948,12 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        public void Dispose() => Dispose(true);
         Once DisposeFlag;
-        public void Dispose()
+        protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall())
-            {
-                CancelSource.Cancel();
-            }
+            if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+            CancelSource.Cancel();
         }
     }
 
@@ -5234,7 +5232,7 @@ namespace SoftEther.WebSocket.Helper
 
     delegate bool TimeoutDetectorCallback(TimeoutDetector detector);
 
-    sealed class TimeoutDetector : AsyncCleanupable
+    class TimeoutDetector : AsyncCleanupable
     {
         Task mainLoop;
 
@@ -5345,12 +5343,19 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class CancelWatcher : AsyncCleanupable
+    enum CancelWatcherCallbackEventType
+    {
+        Canceled,
+    }
+
+    class CancelWatcher : AsyncCleanupable
     {
         CancellationTokenSource cts = new CancellationTokenSource();
         public CancellationToken CancelToken { get => cts.Token; }
         public AsyncManualResetEvent EventWaitMe { get; } = new AsyncManualResetEvent();
         public bool Canceled { get; private set; } = false;
+
+        public FastEventListenerList<CancelWatcher, CancelWatcherCallbackEventType> EventList { get; } = new FastEventListenerList<CancelWatcher, CancelWatcherCallbackEventType>();
 
         Task mainLoop;
 
@@ -5426,6 +5431,7 @@ namespace SoftEther.WebSocket.Helper
                         this.cts.TryCancelAsync().LaissezFaire();
                         this.EventWaitMe.Set(true);
                         this.Canceled = true;
+                        EventList.Fire(this, CancelWatcherCallbackEventType.Canceled);
                         break;
                     }
                 }
@@ -5554,13 +5560,13 @@ namespace SoftEther.WebSocket.Helper
 
     class Holder<T> : IDisposable
     {
-        public T UserData { get; }
+        public T Value { get; }
         Action<T> DisposeProc;
         LeakCheckerHolder Leak;
 
-        public Holder(Action<T> disposeProc, T userData = default(T))
+        public Holder(Action<T> disposeProc, T value = default(T))
         {
-            this.UserData = userData;
+            this.Value = value;
             this.DisposeProc = disposeProc;
 
             Leak = LeakChecker.Enter();
@@ -5574,7 +5580,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 try
                 {
-                    DisposeProc(UserData);
+                    DisposeProc(Value);
                 }
                 finally
                 {
@@ -5724,7 +5730,7 @@ namespace SoftEther.WebSocket.Helper
             => AsyncCleanuper.GetAwaiter();
     }
 
-    sealed class GroupManager<TKey, TGroupContext> : IDisposable
+    class GroupManager<TKey, TGroupContext> : IDisposable
     {
         public class GroupHandle : Holder<GroupInstance>
         {
@@ -5804,12 +5810,11 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
+        public void Dispose() => Dispose(true);
         Once DisposeFlag;
-        public void Dispose()
+        protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall() == false)
-                return;
-
+            if (!disposing || DisposeFlag.IsFirstCall() == false) return;
             lock (LockObj)
             {
                 foreach (var v in Hash.Values)
@@ -5826,7 +5831,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class DelayAction : AsyncCleanupable
+    class DelayAction : AsyncCleanupable
     {
         public Action<object> Action { get; }
         public object UserState { get; }
@@ -6158,7 +6163,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class NonBlockSocket : IDisposable
+    class NonBlockSocket : IDisposable
     {
         public PalSocket Sock { get; }
         public bool IsStream { get; }
@@ -6425,14 +6430,13 @@ namespace SoftEther.WebSocket.Helper
             return null;
         }
 
-        Once dispose;
-        public void Dispose()
+        public void Dispose() => Dispose(true);
+        Once DisposeFlag;
+        protected virtual void Dispose(bool disposing)
         {
-            if (dispose.IsFirstCall())
-            {
-                Watcher.DisposeSafe();
-                Sock.DisposeSafe();
-            }
+            if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+            Watcher.DisposeSafe();
+            Sock.DisposeSafe();
         }
     }
 
@@ -7306,7 +7310,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    public sealed class LeakCheckerHolder : IDisposable
+    class LeakCheckerHolder : IDisposable
     {
         long Id;
         public string Name { get; }
@@ -7326,16 +7330,15 @@ namespace SoftEther.WebSocket.Helper
                 LeakChecker._InternalList.Add(Id, this);
         }
 
+        public void Dispose() => Dispose(true);
         Once DisposeFlag;
-        public void Dispose()
+        protected virtual void Dispose(bool disposing)
         {
-            if (DisposeFlag.IsFirstCall())
+            if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+            lock (LeakChecker._InternalList)
             {
-                lock (LeakChecker._InternalList)
-                {
-                    Debug.Assert(LeakChecker._InternalList.ContainsKey(Id));
-                    LeakChecker._InternalList.Remove(Id);
-                }
+                Debug.Assert(LeakChecker._InternalList.ContainsKey(Id));
+                LeakChecker._InternalList.Remove(Id);
             }
         }
     }
@@ -7575,7 +7578,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class LocalTimer
+    class LocalTimer
     {
         SortedSet<long> List = new SortedSet<long>();
         HashSet<long> Hash = new HashSet<long>();
@@ -8111,7 +8114,7 @@ namespace SoftEther.WebSocket.Helper
     class SocketDisconnectedException : DisconnectedException { }
     class BaseStreamDisconnectedException : DisconnectedException { }
 
-    delegate void FastEventCallback<TCaller, TEventType>(TCaller buffer, TEventType type, object userState);
+    delegate void FastEventCallback<TCaller, TEventType>(TCaller caller, TEventType type, object userState);
 
     class FastEvent<TCaller, TEventType>
     {
@@ -8151,6 +8154,9 @@ namespace SoftEther.WebSocket.Helper
             return ListenerList.Delete(id);
         }
 
+        public Holder<int> RegisterCallbackWithUsing(FastEventCallback<TCaller, TEventType> proc, object userState = null)
+            => new Holder<int>(id => UnregisterCallback(id), RegisterCallback(proc, userState));
+
         public int RegisterEvent(AutoResetEvent ev)
         {
             if (ev == null) return 0;
@@ -8162,6 +8168,9 @@ namespace SoftEther.WebSocket.Helper
             return EventList.Delete(id);
         }
 
+        public Holder<int> RegisterEventWithUsing(AutoResetEvent ev)
+            => new Holder<int>(id => UnregisterEvent(id), RegisterEvent(ev));
+
         public int RegisterAsyncEvent(AsyncAutoResetEvent ev)
         {
             if (ev == null) return 0;
@@ -8172,6 +8181,9 @@ namespace SoftEther.WebSocket.Helper
         {
             return AsyncEventList.Delete(id);
         }
+
+        public Holder<int> RegisterAsyncEventWithUsing(AsyncAutoResetEvent ev)
+            => new Holder<int>(id => UnregisterEvent(id), RegisterAsyncEvent(ev));
 
         public void Fire(TCaller caller, TEventType type)
         {
@@ -9722,7 +9734,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastPipe : AsyncCleanupable
+    class FastPipe : AsyncCleanupable
     {
         public CancelWatcher CancelWatcher { get; }
 
@@ -9992,7 +10004,7 @@ namespace SoftEther.WebSocket.Helper
         public void CheckDisconnected() => Pipe.CheckDisconnected();
     }
 
-    sealed class FastAttachHandle : AsyncCleanupable
+    class FastAttachHandle : AsyncCleanupable
     {
         public FastPipeEnd PipeEnd { get; }
         public object UserState { get; }
@@ -10995,7 +11007,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapperBase
+    class FastPipeEndSocketWrapper : FastPipeEndAsyncObjectWrapperBase
     {
         public PalSocket Socket { get; }
         public int RecvTmpBufferSize { get; private set; }
@@ -11129,7 +11141,7 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapperBase
+    class FastPipeEndStreamWrapper : FastPipeEndAsyncObjectWrapperBase
     {
         public FastStream Stream { get; }
         public int RecvTmpBufferSize { get; private set; }
@@ -11430,34 +11442,60 @@ namespace SoftEther.WebSocket.Helper
             Options = options;
         }
 
-        public abstract Task ConnectMainAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout);
+        protected abstract Task ConnectMainAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout);
+        protected abstract void ListenMain(IPEndPoint localEndPoint);
+        protected abstract Task<FastTcpProtocolStubBase> AcceptMainAsync(AsyncCleanuperLady lady, CancellationToken cancelForNewSocket = default);
 
         public bool IsConnected { get; private set; }
+        public bool IsListening { get; private set; }
         public bool IsServerMode { get; private set; }
 
         AsyncLock ConnectLock = new AsyncLock();
 
-        public async Task<FastSock<FastTcpProtocolStubBase>> ConnectAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout)
+        public async Task<FastSock> ConnectAsync(IPEndPoint remoteEndPoint, int connectTimeout = DefaultTcpConnectTimeout)
         {
             using (await ConnectLock.LockWithAwait())
             {
                 if (IsConnected) throw new ApplicationException("Already connected.");
+                if (IsListening) throw new ApplicationException("Already listening.");
 
                 await ConnectMainAsync(remoteEndPoint, connectTimeout);
 
                 IsConnected = true;
                 IsServerMode = false;
 
-                return new FastSock<FastTcpProtocolStubBase>(this.Lady, this);
+                return new FastSock(this.Lady, this);
             }
         }
 
-        public Task<FastSock<FastTcpProtocolStubBase>> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+        public Task<FastSock> ConnectAsync(IPAddress ip, int port, CancellationToken cancel = default, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
             => ConnectAsync(new IPEndPoint(ip, port), connectTimeout);
 
-        public async Task<FastSock<FastTcpProtocolStubBase>> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+        public async Task<FastSock> ConnectAsync(string host, int port, AddressFamily? addressFamily = null, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
             => await ConnectAsync(await Options.DnsClient.GetIPFromHostName(host, addressFamily, GrandCancel, connectTimeout), port, default, connectTimeout);
 
+        object ListenLock = new object();
+
+        public void Listen(IPEndPoint localEndPoint)
+        {
+            lock (ListenLock)
+            {
+                if (IsConnected) throw new ApplicationException("Already connected.");
+                if (IsListening) throw new ApplicationException("Already listening.");
+
+                ListenMain(localEndPoint);
+
+                IsListening = true;
+                IsServerMode = true;
+            }
+        }
+
+        public async Task<FastSock> AcceptAsync(AsyncCleanuperLady lady, CancellationToken cancelForNewSocket = default)
+        {
+            if (IsListening == false) throw new ApplicationException("Not listening.");
+
+            return new FastSock(lady, await AcceptMainAsync(lady, cancelForNewSocket));
+        }
     }
 
     class FastPalTcpProtocolOptions : FastTcpProtocolOptionsBase
@@ -11483,7 +11521,7 @@ namespace SoftEther.WebSocket.Helper
         {
         }
 
-        public virtual async Task FromSocket(PalSocket s)
+        public virtual void FromSocket(PalSocket s)
         {
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
@@ -11503,19 +11541,21 @@ namespace SoftEther.WebSocket.Helper
             }
             catch
             {
-                await lady;
+                lady.DisposeAllSafe();
                 throw;
             }
         }
 
-        public override async Task ConnectMainAsync(IPEndPoint remoteEndPoint, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
+        protected override async Task ConnectMainAsync(IPEndPoint remoteEndPoint, int connectTimeout = FastTcpProtocolStubBase.DefaultTcpConnectTimeout)
         {
-            if (!(remoteEndPoint.AddressFamily == AddressFamily.InterNetwork || remoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6))
-                throw new ArgumentException("RemoteEndPoint.AddressFamily");
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
             try
             {
-                PalSocket s = new PalSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp).AddToLady(this);
+                if (!(remoteEndPoint.AddressFamily == AddressFamily.InterNetwork || remoteEndPoint.AddressFamily == AddressFamily.InterNetworkV6))
+                    throw new ArgumentException("RemoteEndPoint.AddressFamily");
+
+                PalSocket s = new PalSocket(remoteEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp).AddToLady(lady);
 
                 await WebSocketHelper.DoAsyncWithTimeout(async localCancel =>
                 {
@@ -11526,25 +11566,69 @@ namespace SoftEther.WebSocket.Helper
                 timeout: connectTimeout,
                 cancel: GrandCancel);
 
-                await FromSocket(s);
+                FromSocket(s);
+
+                this.Lady.MergeFrom(lady);
             }
             catch
             {
-                await Lady;
+                await lady;
                 throw;
+            }
+        }
+
+        PalSocket ListeningSocket = null;
+
+        protected override void ListenMain(IPEndPoint localEndPoint)
+        {
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+
+            try
+            {
+                if (!(localEndPoint.AddressFamily == AddressFamily.InterNetwork || localEndPoint.AddressFamily == AddressFamily.InterNetworkV6))
+                    throw new ArgumentException("RemoteEndPoint.AddressFamily");
+
+                PalSocket s = new PalSocket(localEndPoint.AddressFamily, SocketType.Stream, ProtocolType.Tcp).AddToLady(lady);
+
+                s.Bind(localEndPoint);
+
+                s.Listen(int.MaxValue);
+
+                ListeningSocket = s;
+
+                this.Lady.MergeFrom(lady);
+            }
+            catch
+            {
+                lady.DisposeAllSafe();
+                throw;
+            }
+        }
+
+        protected override async Task<FastTcpProtocolStubBase> AcceptMainAsync(AsyncCleanuperLady lady, CancellationToken cancelForNewSocket = default)
+        {
+            using (CancelWatcher.EventList.RegisterCallbackWithUsing((caller, type, state) => ListeningSocket.DisposeSafe()))
+            {
+                PalSocket newSocket = await ListeningSocket.AcceptAsync();
+
+                var newStub = new FastPalTcpProtocolStub(lady, null, null, cancelForNewSocket);
+
+                newStub.FromSocket(newSocket);
+
+                return newStub;
             }
         }
     }
 
-    class FastSock<TProtocolStack> : AsyncCleanupable where TProtocolStack : FastProtocolBase
+    class FastSock : AsyncCleanupable
     {
-        public TProtocolStack Stack { get; }
+        public FastProtocolBase Stack { get; }
         public FastPipe Pipe { get; }
         public FastPipeEnd LowerEnd { get; }
         public FastPipeEnd UpperEnd { get; }
         public LayerInfo Info { get => this.LowerEnd.LayerInfo; }
 
-        internal FastSock(AsyncCleanuperLady lady, TProtocolStack protocolStack)
+        internal FastSock(AsyncCleanuperLady lady, FastProtocolBase protocolStack)
             : base (lady)
         {
             try
@@ -11721,7 +11805,7 @@ namespace SoftEther.WebSocket.Helper
         public FastSslProtocolStack(AsyncCleanuperLady lady, FastPipeEnd lower, FastPipeEnd upper, FastSslProtocolOptions options,
             CancellationToken cancel = default) : base(lady, lower, upper, options ?? new FastSslProtocolOptions(), cancel) { }
 
-        public async Task<FastSock<FastSslProtocolStack>> SslStartClient(SslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken = default)
+        public async Task<FastSock> SslStartClient(SslClientAuthenticationOptions sslClientAuthenticationOptions, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -11747,7 +11831,7 @@ namespace SoftEther.WebSocket.Helper
 
                 var upperStreamWrapper = new FastPipeEndStreamWrapper(this.Lady, UpperAttach.PipeEnd, ssl, CancelWatcher.CancelToken);
 
-                return new FastSock<FastSslProtocolStack>(this.Lady, this);
+                return new FastSock(this.Lady, this);
             }
             catch
             {
@@ -11757,74 +11841,401 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
-    sealed class FastPipeTcpListener : AsyncCleanupable
+    enum IPVersion
     {
-        public PalTcpListener PalListener { get; }
+        IPv4 = 0,
+        IPv6 = 1,
+    }
 
-        public object UserState;
+    enum ListenStatus
+    {
+        Trying,
+        Listening,
+        Stopped,
+    }
 
-        CancellationTokenSource CancelSource = new CancellationTokenSource();
-
-        public delegate Task FastPipeTcpListenerAcceptCallback(FastPipeTcpListener listener, FastSock<FastTcpProtocolStubBase> sock);
-
-        FastPipeTcpListenerAcceptCallback AcceptProc;
-
-        public FastPipeTcpListener(AsyncCleanuperLady lady, FastPipeTcpListenerAcceptCallback acceptProc, object userState = null)
-            : base(lady)
+    abstract class FastTcpListenerBase : IAsyncCleanupable
+    {
+        public class Listener
         {
-            try
-            {
-                this.UserState = userState;
-                this.AcceptProc = acceptProc;
+            public IPVersion IPVersion { get; }
+            public IPAddress IPAddress { get; }
+            public int Port { get; }
 
-                PalListener = new PalTcpListener(PalListenManagerAcceptProc).AddToLady(this);
-            }
-            catch
+            public ListenStatus Status { get; internal set; }
+            public Exception LastError { get; internal set; }
+
+            internal Task _InternalTask { get; }
+
+            internal CancellationTokenSource _InternalSelfCancelSource { get; }
+            internal CancellationToken _InternalSelfCancelToken { get => _InternalSelfCancelSource.Token; }
+
+            public FastTcpListenerBase TcpListener { get; }
+
+            public const long RetryIntervalStandard = 1 * 512;
+            public const long RetryIntervalMax = 60 * 1000;
+
+            internal Listener(FastTcpListenerBase listener, IPVersion ver, IPAddress addr, int port)
             {
-                Lady.DisposeAllSafe();
-                throw;
+                TcpListener = listener;
+                IPVersion = ver;
+                IPAddress = addr;
+                Port = port;
+                LastError = null;
+                Status = ListenStatus.Trying;
+                _InternalSelfCancelSource = new CancellationTokenSource();
+
+                _InternalTask = ListenLoop();
+            }
+
+            static internal string MakeHashKey(IPVersion ipVer, IPAddress ipAddress, int port)
+            {
+                return $"{port} / {ipAddress} / {ipAddress.AddressFamily} / {ipVer}";
+            }
+
+            async Task ListenLoop()
+            {
+                AsyncAutoResetEvent networkChangedEvent = new AsyncAutoResetEvent();
+                int eventRegisterId = BackgroundState<HostNetInfo>.EventListener.RegisterAsyncEvent(networkChangedEvent);
+
+                Status = ListenStatus.Trying;
+
+                int numRetry = 0;
+                int lastNetworkInfoVer = BackgroundState<HostNetInfo>.Current.Version;
+
+                try
+                {
+                    while (_InternalSelfCancelToken.IsCancellationRequested == false)
+                    {
+                        Status = ListenStatus.Trying;
+                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
+
+                        int sleepDelay = (int)Math.Min(RetryIntervalStandard * numRetry, RetryIntervalMax);
+                        if (sleepDelay >= 1)
+                            sleepDelay = WebSocketHelper.RandSInt31() % sleepDelay;
+                        await WebSocketHelper.WaitObjectsAsync(timeout: sleepDelay,
+                            cancels: new CancellationToken[] { _InternalSelfCancelToken },
+                            events: new AsyncAutoResetEvent[] { networkChangedEvent });
+                        numRetry++;
+
+                        int networkInfoVer = BackgroundState<HostNetInfo>.Current.Version;
+                        if (lastNetworkInfoVer != networkInfoVer)
+                        {
+                            lastNetworkInfoVer = networkInfoVer;
+                            numRetry = 0;
+                        }
+
+                        _InternalSelfCancelToken.ThrowIfCancellationRequested();
+
+                        AsyncCleanuperLady listenLady = new AsyncCleanuperLady();
+
+                        try
+                        {
+                            var listenTcp = TcpListener._InternalGetNewTcpStubForListen(listenLady, _InternalSelfCancelToken);
+
+                            listenTcp.Listen(new IPEndPoint(IPAddress, Port));
+
+                            Status = ListenStatus.Listening;
+
+                            while (true)
+                            {
+                                _InternalSelfCancelToken.ThrowIfCancellationRequested();
+
+                                AsyncCleanuperLady ladyForNewTcpStub = new AsyncCleanuperLady();
+
+                                FastSock sock = await listenTcp.AcceptAsync(ladyForNewTcpStub);
+
+                                TcpListener.InternalSocketAccepted(this, sock, ladyForNewTcpStub);
+                            }
+                        }
+                        catch (Exception ex)
+                        {
+                            LastError = ex;
+                        }
+                        finally
+                        {
+                            await listenLady;
+                        }
+                    }
+                }
+                finally
+                {
+                    BackgroundState<HostNetInfo>.EventListener.UnregisterAsyncEvent(eventRegisterId);
+                    Status = ListenStatus.Stopped;
+                }
+            }
+
+            internal async Task _InternalStopAsync()
+            {
+                await _InternalSelfCancelSource.TryCancelAsync();
+                try
+                {
+                    await _InternalTask;
+                }
+                catch { }
             }
         }
 
-        async Task PalListenManagerAcceptProc(PalTcpListener manager, PalTcpListener.Listener listener, PalSocket socket)
+        readonly object LockObj = new object();
+
+        readonly Dictionary<string, Listener> List = new Dictionary<string, Listener>();
+
+        readonly Dictionary<Task, FastSock> RunningAcceptedTasks = new Dictionary<Task, FastSock>();
+
+        readonly CancellationTokenSource CancelSource = new CancellationTokenSource();
+
+        public delegate Task AcceptedProcCallback(Listener listener, FastSock newSock);
+
+        AcceptedProcCallback AcceptedProc { get; }
+
+        public int CurrentConnections
+        {
+            get
+            {
+                lock (RunningAcceptedTasks)
+                    return RunningAcceptedTasks.Count;
+            }
+        }
+
+        public FastTcpListenerBase(AsyncCleanuperLady lady, AcceptedProcCallback acceptedProc)
+        {
+            AcceptedProc = acceptedProc;
+
+            AsyncCleanuper = new AsyncCleanuper(this);
+
+            lady.Add(this);
+        }
+
+        internal protected abstract FastTcpProtocolStubBase _InternalGetNewTcpStubForListen(AsyncCleanuperLady lady, CancellationToken cancel);
+
+        public Listener Add(int port, IPVersion? ipVer = null, IPAddress addr = null)
+        {
+            if (addr == null)
+                addr = ((ipVer ?? IPVersion.IPv4) == IPVersion.IPv4) ? IPAddress.Any : IPAddress.IPv6Any;
+            if (ipVer == null)
+            {
+                if (addr.AddressFamily == AddressFamily.InterNetwork)
+                    ipVer = IPVersion.IPv4;
+                else if (addr.AddressFamily == AddressFamily.InterNetworkV6)
+                    ipVer = IPVersion.IPv6;
+                else
+                    throw new ArgumentException("Unsupported AddressFamily.");
+            }
+            if (port < 1 || port > 65535) throw new ArgumentOutOfRangeException("Port number is out of range.");
+
+            lock (LockObj)
+            {
+                if (DisposeFlag.IsSet) throw new ObjectDisposedException("TcpListenManager");
+
+                var s = Search(Listener.MakeHashKey((IPVersion)ipVer, addr, port));
+                if (s != null)
+                    return s;
+                s = new Listener(this, (IPVersion)ipVer, addr, port);
+                List.Add(Listener.MakeHashKey((IPVersion)ipVer, addr, port), s);
+                return s;
+            }
+        }
+
+        public async Task<bool> DeleteAsync(Listener listener)
+        {
+            Listener s;
+            lock (LockObj)
+            {
+                string hashKey = Listener.MakeHashKey(listener.IPVersion, listener.IPAddress, listener.Port);
+                s = Search(hashKey);
+                if (s == null)
+                    return false;
+                List.Remove(hashKey);
+            }
+            await s._InternalStopAsync();
+            return true;
+        }
+
+        Listener Search(string hashKey)
+        {
+            if (List.TryGetValue(hashKey, out Listener ret) == false)
+                return null;
+            return ret;
+        }
+
+        async Task InternalSocketAcceptedAsync(Listener listener, FastSock sock, AsyncCleanuperLady lady)
         {
             try
             {
-                using (LeakChecker.Enter())
+                await AcceptedProc(listener, sock);
+            }
+            finally
+            {
+                await lady;
+            }
+        }
+
+        void InternalSocketAccepted(Listener listener, FastSock sock, AsyncCleanuperLady lady)
+        {
+            try
+            {
+                Task t = InternalSocketAcceptedAsync(listener, sock, lady);
+
+                if (t.IsCompleted)
                 {
-                    AsyncCleanuperLady lady = new AsyncCleanuperLady();
-                    try
+                    lady.DisposeAllSafe();
+                }
+                else
+                {
+                    lock (LockObj)
+                        RunningAcceptedTasks.Add(t, sock);
+                    t.ContinueWith(x =>
                     {
-                        FastPalTcpProtocolStub stub = new FastPalTcpProtocolStub(lady, cancel: CancelSource.Token);
-
-                        await stub.FromSocket(socket);
-
-                        await AcceptProc(this, new FastSock<FastTcpProtocolStubBase>(lady, stub).AddToLady(this));
-                    }
-                    finally
-                    {
-                        await lady;
-                    }
+                        sock.DisposeSafe();
+                        lock (LockObj)
+                            RunningAcceptedTasks.Remove(t);
+                    });
                 }
             }
             catch (Exception ex)
             {
-                Console.WriteLine("FastPipeTcpListener AcceptProc exception: " + ex.ToString());
-                throw;
+                Console.WriteLine("AcceptedProc error: " + ex.ToString());
+            }
+        }
+
+        public Listener[] Listeners
+        {
+            get
+            {
+                lock (LockObj)
+                    return List.Values.ToArray();
             }
         }
 
         Once DisposeFlag;
-        protected override void Dispose(bool disposing)
+        public void Dispose()
         {
-            try
+            if (DisposeFlag.IsFirstCall())
             {
-                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
-
-                CancelSource.TryCancel();
             }
-            finally { base.Dispose(disposing); }
         }
+
+        public async Task _CleanupAsyncInternal()
+        {
+            List<Listener> o = new List<Listener>();
+            lock (LockObj)
+            {
+                List.Values.ToList().ForEach(x => o.Add(x));
+                List.Clear();
+            }
+
+            foreach (Listener s in o)
+                await s._InternalStopAsync().TryWaitAsync();
+
+            List<Task> waitTasks = new List<Task>();
+            List<FastSock> disconnectStubs = new List<FastSock>();
+
+            lock (LockObj)
+            {
+                foreach (var v in RunningAcceptedTasks)
+                {
+                    disconnectStubs.Add(v.Value);
+                    waitTasks.Add(v.Key);
+                }
+                RunningAcceptedTasks.Clear();
+            }
+
+            foreach (var sock in disconnectStubs)
+            {
+                try
+                {
+                    await sock.AsyncCleanuper;
+                }
+                catch { }
+            }
+
+            foreach (var task in waitTasks)
+                await task.TryWaitAsync();
+
+            Debug.Assert(CurrentConnections == 0);
+        }
+
+        public AsyncCleanuper AsyncCleanuper { get; }
     }
+
+    class FastPalTcpListener : FastTcpListenerBase
+    {
+        public FastPalTcpListener(AsyncCleanuperLady lady, AcceptedProcCallback acceptedProc) : base(lady, acceptedProc) { }
+
+        protected internal override FastTcpProtocolStubBase _InternalGetNewTcpStubForListen(AsyncCleanuperLady lady, CancellationToken cancel)
+            => new FastPalTcpProtocolStub(lady, null, null, cancel);
+    }
+
+    ////abstract class 
+
+    //class FastPalTcpListener : AsyncCleanupable
+    //{
+    //    public FastTcpListener PalListener { get; }
+
+    //    public object UserState;
+
+    //    CancellationTokenSource CancelSource = new CancellationTokenSource();
+
+    //    public delegate Task FastPipeTcpListenerAcceptCallback(FastPalTcpListener listener, FastSock<FastTcpProtocolStubBase> sock);
+
+    //    FastPipeTcpListenerAcceptCallback AcceptProc;
+
+    //    public FastPalTcpListener(AsyncCleanuperLady lady, FastPipeTcpListenerAcceptCallback acceptProc, object userState = null)
+    //        : base(lady)
+    //    {
+    //        try
+    //        {
+    //            this.UserState = userState;
+    //            this.AcceptProc = acceptProc;
+
+    //            PalListener = new FastTcpListener(null, PalListenManagerAcceptProc).AddToLady(this);
+    //        }
+    //        catch
+    //        {
+    //            Lady.DisposeAllSafe();
+    //            throw;
+    //        }
+    //    }
+
+    //    async Task PalListenManagerAcceptProc(FastTcpListener manager, FastTcpListener.Listener listener, FastTcpProtocolStubBase newTcpStub, AsyncCleanuperLady ladyForNewTcpStub)
+    //    {
+    //        try
+    //        {
+    //            using (LeakChecker.Enter())
+    //            {
+    //                AsyncCleanuperLady lady = new AsyncCleanuperLady();
+    //                try
+    //                {
+    //                    FastPalTcpProtocolStub stub = new FastPalTcpProtocolStub(lady, cancel: CancelSource.Token);
+
+    //                    stub.FromSocket(socket);
+
+    //                    await AcceptProc(this, new FastSock<FastTcpProtocolStubBase>(lady, stub).AddToLady(this));
+    //                }
+    //                finally
+    //                {
+    //                    await lady;
+    //                }
+    //            }
+    //        }
+    //        catch (Exception ex)
+    //        {
+    //            Console.WriteLine("FastPipeTcpListener AcceptProc exception: " + ex.ToString());
+    //            throw;
+    //        }
+    //    }
+
+    //    Once DisposeFlag;
+    //    protected override void Dispose(bool disposing)
+    //    {
+    //        try
+    //        {
+    //            if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+
+    //            CancelSource.TryCancel();
+    //        }
+    //        finally { base.Dispose(disposing); }
+    //    }
+    //}
 }
 

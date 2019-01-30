@@ -196,7 +196,7 @@ namespace MVPNClientTest
                 {
                     AsyncCleanuperLady glady = new AsyncCleanuperLady();
 
-                    FastPipeTcpListener listener = new FastPipeTcpListener(glady, async(lx, sock) =>
+                    FastPalTcpListener listener = new FastPalTcpListener(glady, async(lx, sock) =>
                     {
                         AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
@@ -308,8 +308,8 @@ namespace MVPNClientTest
 
                     try
                     {
-                        listener.PalListener.Add(this.ServerPort, IPVersion.IPv4);
-                        listener.PalListener.Add(this.ServerPort, IPVersion.IPv6);
+                        listener.Add(this.ServerPort, IPVersion.IPv4);
+                        listener.Add(this.ServerPort, IPVersion.IPv6);
 
                         WriteLine("Listening.");
 
