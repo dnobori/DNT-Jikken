@@ -61,7 +61,7 @@ namespace SoftEther.WebSocket.Helper
         public CachedProperty<EndPoint> LocalEndPoint { get; }
         public CachedProperty<EndPoint> RemoteEndPoint { get; }
 
-        LeakChecker.Holder Leak;
+        LeakCheckerHolder Leak;
 
         public PalSocket(Socket s)
         {

@@ -57,10 +57,10 @@ namespace MVPNClientTest
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
 
-                Test_Pipe_SslStream_Client(cancel.Token).Wait();
+                //Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
-                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -203,7 +203,7 @@ namespace MVPNClientTest
                         try
                         {
 
-                            //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
+                            Console.WriteLine($"Connected {sock.LayerInfo.TcpEndPoint.RemoteIPAddress}:{sock.LayerInfo.TcpEndPoint.RemotePort} -> {sock.LayerInfo.TcpEndPoint.LocalIPAddress}:{sock.LayerInfo.TcpEndPoint.LocalPort}");
 
                             var app = sock.GetFastAppProtocolStub();
 
@@ -615,20 +615,23 @@ namespace MVPNClientTest
                     RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
                 };
 
-                await ssl.SslStartClient(sslClientOptions, cancel);
+                var ssl_sock = await ssl.SslStartClient(sslClientOptions, cancel);
 
-                var app = ssl.GetSock().GetFastAppProtocolStub(cancel);
+                var app = ssl_sock.GetFastAppProtocolStub(cancel);
 
                 app.AttachHandle.SetStreamReceiveTimeout(1000);
 
                 var st = app.GetStream().GetPalNetworkStream();
 
-                WriteLine("Connected.");
+                var tcp_info = ssl_sock.LayerInfo.GetValue<ILayerInfoTcpEndPoint>();
+                var ssl_info = ssl_sock.LayerInfo.GetValue<ILayerInfoSsl>();
+
+                WriteLine($"Connected. {tcp_info.LocalIPAddress}:{tcp_info.LocalPort} -> {tcp_info.RemoteIPAddress}:{tcp_info.RemotePort}");
                 StreamWriter w = new StreamWriter(st);
                 w.AutoFlush = true;
 
                 await w.WriteAsync(
-                    "GET / HTTP/1.1\r\n" +
+                    "GET / HTTP/1.0\r\n" +
                     $"HOST: {hostname}\r\n\r\n"
                     );
 
