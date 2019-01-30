@@ -57,12 +57,10 @@ namespace MVPNClientTest
             {
                 //Test_Pipe_TCP_Client(cancel.Token).Wait();
 
-                //Test_Pipe_SslStream_Client(cancel.Token).Wait();
-
-                //Test_Pipe_SslStream_Client2(cancel.Token).Wait();
+                Test_Pipe_SslStream_Client(cancel.Token).Wait();
 
                 //Test_Pipe_SpeedTest_Client("speed.sec.softether.co.jp", 9821, 32, 3 * 1000, SpeedTest.ModeFlag.Upload, cancel.Token).Wait();
-                Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
+                //Test_Pipe_SpeedTest_Server(9821, cancel.Token).Wait();
 
                 //if (mode.StartsWith("s", StringComparison.OrdinalIgnoreCase))
                 //{
@@ -196,7 +194,9 @@ namespace MVPNClientTest
                         Dbg.Where($"Delete session: {key}");
                     }))
                 {
-                    FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, sock) =>
+                    AsyncCleanuperLady glady = new AsyncCleanuperLady();
+
+                    FastPipeTcpListener listener = new FastPipeTcpListener(glady, async(lx, sock) =>
                     {
                         AsyncCleanuperLady lady = new AsyncCleanuperLady();
 
@@ -205,9 +205,9 @@ namespace MVPNClientTest
 
                             //Console.WriteLine($"Connected {p.RemoteEndPoint} -> {p.LocalEndPoint}");
 
-                            var app = sock.AddToLady(lady).GetFastAppProtocolStub().AddToLady(lady);
+                            var app = sock.GetFastAppProtocolStub();
 
-                            var st = app.GetStream().AddToLady(lady);
+                            var st = app.GetStream();
 
                             var attachHandle = app.AttachHandle;
 
@@ -233,9 +233,8 @@ namespace MVPNClientTest
 
                             using (var session = sessions.Enter(sessionId))
                             {
-                                using (var delay = new DelayAction((int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => app.Disconnect(new TimeoutException())))
+                                using (var delay = new DelayAction(lady, (int)(Math.Min(timespan * 3 + 180 * 1000, int.MaxValue)), x => app.Disconnect(new TimeoutException())))
                                 {
-                                    lady.Add(delay);
                                     if (dir == Direction.Recv)
                                     {
                                         RefInt refTmp = new RefInt();
@@ -318,8 +317,7 @@ namespace MVPNClientTest
                     }
                     finally
                     {
-                        listener.Dispose();
-                        await listener.AsyncCleanuper;
+                        await glady;
                     }
                 }
             }
@@ -340,8 +338,11 @@ namespace MVPNClientTest
                 List<Task<Result>> tasks = new List<Task<Result>>();
                 List<AsyncManualResetEvent> readyEvents = new List<AsyncManualResetEvent>();
 
-                using (CancelWatcher cancelWatcher = new CancelWatcher(this.Cancel))
+                AsyncCleanuperLady lady = new AsyncCleanuperLady();
+                try
                 {
+
+                    CancelWatcher cancelWatcher = new CancelWatcher(lady, this.Cancel);
                     for (int i = 0; i < NumConnection; i++)
                     {
                         Direction dir;
@@ -377,7 +378,7 @@ namespace MVPNClientTest
                             cancelWatcher.Cancel();
                         });
 
-                        using (new DelayAction(TimeSpan * 3 + 180 * 1000, x =>
+                        using (new DelayAction(lady, TimeSpan * 3 + 180 * 1000, x =>
                         {
                             cancelWatcher.Cancel();
                         }))
@@ -430,6 +431,10 @@ namespace MVPNClientTest
 
                     ExceptionQueue.ThrowFirstExceptionIfExists();
                 }
+                finally
+                {
+                    await lady;
+                }
 
                 Dbg.Where();
 
@@ -442,15 +447,15 @@ namespace MVPNClientTest
                 AsyncCleanuperLady lady = new AsyncCleanuperLady();
                 try
                 {
-                    var tcp = new FastPalTcpProtocolStub(cancel: cancel).AddToLady(lady);
+                    var tcp = new FastPalTcpProtocolStub(lady, cancel: cancel);
 
                     var sock = await tcp.ConnectAsync(ServerIP, ServerPort, cancel, ConnectTimeout);
 
-                    var app = sock.GetFastAppProtocolStub().AddToLady(lady);
+                    var app = sock.GetFastAppProtocolStub();
 
                     var attachHandle = app.AttachHandle;
 
-                    var st = app.GetStream().AddToLady(lady);
+                    var st = app.GetStream();
 
                     if (dir == Direction.Recv)
                         app.AttachHandle.SetStreamReceiveTimeout(RecvTimeout);
@@ -589,7 +594,7 @@ namespace MVPNClientTest
             Console.WriteLine(WebSocketHelper.ObjectToJson(result));
         }
 
-        static async Task Test_Pipe_SslStream_Client2(CancellationToken cancel)
+        static async Task Test_Pipe_SslStream_Client(CancellationToken cancel)
         {
             string hostname = "news.goo.ne.jp";
             int port = 443;
@@ -597,11 +602,11 @@ namespace MVPNClientTest
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                var tcp = new FastPalTcpProtocolStub(cancel: cancel).AddToLady(lady);
+                var tcp = new FastPalTcpProtocolStub(lady, cancel: cancel);
 
                 var sock = await tcp.ConnectAsync(hostname, port);
 
-                FastSslProtocolStack ssl = new FastSslProtocolStack(sock.UpperEnd, null, null, cancel).AddToLady(lady);
+                FastSslProtocolStack ssl = new FastSslProtocolStack(lady, sock.UpperEnd, null, null, cancel);
 
                 var sslClientOptions = new SslClientAuthenticationOptions()
                 {
@@ -610,16 +615,16 @@ namespace MVPNClientTest
                     RemoteCertificateValidationCallback = (sender, certificate, chain, sslPolicyErrors) => { return true; },
                 };
 
-                await ssl.AuthenticateAsClientAsync(sslClientOptions, cancel);
+                await ssl.SslStartClient(sslClientOptions, cancel);
 
-                var st = ssl.GetSock().AddToLady(lady).GetFastAppProtocolStub(cancel).AddToLady(lady).GetStream().AddToLady(lady);
+                var st = ssl.GetSock().GetFastAppProtocolStub(cancel).GetStream();
 
                 WriteLine("Connected.");
                 StreamWriter w = new StreamWriter(st);
                 w.AutoFlush = true;
 
                 await w.WriteAsync(
-                    "GET / HTTP/1.0\r\n" +
+                    "GET / HTTP/1.1\r\n" +
                     $"HOST: {hostname}\r\n\r\n"
                     );
 
@@ -642,13 +647,13 @@ namespace MVPNClientTest
             AsyncCleanuperLady lady = new AsyncCleanuperLady();
             try
             {
-                var tcp = new FastPalTcpProtocolStub(cancel: cancel).AddToLady(lady);
+                var tcp = new FastPalTcpProtocolStub(lady, cancel: cancel);
 
                 var sock = await tcp.ConnectAsync("www.google.com", 80, null);
 
-                var app = sock.GetFastAppProtocolStub(cancel).AddToLady(lady);
+                var app = sock.GetFastAppProtocolStub(cancel);
 
-                var st = app.GetStream().AddToLady(lady);
+                var st = app.GetStream();
 
                 app.AttachHandle.SetStreamTimeout(2000, -1);
                 WriteLine("Connected.");

@@ -627,9 +627,11 @@ namespace SoftEther.VpnClient
             VnParam = new VpnVirtualNetworkAdapterParam(this.Session, VnPacketsSendCallback, VnDisconnectCallback);
             VnState = await NetworkAdapter.OnConnected(VnParam);
 
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+
             try
             {
-                this.TimeoutDetector = new TimeoutDetector(Info.DisconnectTimeout,
+                this.TimeoutDetector = new TimeoutDetector(lady, Info.DisconnectTimeout,
                     callback: (x) =>
                     {
                         SetDisconnectReason(new ApplicationException("VPN transport communication timed out."));
@@ -660,6 +662,7 @@ namespace SoftEther.VpnClient
             }
             finally
             {
+                await lady;
                 await NetworkAdapter.OnDisconnected(VnState, VnParam).TryWaitAsync();
                 VnState = null;
             }

@@ -561,6 +561,128 @@ namespace SoftEther.WebSocket.Helper
         public AsyncCleanuper AsyncCleanuper { get; }
     }
 
+    class PalStream : FastStream
+    {
+        protected Stream SystemStream;
+
+        public PalStream(Stream systemStream)
+        {
+            SystemStream = systemStream;
+        }
+
+        public override async Task<int> ReadAsync(Memory<byte> buffer, CancellationToken cancel = default)
+        {
+            return await SystemStream.ReadAsync(buffer, cancel);
+        }
+
+        public override async Task WriteAsync(ReadOnlyMemory<byte> buffer, CancellationToken cancel = default)
+        {
+            await SystemStream.WriteAsync(buffer, cancel);
+        }
+
+        public async Task<byte[]> ReadAsyncWithTimeout(int maxSize = 65536, int? timeout = null, bool? readAll = false, CancellationToken cancel = default)
+        {
+            byte[] tmp = new byte[maxSize];
+            int ret = await SystemStream.ReadAsyncWithTimeout(tmp, 0, tmp.Length, timeout,
+                readAll: readAll,
+                cancel: cancel);
+            return WebSocketHelper.CopyByte(tmp, 0, ret);
+        }
+
+        public async Task<int> ReadAsyncWithTimeout(byte[] buffer, int offset = 0, int? count = null, int? timeout = null, bool? readAll = false, CancellationToken cancel = default, params CancellationToken[] cancelTokens)
+        {
+            if (timeout == null) timeout = SystemStream.ReadTimeout;
+            if (timeout <= 0) timeout = Timeout.Infinite;
+            int targetReadSize = count ?? (buffer.Length - offset);
+            if (targetReadSize == 0) return 0;
+
+            try
+            {
+                int ret = await WebSocketHelper.DoAsyncWithTimeout(async (cancelLocal) =>
+                {
+                    if (readAll == false)
+                    {
+                        return await SystemStream.ReadAsync(buffer, offset, targetReadSize, cancelLocal);
+                    }
+                    else
+                    {
+                        int currentReadSize = 0;
+
+                        while (currentReadSize != targetReadSize)
+                        {
+                            int sz = await SystemStream.ReadAsync(buffer, offset + currentReadSize, targetReadSize - currentReadSize, cancelLocal);
+                            if (sz == 0)
+                            {
+                                return 0;
+                            }
+
+                            currentReadSize += sz;
+                        }
+
+                        return currentReadSize;
+                    }
+                },
+                timeout: (int)timeout,
+                cancel: cancel,
+                cancelTokens: cancelTokens);
+
+                if (ret <= 0)
+                {
+                    throw new EndOfStreamException("The NetworkStream is disconnected.");
+                }
+
+                return ret;
+            }
+            catch
+            {
+                SystemStream.TryCloseNonBlock();
+                throw;
+            }
+        }
+
+        public async Task WriteAsyncWithTimeout(byte[] buffer, int offset = 0, int? count = null, int? timeout = null, CancellationToken cancel = default, params CancellationToken[] cancelTokens)
+        {
+            if (timeout == null) timeout = SystemStream.WriteTimeout;
+            if (timeout <= 0) timeout = Timeout.Infinite;
+            int targetWriteSize = count ?? (buffer.Length - offset);
+            if (targetWriteSize == 0) return;
+
+            try
+            {
+                await WebSocketHelper.DoAsyncWithTimeout(async (cancelLocal) =>
+                {
+                    await SystemStream.WriteAsync(buffer, offset, targetWriteSize, cancelLocal);
+                    return 0;
+                },
+                timeout: (int)timeout,
+                cancel: cancel,
+                cancelTokens: cancelTokens);
+
+            }
+            catch
+            {
+                SystemStream.TryCloseNonBlock();
+                throw;
+            }
+        }
+
+        Once DisposeFlag;
+        protected override void Dispose(bool disposing)
+        {
+            try
+            {
+                if (!disposing || DisposeFlag.IsFirstCall() == false) return;
+                SystemStream.DisposeSafe();
+            }
+            finally { base.Dispose(disposing); }
+        }
+    }
+
+    class PalSslStream : PalStream
+    {
+        public PalSslStream(SslStream sslStream) : base(sslStream) { }
+    }
+
     static class PalDns
     {
         public static Task<IPAddress[]> GetHostAddressesAsync(string hostNameOrAddress, int timeout = Timeout.Infinite, CancellationToken cancel = default)

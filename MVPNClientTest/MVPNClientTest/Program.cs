@@ -101,11 +101,6 @@ namespace MVPNClientTest
                 }
             }
 
-            if (false)
-            {
-                TestPipeTcp();
-            }
-
             //FastPipeTcpListener listener = new FastPipeTcpListener(async (lx, sock) =>
             //{
             //    try
@@ -138,73 +133,6 @@ namespace MVPNClientTest
             //Console.WriteLine("Stopped.");
 
             //LeakChecker.Print();
-        }
-
-        static async Task TestPipeTcpProc(PalSocket socket, CancellationToken cancel)
-        {
-            using (FastPipe pipe = new FastPipe(cancel))
-            {
-                using (var wrap = new FastPipeEndSocketWrapper(pipe.A_LowerSide, socket))
-                {
-                    try
-                    {
-                        var end = pipe.B_UpperSide;
-                        var reader = end.StreamReader;
-                        var writer = end.StreamWriter;
-                        Dbg.Where();
-                        FastPipeNonblockStateHelper helper = new FastPipeNonblockStateHelper(reader, writer);
-
-                        while (true)
-                        {
-                            while (true)
-                            {
-                                Memory<byte> data = reader.DequeueContiguousSlow(1);
-                                if (data.Length == 0)
-                                {
-                                    //Dbg.Where();
-                                    break;
-                                }
-                                //Dbg.Where();
-                                Console.Write((char)data.Span[0]);
-                                end.StreamWriter.Enqueue(new byte[] { (byte)'[' });
-                                end.StreamWriter.Enqueue(data);
-                                end.StreamWriter.Enqueue(new byte[] { (byte)']' });
-                                end.StreamWriter.CompleteWrite();
-                            }
-                            reader.CompleteRead();
-                            await helper.WaitIfNothingChanged();
-                        }
-                    }
-                    finally
-                    {
-                        await wrap.AsyncCleanuper;
-                    }
-                }
-            }
-        }
-
-        static void TestPipeTcp()
-        {
-            TcpListener listener = new TcpListener(IPAddress.Any, 1);
-            listener.Start();
-
-            CancellationTokenSource cts = new CancellationTokenSource();
-
-            new Thread(() =>
-            {
-                Console.ReadLine();
-                listener.Stop();
-                cts.Cancel();
-                WriteLine("Cancelled.");
-
-                LeakChecker.Print();
-            }).Start();
-
-            while (true)
-            {
-                Socket socket = listener.AcceptSocket();
-                TestPipeTcpProc(new PalSocket(socket), cts.Token).LaissezFaire();
-            }
         }
 
         static void BenchStreamBuffer()
@@ -769,12 +697,14 @@ namespace MVPNClientTest
 
             IPAddress server_ip = IPAddress.Parse("130.158.6.60");
 
-            using (FastPipe pipe = new FastPipe())
+            AsyncCleanuperLady lady = new AsyncCleanuperLady();
+            try
             {
+                FastPipe pipe = new FastPipe(lady);
                 var reader = pipe.B_UpperSide.DatagramReader;
                 var writer = pipe.B_UpperSide.DatagramWriter;
 
-                using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(pipe.A_LowerSide, new PalSocket(uc.Client)))
+                using (FastPipeEndSocketWrapper w = new FastPipeEndSocketWrapper(lady, pipe.A_LowerSide, new PalSocket(uc.Client)))
                 {
                     try
                     {
@@ -830,6 +760,10 @@ namespace MVPNClientTest
                         await w.AsyncCleanuper;
                     }
                 }
+            }
+            finally
+            {
+                await lady;
             }
 
         }
