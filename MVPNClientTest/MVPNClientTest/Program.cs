@@ -25,8 +25,15 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
+            //if (true)
+            //{
+            //    VCodeOperand op = new VCodeOperand("-0x1234(%esi,%eiz,8)");
+            //    return;
+            //}
 
-            PipeTest.TestMain();
+            VCpuCodeGenTest.CodeGen();
+
+            //PipeTest.TestMain();
 
             //while (true)
             //{

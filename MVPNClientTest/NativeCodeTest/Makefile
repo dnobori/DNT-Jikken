@@ -1,8 +1,8 @@
 # Makefile
 
-OPTIONS_COMPILE_RELEASE=-m32 -DNDEBUG -DVPN_SPEED -D_REENTRANT -DREENTRANT -D_THREAD_SAFE -D_THREADSAFE -DTHREAD_SAFE -DTHREADSAFE -D_FILE_OFFSET_BITS=64 -fsigned-char -g
+OPTIONS_COMPILE_RELEASE=-m32 -DNDEBUG -DVPN_SPEED -D_REENTRANT -DREENTRANT -D_THREAD_SAFE -D_THREADSAFE -DTHREAD_SAFE -DTHREADSAFE -D_FILE_OFFSET_BITS=64 -fsigned-char -g -O3
 
-OPTIONS_LINK_RELEASE=-m32 -fsigned-char -g
+OPTIONS_LINK_RELEASE=-m32 -fsigned-char -g -O3
 
 OBJECTS_test=obj/obj/linux/test.o bin/test_lib.asm bin/test_exec.asm
 
@@ -26,7 +26,7 @@ obj/obj/linux/test.o: test.c
 	@mkdir -p bin/
 	$(CC) $(OPTIONS_COMPILE) -c test.c -o obj/obj/linux/test.o
 
-bin/test: obj/obj/linux/test.o $(OBJECTS_test)
+bin/test: obj/obj/linux/test.o
 	$(CC) obj/obj/linux/test.o $(OPTIONS_LINK) -o bin/test
 
 clean:

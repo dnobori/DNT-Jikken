@@ -40,7 +40,31 @@ namespace VCpuTest
     {
         static void Main(string[] args)
         {
-            Console.WriteLine("Hello World!");
+            Console.WriteLine("IPABox Test");
+            Console.WriteLine();
+
+            VCpuExecTest.ExecTest();
+        }
+    }
+
+    static class VCpuExecTest
+    {
+        public static void ExecTest()
+        {
+            using (VProcess proc = new VProcess())
+            {
+                proc.Memory.AllocateMemory(0x400000, 0x10000);
+
+                uint stackPtr = 0x500000 + 0x10000 / 2;
+
+                proc.Memory.AllocateMemory(0x500000, 0x10000);
+
+                VCpuState state = new VCpuState(proc);
+
+                state.Esp = stackPtr;
+
+                VCode.CodeMain(state);
+            }
         }
     }
 }
