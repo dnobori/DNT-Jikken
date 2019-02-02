@@ -322,15 +322,26 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine($"uint vaddr = {GetCode()};");
             w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
             w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
-            w.WriteLine($"if (vaddr1_index == cache_last_page)");
+            w.WriteLine($"if (vaddr1_index == cache_last_page1)");
             w.WriteLine("{");
             if (writeMode)
             {
-                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = {srcOrDestinationCode};");
+                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = {srcOrDestinationCode};");
             }
             else
             {
-                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));");
+                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));");
+            }
+            w.WriteLine("}");
+            w.WriteLine("else if (vaddr1_index == cache_last_page2)");
+            w.WriteLine("{");
+            if (writeMode)
+            {
+                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = {srcOrDestinationCode};");
+            }
+            else
+            {
+                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));");
             }
             w.WriteLine("}");
             w.WriteLine("else");
@@ -341,10 +352,18 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine($"    exception_address = 0x{codeAddress:x};");
             w.WriteLine("    goto L_RETURN;");
             w.WriteLine("}");
-            w.WriteLine("cache_last_page = vaddr1_index;");
-            w.WriteLine("cache_last_realaddr = pte[vaddr1_index].RealMemory;");
+
+            w.WriteLine("if (((last_used_cache++) % 2) == 0)");
+            w.WriteLine("{");
+            w.WriteLine("    cache_last_page1 = vaddr1_index;");
+            w.WriteLine("    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;");
+            w.WriteLine("} else {");
+            w.WriteLine("    cache_last_page2 = vaddr1_index;");
+            w.WriteLine("    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;");
+            w.WriteLine("}");
             w.WriteLine($"byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
 
+            
             // beyond two pages
             w.WriteLine("if ((vaddr1_offset + 4) > VConsts.PageSize)");
             w.WriteLine("{");
@@ -381,7 +400,7 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("}");
 
             // single page
-            w.WriteLine("else");
+            w.WriteLine("else"); 
             w.WriteLine("{");
             if (writeMode)
             {
@@ -793,8 +812,11 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("string exception_string = null;");
             Out.WriteLine("uint exception_address = 0;");
             Out.WriteLine("uint compare_result = 0;");
-            Out.WriteLine("uint cache_last_page = 0xffffffff;");
-            Out.WriteLine("byte *cache_last_realaddr = null;");
+            Out.WriteLine("uint cache_last_page1 = 0xffffffff;");
+            Out.WriteLine("uint last_used_cache = 0;");
+            Out.WriteLine("byte *cache_last_realaddr1 = null;");
+            Out.WriteLine("uint cache_last_page2 = 0xffffffff;");
+            Out.WriteLine("byte *cache_last_realaddr2 = null;");
 
             Out.WriteLine("VMemory Memory = state.Memory;");
             Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");

@@ -20,8 +20,11 @@ const uint eiz = 0;
 string exception_string = null;
 uint exception_address = 0;
 uint compare_result = 0;
-uint cache_last_page = 0xffffffff;
-byte *cache_last_realaddr = null;
+uint cache_last_page1 = 0xffffffff;
+uint last_used_cache = 0;
+byte *cache_last_realaddr1 = null;
+uint cache_last_page2 = 0xffffffff;
+byte *cache_last_realaddr2 = null;
 VMemory Memory = state.Memory;
 VPageTableEntry* pte = Memory.PageTableEntry;
 uint next_ip = ip;
@@ -57,9 +60,13 @@ esp -= 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = esi;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = esi;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = esi;
 }
 else
 {
@@ -69,8 +76,14 @@ if (pte[vaddr1_index].CanWrite == false)
     exception_address = 0x80487c0;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -105,9 +118,13 @@ esp -= 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = ebx;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
 }
 else
 {
@@ -117,8 +134,14 @@ if (pte[vaddr1_index].CanWrite == false)
     exception_address = 0x80487c1;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -168,9 +191,13 @@ compare_result = esp;
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = ( +0x4e20);
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x4e20);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x4e20);
 }
 else
 {
@@ -180,8 +207,14 @@ if (pte[vaddr1_index].CanWrite == false)
     exception_address = 0x80487cc;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -215,9 +248,13 @@ else
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    eax= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -227,8 +264,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x80487d4;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -380,9 +423,13 @@ L_804880c:
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    eax= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -392,8 +439,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x804880c;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -458,9 +511,13 @@ eax = esi;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    ebx= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    ebx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    ebx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -470,8 +527,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x804881c;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -507,9 +570,13 @@ esp += 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    esi= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    esi= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    esi= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -519,8 +586,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x804881d;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -556,9 +629,13 @@ esp += 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    next_ip= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    next_ip= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    next_ip= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -568,8 +645,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x804881e;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -613,9 +696,13 @@ esp -= 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = esi;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = esi;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = esi;
 }
 else
 {
@@ -625,8 +712,14 @@ if (pte[vaddr1_index].CanWrite == false)
     exception_address = 0x8048820;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -661,9 +754,13 @@ esp -= 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = ebx;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
 }
 else
 {
@@ -673,8 +770,14 @@ if (pte[vaddr1_index].CanWrite == false)
     exception_address = 0x8048821;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -714,9 +817,13 @@ compare_result = esp;
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = ( +0x7d0);
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x7d0);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x7d0);
 }
 else
 {
@@ -726,8 +833,14 @@ if (pte[vaddr1_index].CanWrite == false)
     exception_address = 0x8048828;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -761,9 +874,13 @@ else
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    eax= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -773,8 +890,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x8048830;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -836,9 +959,13 @@ L_8048840:
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    edx= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    edx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    edx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -848,8 +975,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x8048840;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -884,9 +1017,13 @@ else
 uint vaddr = (ebx + eax * 0x4);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = eax;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
 }
 else
 {
@@ -896,8 +1033,14 @@ if (pte[vaddr1_index].CanWrite == false)
     exception_address = 0x8048844;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -966,9 +1109,13 @@ L_8048858:
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    edx= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    edx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    edx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -978,8 +1125,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x8048858;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -1047,9 +1200,13 @@ L_8048870:
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    ecx= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    ecx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    ecx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -1059,8 +1216,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x8048870;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -1095,9 +1258,13 @@ else
 uint vaddr = (ebx + edx * 0x4);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    eax+= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    eax+= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax+= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -1107,8 +1274,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x8048874;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -1182,9 +1355,13 @@ compare_result = esp;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    ebx= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    ebx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    ebx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -1194,8 +1371,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x8048889;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -1231,9 +1414,13 @@ esp += 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    esi= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    esi= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    esi= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -1243,8 +1430,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x804888a;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
@@ -1280,9 +1473,13 @@ esp += 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (vaddr1_index == cache_last_page)
+if (vaddr1_index == cache_last_page1)
 {
-    next_ip= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));
+    next_ip= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    next_ip= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
 }
 else
 {
@@ -1292,8 +1489,14 @@ if (pte[vaddr1_index].CanRead == false)
     exception_address = 0x804888b;
     goto L_RETURN;
 }
-cache_last_page = vaddr1_index;
-cache_last_realaddr = pte[vaddr1_index].RealMemory;
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
 if ((vaddr1_offset + 4) > VConsts.PageSize)
 {
