@@ -30,41 +30,12 @@ L_START:
 switch (next_ip)
 {
 case 0x8048890: goto L_8048890;
-case 0x8048891: goto L_8048891;
-case 0x8048892: goto L_8048892;
-case 0x8048894: goto L_8048894;
-case 0x8048899: goto L_8048899;
-case 0x804889c: goto L_804889c;
-case 0x80488a4: goto L_80488a4;
-case 0x80488a8: goto L_80488a8;
-case 0x80488ab: goto L_80488ab;
-case 0x80488ad: goto L_80488ad;
 case 0x80488b0: goto L_80488b0;
-case 0x80488b3: goto L_80488b3;
-case 0x80488b5: goto L_80488b5;
-case 0x80488b8: goto L_80488b8;
-case 0x80488ba: goto L_80488ba;
-case 0x80488bf: goto L_80488bf;
-case 0x80488c1: goto L_80488c1;
 case 0x80488c8: goto L_80488c8;
-case 0x80488ca: goto L_80488ca;
-case 0x80488cc: goto L_80488cc;
-case 0x80488ce: goto L_80488ce;
-case 0x80488d0: goto L_80488d0;
 case 0x80488d2: goto L_80488d2;
-case 0x80488d5: goto L_80488d5;
-case 0x80488d7: goto L_80488d7;
 case 0x80488d9: goto L_80488d9;
 case 0x80488dc: goto L_80488dc;
-case 0x80488e0: goto L_80488e0;
-case 0x80488e3: goto L_80488e3;
-case 0x80488e5: goto L_80488e5;
 case 0x80488e7: goto L_80488e7;
-case 0x80488ea: goto L_80488ea;
-case 0x80488ec: goto L_80488ec;
-case 0x80488ed: goto L_80488ed;
-case 0x80488ee: goto L_80488ee;
-case 0x80488ef: goto L_80488ef;
 case 0xdeadbeef: goto L_RETURN;
 default:
     exception_string = "Invalid jump target.";
@@ -122,7 +93,6 @@ else
 }
 
 // 8048891 push %ebx
-L_8048891:
 {
 esp -= 4;
 uint vaddr = esp;
@@ -171,25 +141,21 @@ else
 }
 
 // 8048892 xor %esi,%esi
-L_8048892:
 {
 esi ^= esi;
 }
 
 // 8048894 mov $0x3,%ebx
-L_8048894:
 {
 ebx = ( +0x3);
 }
 
 // 8048899 sub $0x10,%esp
-L_8048899:
 {
 esp -= ( +0x10);
 }
 
 // 804889c movl $0x4e20,0xc(%esp)
-L_804889c:
 {
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -237,7 +203,6 @@ else
 }
 
 // 80488a4 mov 0xc(%esp),%eax
-L_80488a4:
 {
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -286,13 +251,11 @@ else
 }
 
 // 80488a8 cmp $0x2,%eax
-L_80488a8:
 {
 compare_result = (uint)(eax - ( +0x2));
 }
 
 // 80488ab jbe 80488e7 <test_target1+0x57>
-L_80488ab:
 {
 if (compare_result == 0 || compare_result >= 0x80000000) {
     goto L_80488e7;
@@ -300,7 +263,6 @@ if (compare_result == 0 || compare_result >= 0x80000000) {
 }
 
 // 80488ad lea 0x0(%esi),%esi
-L_80488ad:
 {
 esi = esi;
 }
@@ -312,7 +274,6 @@ compare_result = (uint)(ebx - ( +0x2));
 }
 
 // 80488b3 jbe 80488d9 <test_target1+0x49>
-L_80488b3:
 {
 if (compare_result == 0 || compare_result >= 0x80000000) {
     goto L_80488d9;
@@ -320,13 +281,11 @@ if (compare_result == 0 || compare_result >= 0x80000000) {
 }
 
 // 80488b5 test $0x1,%bl
-L_80488b5:
 {
 compare_result = (uint)(bl & ( +0x1));
 }
 
 // 80488b8 je 80488dc <test_target1+0x4c>
-L_80488b8:
 {
 if (compare_result == 0) {
     goto L_80488dc;
@@ -334,13 +293,11 @@ if (compare_result == 0) {
 }
 
 // 80488ba mov $0x2,%ecx
-L_80488ba:
 {
 ecx = ( +0x2);
 }
 
 // 80488bf jmp 80488d2 <test_target1+0x42>
-L_80488bf:
 {
 if (true) {
     goto L_80488d2;
@@ -348,7 +305,6 @@ if (true) {
 }
 
 // 80488c1 lea 0x0(%esi,%eiz,1),%esi
-L_80488c1:
 {
 esi = (esi + eiz * 0x1);
 }
@@ -360,27 +316,23 @@ edx ^= edx;
 }
 
 // 80488ca mov %ebx,%eax
-L_80488ca:
 {
 eax = ebx;
 }
 
 // 80488cc div %ecx
-L_80488cc:
 {
-ulong target = (ulong)edx << 32 | eax;
+ulong target = ((ulong)edx << 32) + (ulong)eax;
 eax = (uint)(target / ecx);
 edx = (uint)(target - eax * ecx);
 }
 
 // 80488ce test %edx,%edx
-L_80488ce:
 {
 compare_result = (uint)(edx & edx);
 }
 
 // 80488d0 je 80488dc <test_target1+0x4c>
-L_80488d0:
 {
 if (compare_result == 0) {
     goto L_80488dc;
@@ -394,13 +346,11 @@ ecx += ( +0x1);
 }
 
 // 80488d5 cmp %ebx,%ecx
-L_80488d5:
 {
 compare_result = (uint)(ecx - ebx);
 }
 
 // 80488d7 jne 80488c8 <test_target1+0x38>
-L_80488d7:
 {
 if (compare_result != 0) {
     goto L_80488c8;
@@ -463,19 +413,16 @@ else
 }
 
 // 80488e0 add $0x1,%ebx
-L_80488e0:
 {
 ebx += ( +0x1);
 }
 
 // 80488e3 cmp %ebx,%eax
-L_80488e3:
 {
 compare_result = (uint)(eax - ebx);
 }
 
 // 80488e5 jae 80488b0 <test_target1+0x20>
-L_80488e5:
 {
 if (compare_result <= 0x80000000) {
     goto L_80488b0;
@@ -489,13 +436,11 @@ esp += ( +0x10);
 }
 
 // 80488ea mov %esi,%eax
-L_80488ea:
 {
 eax = esi;
 }
 
 // 80488ec pop %ebx
-L_80488ec:
 {
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -545,7 +490,6 @@ esp += 4;
 }
 
 // 80488ed pop %esi
-L_80488ed:
 {
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -595,7 +539,6 @@ esp += 4;
 }
 
 // 80488ee ret 
-L_80488ee:
 {
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -646,7 +589,6 @@ goto L_START;
 }
 
 // 80488ef nop 
-L_80488ef:
 {
 }
 

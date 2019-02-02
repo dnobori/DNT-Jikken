@@ -406,7 +406,7 @@ namespace SoftEther.WebSocket.Helper
 
             if (operand.IsLabel == false) throw new ApplicationException("Operand is not a label.");
 
-            if (Gen.Labels.Contains(operand.Displacement))
+            if (Gen.CodeLabels.Contains(operand.Displacement))
             {
                 w.WriteLine($"    goto L_{operand.Displacement:x};");
             }
@@ -421,7 +421,10 @@ namespace SoftEther.WebSocket.Helper
 
         public void WriteCode(StringWriter w)
         {
-            w.WriteLine($"L_{Address:x}:");
+            if (Gen.LabelRefs.Contains(Address))
+            {
+                w.WriteLine($"L_{Address:x}:");
+            }
 
             w.WriteLine("{");
 
@@ -525,7 +528,7 @@ namespace SoftEther.WebSocket.Helper
 
                 case "div":
                     {
-                        w.WriteLine("ulong target = (ulong)edx << 32 | eax;");
+                        w.WriteLine("ulong target = ((ulong)edx << 32) + (ulong)eax;");
                         w.WriteLine($"eax = (uint)(target / {Operand1.GetValueAccessCode()});");
                         w.WriteLine($"edx = (uint)(target - eax * {Operand1.GetValueAccessCode()});");
                         break;
@@ -654,7 +657,8 @@ namespace SoftEther.WebSocket.Helper
         string[] Lines;
         Dictionary<string, uint> FunctionTable;
         SortedDictionary<uint, VCodeOperation> OperationLines = new SortedDictionary<uint, VCodeOperation>();
-        public HashSet<uint> Labels = new HashSet<uint>();
+        public HashSet<uint> CodeLabels = new HashSet<uint>();
+        public HashSet<uint> LabelRefs = new HashSet<uint>();
 
         public override string ToString() => Out.ToString();
 
@@ -693,10 +697,26 @@ namespace SoftEther.WebSocket.Helper
                                 targets = "";
                             }
                             OperationLines.Add(address, new VCodeOperation(this, address, operation, targets));
-                            Labels.Add(address);
+                            CodeLabels.Add(address);
                         }
                     }
                 }
+            }
+
+            foreach (var op in OperationLines.Values)
+            {
+                if (op.Operand1 != null)
+                {
+                    if (op.Operand1.IsLabel)
+                    {
+                        LabelRefs.Add(op.Operand1.Displacement);
+                    }
+                }
+            }
+
+            foreach (var func in FunctionTable)
+            {
+                LabelRefs.Add(func.Value);
             }
         }
 
@@ -741,10 +761,14 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("L_START:");
             Out.WriteLine("switch (next_ip)");
             Out.WriteLine("{");
+
             foreach (VCodeOperation op in OperationLines.Values)
             {
-                Out.Write($"case 0x{op.Address:x}: ");
-                Out.WriteLine($"goto L_{op.Address:x};");
+                if (LabelRefs.Contains(op.Address))
+                {
+                    Out.Write($"case 0x{op.Address:x}: ");
+                    Out.WriteLine($"goto L_{op.Address:x};");
+                }
             }
 
             Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
