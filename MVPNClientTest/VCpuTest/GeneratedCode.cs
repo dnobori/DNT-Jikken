@@ -172,7 +172,7 @@ else
 
 // 80487c2 xor %esi,%esi
 {
-esi ^= esi;
+esi = 0;
 }
 
 // 80487c4 mov $0x3,%ebx
@@ -363,7 +363,7 @@ esi = (esi + eiz * 0x1);
 // 80487f8 xor %edx,%edx
 L_80487f8:
 {
-edx ^= edx;
+edx = 0;
 }
 
 // 80487fa mov %ebx,%eax
@@ -373,10 +373,17 @@ eax = ebx;
 
 // 80487fc div %ecx
 {
-uint tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);
+if (edx != 0) {
+ulong tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);
+ulong tmp2 = ecx;
+eax = (uint)(tmp1 / tmp2);
+edx = (uint)(tmp1 - tmp2 * eax);
+} else {
+uint tmp1 = eax;
 uint tmp2 = ecx;
-eax = (tmp1 / tmp2);
-edx = (tmp1 % tmp2);
+eax = tmp1 / tmp2;
+edx = tmp1 - tmp2 * eax;
+}
 }
 
 // 80487fe test %edx,%edx
@@ -946,7 +953,7 @@ ebx = (esp +0x10);
 
 // 804883c xor %eax,%eax
 {
-eax ^= eax;
+eax = 0;
 }
 
 // 804883e xchg %ax,%ax
@@ -1095,7 +1102,7 @@ esi = ( +0xc350);
 
 // 8048853 xor %eax,%eax
 {
-eax ^= eax;
+eax = 0;
 }
 
 // 8048855 lea 0x0(%esi),%esi
@@ -1181,7 +1188,7 @@ ebx = (esp +0x10);
 
 // 8048864 xor %edx,%edx
 {
-edx ^= edx;
+edx = 0;
 }
 
 // 8048866 lea 0x0(%esi),%esi

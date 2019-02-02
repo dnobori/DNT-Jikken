@@ -469,7 +469,14 @@ namespace SoftEther.WebSocket.Helper
 
                 case "xor":
                     {
-                        w.WriteLine($"{Operand2.GetValueAccessCode()} ^= {Operand1.GetValueAccessCode()};");
+                        if (Operand2.GetValueAccessCode() == Operand1.GetValueAccessCode())
+                        {
+                            w.WriteLine($"{Operand2.GetValueAccessCode()} = 0;");
+                        }
+                        else
+                        {
+                            w.WriteLine($"{Operand2.GetValueAccessCode()} ^= {Operand1.GetValueAccessCode()};");
+                        }
                         break;
                     }
 
@@ -562,14 +569,22 @@ namespace SoftEther.WebSocket.Helper
 
                 case "div":
                     {
-                        //w.WriteLine("ulong target = ((ulong)edx << 32) + (ulong)eax;");
-                        //w.WriteLine($"eax = (uint)(target / {Operand1.GetValueAccessCode()});");
-                        //w.WriteLine($"edx = (uint)(target % {Operand1.GetValueAccessCode()});");
+                        w.WriteLine("if (edx != 0) {");
 
-                        w.WriteLine("uint tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);");
+                        w.WriteLine("ulong tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);");
+                        w.WriteLine($"ulong tmp2 = {Operand1.GetValueAccessCode()};");
+                        w.WriteLine("eax = (uint)(tmp1 / tmp2);");
+                        w.WriteLine("edx = (uint)(tmp1 - tmp2 * eax);");
+
+                        w.WriteLine("} else {");
+
+                        w.WriteLine("uint tmp1 = eax;");
                         w.WriteLine($"uint tmp2 = {Operand1.GetValueAccessCode()};");
-                        w.WriteLine("eax = (tmp1 / tmp2);");
-                        w.WriteLine("edx = (tmp1 % tmp2);");
+
+                        w.WriteLine("eax = tmp1 / tmp2;");
+                        w.WriteLine("edx = tmp1 - tmp2 * eax;");
+
+                        w.WriteLine("}");
                         break;
                     }
 
