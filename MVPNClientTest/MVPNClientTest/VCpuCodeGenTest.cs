@@ -528,9 +528,14 @@ namespace SoftEther.WebSocket.Helper
 
                 case "div":
                     {
-                        w.WriteLine("ulong target = ((ulong)edx << 32) + (ulong)eax;");
-                        w.WriteLine($"eax = (uint)(target / {Operand1.GetValueAccessCode()});");
-                        w.WriteLine($"edx = (uint)(target - eax * {Operand1.GetValueAccessCode()});");
+                        //w.WriteLine("ulong target = ((ulong)edx << 32) + (ulong)eax;");
+                        //w.WriteLine($"eax = (uint)(target / {Operand1.GetValueAccessCode()});");
+                        //w.WriteLine($"edx = (uint)(target % {Operand1.GetValueAccessCode()});");
+
+                        w.WriteLine("uint tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);");
+                        w.WriteLine($"uint tmp2 = {Operand1.GetValueAccessCode()};");
+                        w.WriteLine("eax = (tmp1 / tmp2);");
+                        w.WriteLine("edx = (tmp1 % tmp2);");
                         break;
                     }
 

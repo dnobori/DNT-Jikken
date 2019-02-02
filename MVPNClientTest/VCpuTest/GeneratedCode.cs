@@ -322,9 +322,10 @@ eax = ebx;
 
 // 80488cc div %ecx
 {
-ulong target = ((ulong)edx << 32) + (ulong)eax;
-eax = (uint)(target / ecx);
-edx = (uint)(target - eax * ecx);
+uint tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);
+uint tmp2 = ecx;
+eax = (tmp1 / tmp2);
+edx = (tmp1 % tmp2);
 }
 
 // 80488ce test %edx,%edx
