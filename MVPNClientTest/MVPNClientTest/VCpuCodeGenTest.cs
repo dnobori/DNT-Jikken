@@ -321,13 +321,28 @@ namespace SoftEther.WebSocket.Helper
 
             w.WriteLine($"uint vaddr = {GetCode()};");
             w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
-            w.WriteLine($"uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;");
+            w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
+            w.WriteLine($"if (vaddr1_index == cache_last_page)");
+            w.WriteLine("{");
+            if (writeMode)
+            {
+                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset)) = {srcOrDestinationCode};");
+            }
+            else
+            {
+                w.WriteLine($"    {srcOrDestinationCode} = *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));");
+            }
+            w.WriteLine("}");
+            w.WriteLine("else");
+            w.WriteLine("{");
             w.WriteLine($"if (pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
             w.WriteLine("{");
             w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
             w.WriteLine($"    exception_address = 0x{codeAddress:x};");
             w.WriteLine("    goto L_RETURN;");
             w.WriteLine("}");
+            w.WriteLine("cache_last_page = vaddr1_index;");
+            w.WriteLine("cache_last_realaddr = pte[vaddr1_index].RealMemory;");
             w.WriteLine($"byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
 
             // beyond two pages
@@ -376,6 +391,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 w.WriteLine($"    {srcOrDestinationCode} = *((uint *)realaddr1);");
             }
+            w.WriteLine("}");
             w.WriteLine("}");
 
             return w.ToString();
@@ -485,7 +501,7 @@ namespace SoftEther.WebSocket.Helper
 
                 case "jae":
                     {
-                        WriteJumpCode(w, "compare_result == 0 || compare_result <= 0x80000000", Operand1);
+                        WriteJumpCode(w, "compare_result <= 0x80000000", Operand1);
                         break;
                     }
 
@@ -713,6 +729,8 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("string exception_string = null;");
             Out.WriteLine("uint exception_address = 0;");
             Out.WriteLine("uint compare_result = 0;");
+            Out.WriteLine("uint cache_last_page = 0xffffffff;");
+            Out.WriteLine("byte *cache_last_realaddr = null;");
 
             Out.WriteLine("VMemory Memory = state.Memory;");
             Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
