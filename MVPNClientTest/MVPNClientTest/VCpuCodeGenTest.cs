@@ -330,7 +330,7 @@ namespace SoftEther.WebSocket.Helper
             }
             else
             {
-                w.WriteLine($"    {srcOrDestinationCode} = *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));");
+                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)(((byte *)cache_last_realaddr) + vaddr1_offset));");
             }
             w.WriteLine("}");
             w.WriteLine("else");
@@ -375,7 +375,7 @@ namespace SoftEther.WebSocket.Helper
                 w.WriteLine("    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }");
                 w.WriteLine("    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }");
                 w.WriteLine("    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }");
-                w.WriteLine($"    {srcOrDestinationCode} = get_value;");
+                w.WriteLine($"    {srcOrDestinationCode}= get_value;");
             }
 
             w.WriteLine("}");
@@ -385,11 +385,11 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("{");
             if (writeMode)
             {
-                w.WriteLine($"    *((uint *)realaddr1) = {srcOrDestinationCode};");
+                w.WriteLine($"    *((uint *)realaddr1) ={srcOrDestinationCode};");
             }
             else
             {
-                w.WriteLine($"    {srcOrDestinationCode} = *((uint *)realaddr1);");
+                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)realaddr1);");
             }
             w.WriteLine("}");
             w.WriteLine("}");
@@ -408,10 +408,12 @@ namespace SoftEther.WebSocket.Helper
 
             if (Gen.CodeLabels.Contains(operand.Displacement))
             {
+                //w.WriteLine("compare_result = 0;");
                 w.WriteLine($"    goto L_{operand.Displacement:x};");
             }
             else
             {
+                w.WriteLine("compare_result = 0;");
                 w.WriteLine($"    next_ip = 0x{operand.Displacement:x};");
                 w.WriteLine("    goto L_START;");
             }
@@ -476,7 +478,14 @@ namespace SoftEther.WebSocket.Helper
 
                 case "test":
                     {
-                        w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()} & {Operand1.GetValueAccessCode()});");
+                        if (Operand2.GetValueAccessCode() == Operand1.GetValueAccessCode())
+                        {
+                            w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()});");
+                        }
+                        else
+                        {
+                            w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()} & {Operand1.GetValueAccessCode()});");
+                        }
                         break;
                     }
 
@@ -505,6 +514,12 @@ namespace SoftEther.WebSocket.Helper
                 case "jae":
                     {
                         WriteJumpCode(w, "compare_result <= 0x80000000", Operand1);
+                        break;
+                    }
+
+                case "ja":
+                    {
+                        WriteJumpCode(w, "compare_result != 0 && compare_result <= 0x80000000", Operand1);
                         break;
                     }
 
@@ -541,13 +556,27 @@ namespace SoftEther.WebSocket.Helper
 
                 case "add":
                     {
-                        w.WriteLine($"{Operand2.GetValueAccessCode()} += {Operand1.GetValueAccessCode()};");
+                        //if (Address == 0x8048874) break;
+                        if (Operand1.IsPointer && Operand2.IsPointer == false)
+                        {
+                            w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, Operand2.GetValueAccessCode() + "+"));
+                        }
+                        else if (Operand1.IsPointer == false && Operand2.IsPointer == false)
+                        {
+                            w.WriteLine($"{Operand2.GetValueAccessCode()} += {Operand1.GetValueAccessCode()};");
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+                        w.WriteLine($"compare_result = {Operand2.GetValueAccessCode()};");
                         break;
                     }
 
                 case "sub":
                     {
                         w.WriteLine($"{Operand2.GetValueAccessCode()} -= {Operand1.GetValueAccessCode()};");
+                        w.WriteLine($"compare_result = {Operand2.GetValueAccessCode()};");
                         break;
                     }
 
@@ -564,6 +593,16 @@ namespace SoftEther.WebSocket.Helper
 
                 case "nop":
                     {
+                        break;
+                    }
+
+                case "call":
+                    {
+                        if (ToString().Contains("__stack_chk_fail")) { }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
                         break;
                     }
 
@@ -660,7 +699,7 @@ namespace SoftEther.WebSocket.Helper
     {
         StringWriter Out = new StringWriter();
         string[] Lines;
-        Dictionary<string, uint> FunctionTable;
+        public Dictionary<string, uint> FunctionTable;
         SortedDictionary<uint, VCodeOperation> OperationLines = new SortedDictionary<uint, VCodeOperation>();
         public HashSet<uint> CodeLabels = new HashSet<uint>();
         public HashSet<uint> LabelRefs = new HashSet<uint>();
@@ -790,6 +829,11 @@ namespace SoftEther.WebSocket.Helper
 
             foreach (VCodeOperation op in OperationLines.Values)
             {
+                if (FunctionTable.Values.Contains(op.Address))
+                {
+                    Out.WriteLine($"// function {FunctionTable.Where(x => x.Value == op.Address).Select(x => x.Key).Single()}();");
+                }
+
                 Out.WriteLine($"// {op.ToString()}");
                 op.WriteCode(Out);
                 Out.WriteLine();
@@ -819,7 +863,7 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("using System;");
             Out.WriteLine("using SoftEther.WebSocket.Helper;");
             Out.WriteLine();
-            Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717");
+            Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717, CS0162");
             Out.WriteLine();
             Out.WriteLine("public static unsafe class VCode");
             Out.WriteLine("{");
@@ -848,6 +892,14 @@ namespace SoftEther.WebSocket.Helper
             string[] includeFunctions = new string[]
                 {
                     "test_target1",
+                    "test_target2",
+                    "test_target3",
+                    "test_target4",
+                    "test_target5",
+                    "test_target6",
+                    "test_target7",
+                    "test_target8",
+                    "test_target9",
                 };
 
             string[] lines = File.ReadAllLines(srcAsm);

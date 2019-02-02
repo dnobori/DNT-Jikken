@@ -1116,6 +1116,27 @@ namespace cs_struct_bench1
             }
         }
 
+        static uint test_target2()
+        {
+            uint[] tmp = new uint[2000];
+            uint p = (uint)tmp.Length;
+            uint i, j;
+            uint ret = 0;
+
+            for (i = 0; i < p; i++)
+            {
+                tmp[i] = i;
+            }
+            for (j = 0; j < 50000; j++)
+            {
+                for (i = 0; i < p; i++)
+                {
+                    ret += tmp[i];
+                }
+            }
+            return ret;
+        }
+
         static void Main(string[] args)
         {
             WriteLine("Started.");
@@ -1205,6 +1226,16 @@ namespace cs_struct_bench1
 
             var q = new MicroBenchmarkQueue()
 
+
+                .Add(new MicroBenchmark<Memory<byte>>("test_target2", 10, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        test_target2();
+                        // 66ns
+                    }
+                }
+                ), true, 190202)
 
                 .Add(new MicroBenchmark<Memory<byte>>("test_asm_program_main_4", 5, (state, iterations) =>
                 {
