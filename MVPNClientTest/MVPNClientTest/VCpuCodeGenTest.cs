@@ -38,6 +38,7 @@ namespace SoftEther.WebSocket.Helper
     {
         public const uint PageSize = 4096;
         public const uint NumPages = (uint)(0x100000000 / PageSize);
+        public const uint Magic_Return = 0xdeadbeef;
     }
 
     public unsafe struct VPageTableEntry
@@ -58,6 +59,75 @@ namespace SoftEther.WebSocket.Helper
             {
                 PageTableEntry[i].RealMemory = null;
                 PageTableEntry[i].CanRead = PageTableEntry[i].CanWrite = false;
+            }
+        }
+
+        public void Write(uint address, uint value)
+        {
+            VPageTableEntry* pte = PageTableEntry;
+            uint vaddr = address;
+            uint vaddr1_index = vaddr / VConsts.PageSize;
+            uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+            if (pte[vaddr1_index].CanWrite == false)
+            {
+                throw new ApplicationException($"Access violation to 0x{vaddr:x}.");
+            }
+            byte* realaddr1 = (byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+            if ((vaddr1_offset + 4) > VConsts.PageSize)
+            {
+                uint size1 = VConsts.PageSize - vaddr1_offset;
+                uint size2 = 4 - size1;
+                uint vaddr2 = vaddr + size1;
+                uint vaddr2_index = vaddr2 / VConsts.PageSize;
+                if (pte[vaddr2_index].CanWrite == false)
+                {
+                    throw new ApplicationException($"Access violation to 0x{vaddr2:x}.");
+                }
+                byte* realaddr2 = (byte*)(pte[vaddr2_index].RealMemory);
+                uint set_value = value;
+                byte* set_ptr = (byte*)set_value;
+                if (size1 == 1) { realaddr1[0] = set_ptr[0]; realaddr2[0] = set_ptr[1]; realaddr2[1] = set_ptr[2]; realaddr2[2] = set_ptr[3]; }
+                else if (size1 == 2) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr2[0] = set_ptr[2]; realaddr2[1] = set_ptr[3]; }
+                else if (size1 == 3) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr1[2] = set_ptr[2]; realaddr2[0] = set_ptr[3]; }
+            }
+            else
+            {
+                *((uint*)realaddr1) = value;
+            }
+        }
+
+        public uint Read(uint address)
+        {
+            VPageTableEntry* pte = PageTableEntry;
+            uint vaddr = address;
+            uint vaddr1_index = vaddr / VConsts.PageSize;
+            uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+            if (pte[vaddr1_index].CanRead == false)
+            {
+                throw new ApplicationException($"Access violation to 0x{vaddr:x}.");
+            }
+            byte* realaddr1 = (byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+            if ((vaddr1_offset + 4) > VConsts.PageSize)
+            {
+                uint size1 = VConsts.PageSize - vaddr1_offset;
+                uint size2 = 4 - size1;
+                uint vaddr2 = vaddr + size1;
+                uint vaddr2_index = vaddr2 / VConsts.PageSize;
+                if (pte[vaddr2_index].CanRead == false)
+                {
+                    throw new ApplicationException($"Access violation to 0x{vaddr2:x}.");
+                }
+                byte* realaddr2 = (byte*)(pte[vaddr2_index].RealMemory);
+                uint get_value = 0;
+                byte* get_ptr = (byte*)get_value;
+                if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
+                else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
+                else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
+                return get_value;
+            }
+            else
+            {
+                return *((uint*)realaddr1);
             }
         }
 
@@ -251,10 +321,10 @@ namespace SoftEther.WebSocket.Helper
 
             w.WriteLine($"uint vaddr = {GetCode()};");
             w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
-            w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
+            w.WriteLine($"uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;");
             w.WriteLine($"if (pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
             w.WriteLine("{");
-            w.WriteLine($"    exception_string = \"Access violation at 0x{codeAddress:x}.\";");
+            w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
             w.WriteLine($"    exception_address = 0x{codeAddress:x};");
             w.WriteLine("    goto L_RETURN;");
             w.WriteLine("}");
@@ -270,7 +340,7 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine($"    uint vaddr2_index = vaddr2 / VConsts.PageSize;");
             w.WriteLine($"    if (pte[vaddr2_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
             w.WriteLine("    {");
-            w.WriteLine($"        exception_string = \"Access violation at 0x{codeAddress:x}.\";");
+            w.WriteLine("        exception_string = $\"Access violation to 0x{vaddr2:x}.\";");
             w.WriteLine($"        exception_address = 0x{codeAddress:x};");
             w.WriteLine("        goto L_RETURN;");
             w.WriteLine("    }");
@@ -314,6 +384,25 @@ namespace SoftEther.WebSocket.Helper
 
     class VCodeOperation
     {
+        void WriteJumpCode(StringWriter w, string condition, VCodeOperand operand)
+        {
+            w.WriteLine($"if ({condition}) {{");
+
+            if (operand.IsLabel == false) throw new ApplicationException("Operand is not a label.");
+
+            if (Gen.Labels.Contains(operand.Displacement))
+            {
+                w.WriteLine($"    goto L_{operand.Displacement:x};");
+            }
+            else
+            {
+                w.WriteLine($"    next_ip = 0x{operand.Displacement:x};");
+                w.WriteLine("    goto L_START;");
+            }
+
+            w.WriteLine("}");
+        }
+
         public void WriteCode(StringWriter w)
         {
             w.WriteLine($"L_{Address:x}:");
@@ -330,6 +419,14 @@ namespace SoftEther.WebSocket.Helper
                         break;
                     }
 
+                case "pop":
+                    {
+                        var destMemory = new VCodeOperand("(%esp)");
+                        w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, false, Operand1.GetValueAccessCode()));
+                        w.WriteLine("esp += 4;");
+                        break;
+                    }
+
                 case "xor":
                     {
                         w.WriteLine($"{Operand2.GetValueAccessCode()} ^= {Operand1.GetValueAccessCode()};");
@@ -337,6 +434,7 @@ namespace SoftEther.WebSocket.Helper
                     }
 
                 case "mov":
+                case "movl":
                     {
                         if (Operand1.IsPointer == false && Operand2.IsPointer == false)
                         {
@@ -345,6 +443,14 @@ namespace SoftEther.WebSocket.Helper
                         else if (Operand1.IsPointer)
                         {
                             w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, Operand2.GetValueAccessCode()));
+                        }
+                        else if (Operand2.IsPointer)
+                        {
+                            w.WriteLine(Operand2.GenerateMemoryAccessCode(Address, true, Operand1.GetValueAccessCode()));
+                        }
+                        else
+                        {
+                            throw new ApplicationException("Both operand1 and operand2 are pointers.");
                         }
                         break;
                     }
@@ -355,10 +461,90 @@ namespace SoftEther.WebSocket.Helper
                         break;
                     }
 
+                case "ret":
+                    {
+                        var destMemory = new VCodeOperand("(%esp)");
+                        w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, false, "next_ip"));
+                        w.WriteLine("esp += 4;");
+                        w.WriteLine("goto L_START;");
+                    }
+                    break;
+                    
+
                 case "je":
                     {
-                        w.WriteLine($"
+                        WriteJumpCode(w, "compare_result == 0", Operand1);
+                        break;
                     }
+
+                case "jbe":
+                    {
+                        WriteJumpCode(w, "compare_result == 0 || compare_result >= 0x80000000", Operand1);
+                        break;
+                    }
+
+                case "jae":
+                    {
+                        WriteJumpCode(w, "compare_result == 0 || compare_result <= 0x80000000", Operand1);
+                        break;
+                    }
+
+                case "jne":
+                    {
+                        WriteJumpCode(w, "compare_result != 0", Operand1);
+                        break;
+                    }
+
+                case "jmp":
+                    {
+                        WriteJumpCode(w, "true", Operand1);
+                        break;
+                    }
+
+                case "lea":
+                    {
+                        w.WriteLine($"{Operand2.GetValueAccessCode()} = {Operand1.GetCode()};");
+                        break;
+                    }
+
+                case "div":
+                    {
+                        w.WriteLine("ulong target = (ulong)edx << 32 | eax;");
+                        w.WriteLine($"eax = (uint)(target / {Operand1.GetValueAccessCode()});");
+                        w.WriteLine($"edx = (uint)(target - eax * {Operand1.GetValueAccessCode()});");
+                        break;
+                    }
+
+                case "add":
+                    {
+                        w.WriteLine($"{Operand2.GetValueAccessCode()} += {Operand1.GetValueAccessCode()};");
+                        break;
+                    }
+
+                case "sub":
+                    {
+                        w.WriteLine($"{Operand2.GetValueAccessCode()} -= {Operand1.GetValueAccessCode()};");
+                        break;
+                    }
+
+                case "cmp":
+                    {
+                        w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()} - {Operand1.GetValueAccessCode()});");
+                        break;
+                    }
+
+                case "xchg":
+                    {
+                        break;
+                    }
+
+                case "nop":
+                    {
+                        break;
+                    }
+
+                default:
+                    throw new ApplicationException("Invalid operation: " + ToString());
             }
 
             w.WriteLine("}");
@@ -380,10 +566,13 @@ namespace SoftEther.WebSocket.Helper
         public string Opcode;
         public string Arguments;
 
+        VCodeGen Gen;
+
         public VCodeOperand Operand1, Operand2;
 
-        public VCodeOperation(uint address, string opcode, string arguments)
+        public VCodeOperation(VCodeGen gen, uint address, string opcode, string arguments)
         {
+            Gen = gen;
             Address = address;
             Opcode = opcode;
             Arguments = arguments;
@@ -447,13 +636,16 @@ namespace SoftEther.WebSocket.Helper
     {
         StringWriter Out = new StringWriter();
         string[] Lines;
+        Dictionary<string, uint> FunctionTable;
         SortedDictionary<uint, VCodeOperation> OperationLines = new SortedDictionary<uint, VCodeOperation>();
+        public HashSet<uint> Labels = new HashSet<uint>();
 
         public override string ToString() => Out.ToString();
 
-        public VCodeGen(string[] lines)
+        public VCodeGen(string[] lines, Dictionary<string, uint> functionTable)
         {
             Lines = lines;
+            FunctionTable = functionTable;
 
             foreach (string line in Lines)
             {
@@ -470,24 +662,43 @@ namespace SoftEther.WebSocket.Helper
                         {
                             string tmp3 = tmp2.Substring(j).Trim();
                             int k = tmp3.IndexOf(' ');
+                            string operation;
+                            uint address = Convert.ToUInt32(label, 16);
+                            string targets;
+
                             if (k != -1)
                             {
-                                string operation = tmp3.Substring(0, k);
-                                string targets = tmp3.Substring(k).Trim();
-
-                                uint address = Convert.ToUInt32(label, 16);
-
-                                OperationLines.Add(address, new VCodeOperation(address, operation, targets));
+                                targets = tmp3.Substring(k).Trim();
+                                operation = tmp3.Substring(0, k);
                             }
+                            else
+                            {
+                                operation = tmp3;
+                                targets = "";
+                            }
+                            OperationLines.Add(address, new VCodeOperation(this, address, operation, targets));
+                            Labels.Add(address);
                         }
                     }
                 }
             }
         }
 
+        void WriteFunctionTable()
+        {
+            Out.WriteLine("public enum FunctionTable");
+            Out.WriteLine("{");
+            foreach (string functionName in this.FunctionTable.Keys)
+            {
+                Out.WriteLine($"    {functionName} = 0x{FunctionTable[functionName]:x},");
+            }
+            Out.WriteLine("}");
+            Out.WriteLine("");
+        }
+
         void WriteMainFunction()
         {
-            Out.WriteLine("public static void CodeMain(VCpuState state)");
+            Out.WriteLine("public static void Iam_The_IntelCPU_HaHaHa(VCpuState state, uint ip)");
             Out.WriteLine("{");
 
             Out.WriteLine("uint eax = state.Eax; ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);");
@@ -505,6 +716,28 @@ namespace SoftEther.WebSocket.Helper
 
             Out.WriteLine("VMemory Memory = state.Memory;");
             Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
+            Out.WriteLine("uint next_ip = ip;");
+
+            Out.WriteLine();
+
+            Out.WriteLine("L_START:");
+            Out.WriteLine("switch (next_ip)");
+            Out.WriteLine("{");
+            foreach (VCodeOperation op in OperationLines.Values)
+            {
+                Out.Write($"case 0x{op.Address:x}: ");
+                Out.WriteLine($"goto L_{op.Address:x};");
+            }
+
+            Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
+            Out.WriteLine("goto L_RETURN;");
+
+            Out.WriteLine("default:");
+            Out.WriteLine($"    exception_string = \"Invalid jump target.\";");
+            Out.WriteLine("    exception_address = next_ip;");
+            Out.WriteLine("    goto L_RETURN;");
+
+            Out.WriteLine("}");
 
             Out.WriteLine();
 
@@ -539,12 +772,16 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("using System;");
             Out.WriteLine("using SoftEther.WebSocket.Helper;");
             Out.WriteLine();
-            Out.WriteLine("#pragma warning disable CS0164, CS0219");
+            Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717");
             Out.WriteLine();
             Out.WriteLine("public static unsafe class VCode");
             Out.WriteLine("{");
 
             WriteMainFunction();
+
+            Out.WriteLine();
+
+            WriteFunctionTable();
 
             Out.WriteLine("}");
             Out.WriteLine();
@@ -571,6 +808,7 @@ namespace SoftEther.WebSocket.Helper
             string currentFuncName = null;
 
             Dictionary<string, List<string>> linesByFunc = new Dictionary<string, List<string>>();
+            Dictionary<string, uint> functionTable = new Dictionary<string, uint>();
 
             for (int i = 0; i < lines.Length; i++)
             {
@@ -582,6 +820,7 @@ namespace SoftEther.WebSocket.Helper
                     if (currentFuncName != null)
                     {
                         linesByFunc.Add(currentFuncName, new List<string>());
+                        functionTable.Add(currentFuncName, Convert.ToUInt32(line.Split(' ')[0], 16));
                     }
                 }
 
@@ -591,7 +830,7 @@ namespace SoftEther.WebSocket.Helper
 
             lines = linesByFunc.Values.SelectMany(x => x.ToArray()).ToArray();
 
-            VCodeGen gen = new VCodeGen(lines);
+            VCodeGen gen = new VCodeGen(lines, functionTable);
 
             gen.DoMain();
 

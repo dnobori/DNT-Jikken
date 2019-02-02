@@ -33,14 +33,98 @@ typedef signed char			CHAR;
 typedef	unsigned long long	UINT64;
 typedef signed long long	INT64;
 
+#ifdef _WIN32
+UINT64 MsGetHiResTimeSpan(UINT64 diff)
+{
+	LARGE_INTEGER t; UINT64 freq;
+	if (QueryPerformanceFrequency(&t) == false) freq = 1000ULL;
+	else memcpy(&freq, &t, sizeof(UINT64));
+	return (UINT64)diff * 1000000000UL / (UINT64)freq;
+}
+UINT64 MsGetHiResCounter()
+{
+	LARGE_INTEGER t; UINT64 ret;
+	if (QueryPerformanceCounter(&t) == false) return 0xffffffffffffffffull;
+	memcpy(&ret, &t, sizeof(UINT64));
+	return ret;
+}
+UINT64 TickHighres64()
+{
+	return (UINT64)(MsGetHiResTimeSpan(MsGetHiResCounter()));
+}
+#else
+UINT64 TickHighres64() {
+	return 0;
+}
+#endif
+void ToStr64(char *str, UINT64 value)
+{
+	char tmp[256];
+	UINT wp = 0;
+	UINT len, i;
+	strcpy(tmp, "");
+	// Append from the last digit
+	while (true)
+	{
+		UINT a = (UINT)(value % (UINT64)10);
+		value = value / (UINT64)10;
+		tmp[wp++] = (char)('0' + a);
+		if (value == 0)
+		{
+			tmp[wp++] = 0;
+			break;
+		}
+	}
+	len = strlen(tmp);
+	for (i = 0;i < len;i++)
+	{
+		str[len - i - 1] = tmp[i];
+	}
+	str[len] = 0;
+}
+void ToStr3(char *str, UINT64 v)
+{
+	char tmp[128];
+	char tmp2[128];
+	UINT i, len, wp;
+	ToStr64(tmp, v);
+	wp = 0;
+	len = strlen(tmp);
+	for (i = len - 1;((int)i) >= 0;i--)
+	{
+		tmp2[wp++] = tmp[i];
+	}
+	tmp2[wp++] = 0;
+	wp = 0;
+	for (i = 0;i < len;i++)
+	{
+		if (i != 0 && (i % 3) == 0)
+		{
+			tmp[wp++] = ',';
+		}
+		tmp[wp++] = tmp2[i];
+	}
+	tmp[wp++] = 0;
+	wp = 0;
+	len = strlen(tmp);
 
-UINT j;
-UINT total = 0;
+	for (i = len - 1;((int)i) >= 0;i--)
+	{
+		tmp2[wp++] = tmp[i];
+	}
+	tmp2[wp++] = 0;
+
+	strcpy(str, tmp2);
+}
+
 
 NOINLINE UINT test_target1()
 {
+	UINT j;
+	UINT total = 0;
+	volatile UINT p = 20000;
 
-	for (j = 3;j <= 20000;j++)
+	for (j = 3;j <= p;j++)
 	{
 		UINT k;
 		bool ok = true;
@@ -63,12 +147,53 @@ NOINLINE UINT test_target1()
 	return total; // 2261
 }
 
+NOINLINE UINT test_main(UINT count)
+{
+	UINT ret = 0xffffffff;
+	UINT i;
+
+	for (i = 0;i < count;i++)
+	{
+		UINT r = test_target1();
+		if (ret == 0xffffffff || ret == r)
+		{
+			ret = r;
+		}
+		else
+		{
+			return 0xffffffff;
+		}
+	}
+
+	return ret;
+}
 
 
 
 int main()
 {
-	printf("%u\n", test_target1());
+	UINT64 start;
+	UINT64 end;
+	char tmp[256];
+	UINT count = 10;
+	UINT64 result;
+
+	UINT ret;
+
+	start = TickHighres64();
+	
+	ret = test_main(count);
+
+	end = TickHighres64();
+
+	result = (end - start) / (UINT64)count;
+
+	printf("ret = %u\n", ret);
+
+	
+	ToStr3(tmp, result);
+	printf("time = %s\n", tmp);
+
 	return 0;
 }
 

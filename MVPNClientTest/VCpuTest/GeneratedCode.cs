@@ -2,11 +2,11 @@
 using System;
 using SoftEther.WebSocket.Helper;
 
-#pragma warning disable CS0164, CS0219
+#pragma warning disable CS0164, CS0219, CS1717
 
 public static unsafe class VCode
 {
-public static void CodeMain(VCpuState state)
+public static void Iam_The_IntelCPU_HaHaHa(VCpuState state, uint ip)
 {
 uint eax = state.Eax; ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);
 uint ebx = state.Ebx; ref ushort bl = ref *((ushort*)(&ebx) + 0); ref ushort bh = ref *((ushort*)(&ebx) + 1);
@@ -22,18 +22,65 @@ uint exception_address = 0;
 uint compare_result = 0;
 VMemory Memory = state.Memory;
 VPageTableEntry* pte = Memory.PageTableEntry;
+uint next_ip = ip;
 
-// 8048460 push %edi
-L_8048460:
+L_START:
+switch (next_ip)
+{
+case 0x8048890: goto L_8048890;
+case 0x8048891: goto L_8048891;
+case 0x8048892: goto L_8048892;
+case 0x8048894: goto L_8048894;
+case 0x8048899: goto L_8048899;
+case 0x804889c: goto L_804889c;
+case 0x80488a4: goto L_80488a4;
+case 0x80488a8: goto L_80488a8;
+case 0x80488ab: goto L_80488ab;
+case 0x80488ad: goto L_80488ad;
+case 0x80488b0: goto L_80488b0;
+case 0x80488b3: goto L_80488b3;
+case 0x80488b5: goto L_80488b5;
+case 0x80488b8: goto L_80488b8;
+case 0x80488ba: goto L_80488ba;
+case 0x80488bf: goto L_80488bf;
+case 0x80488c1: goto L_80488c1;
+case 0x80488c8: goto L_80488c8;
+case 0x80488ca: goto L_80488ca;
+case 0x80488cc: goto L_80488cc;
+case 0x80488ce: goto L_80488ce;
+case 0x80488d0: goto L_80488d0;
+case 0x80488d2: goto L_80488d2;
+case 0x80488d5: goto L_80488d5;
+case 0x80488d7: goto L_80488d7;
+case 0x80488d9: goto L_80488d9;
+case 0x80488dc: goto L_80488dc;
+case 0x80488e0: goto L_80488e0;
+case 0x80488e3: goto L_80488e3;
+case 0x80488e5: goto L_80488e5;
+case 0x80488e7: goto L_80488e7;
+case 0x80488ea: goto L_80488ea;
+case 0x80488ec: goto L_80488ec;
+case 0x80488ed: goto L_80488ed;
+case 0x80488ee: goto L_80488ee;
+case 0x80488ef: goto L_80488ef;
+case 0xdeadbeef: goto L_RETURN;
+default:
+    exception_string = "Invalid jump target.";
+    exception_address = next_ip;
+    goto L_RETURN;
+}
+
+// 8048890 push %esi
+L_8048890:
 {
 esp -= 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
-uint vaddr1_offset = vaddr % VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
 if (pte[vaddr1_index].CanWrite == false)
 {
-    exception_string = "Access violation at 0x8048460.";
-    exception_address = 0x8048460;
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048890;
     goto L_RETURN;
 }
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
@@ -45,48 +92,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
     uint vaddr2_index = vaddr2 / VConsts.PageSize;
     if (pte[vaddr2_index].CanWrite == false)
     {
-        exception_string = "Access violation at 0x8048460.";
-        exception_address = 0x8048460;
-        goto L_RETURN;
-    }
-    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
-    uint set_value = edi;
-    byte *set_ptr = (byte *)set_value;
-    if (size1 == 1) { realaddr1[0] = set_ptr[0]; realaddr2[0] = set_ptr[1]; realaddr2[1] = set_ptr[2]; realaddr2[2] = set_ptr[3]; }
-    else if (size1 == 2) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr2[0] = set_ptr[2]; realaddr2[1] = set_ptr[3]; }
-    else if (size1 == 3) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr1[2] = set_ptr[2]; realaddr2[0] = set_ptr[3]; }
-}
-else
-{
-    *((uint *)realaddr1) = edi;
-}
-
-}
-
-// 8048461 push %esi
-L_8048461:
-{
-esp -= 4;
-uint vaddr = esp;
-uint vaddr1_index = vaddr / VConsts.PageSize;
-uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (pte[vaddr1_index].CanWrite == false)
-{
-    exception_string = "Access violation at 0x8048461.";
-    exception_address = 0x8048461;
-    goto L_RETURN;
-}
-byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
-if ((vaddr1_offset + 4) > VConsts.PageSize)
-{
-    uint size1 = VConsts.PageSize - vaddr1_offset;
-    uint size2 = 4 - size1;
-    uint vaddr2 = vaddr + size1;
-    uint vaddr2_index = vaddr2 / VConsts.PageSize;
-    if (pte[vaddr2_index].CanWrite == false)
-    {
-        exception_string = "Access violation at 0x8048461.";
-        exception_address = 0x8048461;
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x8048890;
         goto L_RETURN;
     }
     byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
@@ -103,63 +110,17 @@ else
 
 }
 
-// 8048462 xor %edi,%edi
-L_8048462:
-{
-edi ^= edi;
-}
-
-// 8048464 mov 0x804a020,%esi
-L_8048464:
-{
-uint vaddr = ( +0x804a020);
-uint vaddr1_index = vaddr / VConsts.PageSize;
-uint vaddr1_offset = vaddr % VConsts.PageSize;
-if (pte[vaddr1_index].CanRead == false)
-{
-    exception_string = "Access violation at 0x8048464.";
-    exception_address = 0x8048464;
-    goto L_RETURN;
-}
-byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
-if ((vaddr1_offset + 4) > VConsts.PageSize)
-{
-    uint size1 = VConsts.PageSize - vaddr1_offset;
-    uint size2 = 4 - size1;
-    uint vaddr2 = vaddr + size1;
-    uint vaddr2_index = vaddr2 / VConsts.PageSize;
-    if (pte[vaddr2_index].CanRead == false)
-    {
-        exception_string = "Access violation at 0x8048464.";
-        exception_address = 0x8048464;
-        goto L_RETURN;
-    }
-    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
-    uint get_value = 0;
-    byte *get_ptr = (byte *)get_value;
-    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
-    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
-    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
-    esi = get_value;
-}
-else
-{
-    esi = *((uint *)realaddr1);
-}
-
-}
-
-// 804846a push %ebx
-L_804846a:
+// 8048891 push %ebx
+L_8048891:
 {
 esp -= 4;
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
-uint vaddr1_offset = vaddr % VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
 if (pte[vaddr1_index].CanWrite == false)
 {
-    exception_string = "Access violation at 0x804846a.";
-    exception_address = 0x804846a;
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048891;
     goto L_RETURN;
 }
 byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
@@ -171,8 +132,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
     uint vaddr2_index = vaddr2 / VConsts.PageSize;
     if (pte[vaddr2_index].CanWrite == false)
     {
-        exception_string = "Access violation at 0x804846a.";
-        exception_address = 0x804846a;
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x8048891;
         goto L_RETURN;
     }
     byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
@@ -189,193 +150,429 @@ else
 
 }
 
-// 804846b mov $0x3,%ebx
-L_804846b:
+// 8048892 xor %esi,%esi
+L_8048892:
+{
+esi ^= esi;
+}
+
+// 8048894 mov $0x3,%ebx
+L_8048894:
 {
 ebx = ( +0x3);
 }
 
-// 8048470 test $0x1,%bl
-L_8048470:
+// 8048899 sub $0x10,%esp
+L_8048899:
+{
+esp -= ( +0x10);
+}
+
+// 804889c movl $0x4e20,0xc(%esp)
+L_804889c:
+{
+uint vaddr = (esp +0xc);
+uint vaddr1_index = vaddr / VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+if (pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804889c;
+    goto L_RETURN;
+}
+byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+if ((vaddr1_offset + 4) > VConsts.PageSize)
+{
+    uint size1 = VConsts.PageSize - vaddr1_offset;
+    uint size2 = 4 - size1;
+    uint vaddr2 = vaddr + size1;
+    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+    if (pte[vaddr2_index].CanWrite == false)
+    {
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x804889c;
+        goto L_RETURN;
+    }
+    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
+    uint set_value = ( +0x4e20);
+    byte *set_ptr = (byte *)set_value;
+    if (size1 == 1) { realaddr1[0] = set_ptr[0]; realaddr2[0] = set_ptr[1]; realaddr2[1] = set_ptr[2]; realaddr2[2] = set_ptr[3]; }
+    else if (size1 == 2) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr2[0] = set_ptr[2]; realaddr2[1] = set_ptr[3]; }
+    else if (size1 == 3) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr1[2] = set_ptr[2]; realaddr2[0] = set_ptr[3]; }
+}
+else
+{
+    *((uint *)realaddr1) = ( +0x4e20);
+}
+
+}
+
+// 80488a4 mov 0xc(%esp),%eax
+L_80488a4:
+{
+uint vaddr = (esp +0xc);
+uint vaddr1_index = vaddr / VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+if (pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488a4;
+    goto L_RETURN;
+}
+byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+if ((vaddr1_offset + 4) > VConsts.PageSize)
+{
+    uint size1 = VConsts.PageSize - vaddr1_offset;
+    uint size2 = 4 - size1;
+    uint vaddr2 = vaddr + size1;
+    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+    if (pte[vaddr2_index].CanRead == false)
+    {
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x80488a4;
+        goto L_RETURN;
+    }
+    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
+    uint get_value = 0;
+    byte *get_ptr = (byte *)get_value;
+    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
+    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
+    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
+    eax = get_value;
+}
+else
+{
+    eax = *((uint *)realaddr1);
+}
+
+}
+
+// 80488a8 cmp $0x2,%eax
+L_80488a8:
+{
+compare_result = (uint)(eax - ( +0x2));
+}
+
+// 80488ab jbe 80488e7 <test_target1+0x57>
+L_80488ab:
+{
+if (compare_result == 0 || compare_result >= 0x80000000) {
+    goto L_80488e7;
+}
+}
+
+// 80488ad lea 0x0(%esi),%esi
+L_80488ad:
+{
+esi = esi;
+}
+
+// 80488b0 cmp $0x2,%ebx
+L_80488b0:
+{
+compare_result = (uint)(ebx - ( +0x2));
+}
+
+// 80488b3 jbe 80488d9 <test_target1+0x49>
+L_80488b3:
+{
+if (compare_result == 0 || compare_result >= 0x80000000) {
+    goto L_80488d9;
+}
+}
+
+// 80488b5 test $0x1,%bl
+L_80488b5:
 {
 compare_result = (uint)(bl & ( +0x1));
 }
 
-// 8048473 je 8048499 <test_target1+0x39>
-L_8048473:
+// 80488b8 je 80488dc <test_target1+0x4c>
+L_80488b8:
 {
+if (compare_result == 0) {
+    goto L_80488dc;
+}
 }
 
-// 8048475 mov $0x2,%ecx
-L_8048475:
+// 80488ba mov $0x2,%ecx
+L_80488ba:
 {
 ecx = ( +0x2);
 }
 
-// 804847a jmp 804848a <test_target1+0x2a>
-L_804847a:
+// 80488bf jmp 80488d2 <test_target1+0x42>
+L_80488bf:
 {
+if (true) {
+    goto L_80488d2;
+}
 }
 
-// 804847c lea 0x0(%esi,%eiz,1),%esi
-L_804847c:
+// 80488c1 lea 0x0(%esi,%eiz,1),%esi
+L_80488c1:
 {
+esi = (esi + eiz * 0x1);
 }
 
-// 8048480 xor %edx,%edx
-L_8048480:
+// 80488c8 xor %edx,%edx
+L_80488c8:
 {
 edx ^= edx;
 }
 
-// 8048482 mov %ebx,%eax
-L_8048482:
+// 80488ca mov %ebx,%eax
+L_80488ca:
 {
 eax = ebx;
 }
 
-// 8048484 div %ecx
-L_8048484:
+// 80488cc div %ecx
+L_80488cc:
 {
+ulong target = (ulong)edx << 32 | eax;
+eax = (uint)(target / ecx);
+edx = (uint)(target - eax * ecx);
 }
 
-// 8048486 test %edx,%edx
-L_8048486:
+// 80488ce test %edx,%edx
+L_80488ce:
 {
 compare_result = (uint)(edx & edx);
 }
 
-// 8048488 je 8048499 <test_target1+0x39>
-L_8048488:
+// 80488d0 je 80488dc <test_target1+0x4c>
+L_80488d0:
 {
+if (compare_result == 0) {
+    goto L_80488dc;
+}
 }
 
-// 804848a add $0x1,%ecx
-L_804848a:
+// 80488d2 add $0x1,%ecx
+L_80488d2:
 {
+ecx += ( +0x1);
 }
 
-// 804848d cmp %ebx,%ecx
-L_804848d:
+// 80488d5 cmp %ebx,%ecx
+L_80488d5:
 {
+compare_result = (uint)(ecx - ebx);
 }
 
-// 804848f jne 8048480 <test_target1+0x20>
-L_804848f:
+// 80488d7 jne 80488c8 <test_target1+0x38>
+L_80488d7:
 {
+if (compare_result != 0) {
+    goto L_80488c8;
+}
 }
 
-// 8048491 add $0x1,%esi
-L_8048491:
+// 80488d9 add $0x1,%esi
+L_80488d9:
 {
+esi += ( +0x1);
 }
 
-// 8048494 mov $0x1,%edi
-L_8048494:
+// 80488dc mov 0xc(%esp),%eax
+L_80488dc:
 {
-edi = ( +0x1);
+uint vaddr = (esp +0xc);
+uint vaddr1_index = vaddr / VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+if (pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488dc;
+    goto L_RETURN;
+}
+byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+if ((vaddr1_offset + 4) > VConsts.PageSize)
+{
+    uint size1 = VConsts.PageSize - vaddr1_offset;
+    uint size2 = 4 - size1;
+    uint vaddr2 = vaddr + size1;
+    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+    if (pte[vaddr2_index].CanRead == false)
+    {
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x80488dc;
+        goto L_RETURN;
+    }
+    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
+    uint get_value = 0;
+    byte *get_ptr = (byte *)get_value;
+    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
+    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
+    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
+    eax = get_value;
+}
+else
+{
+    eax = *((uint *)realaddr1);
 }
 
-// 8048499 add $0x1,%ebx
-L_8048499:
-{
 }
 
-// 804849c cmp $0x4e21,%ebx
-L_804849c:
+// 80488e0 add $0x1,%ebx
+L_80488e0:
 {
+ebx += ( +0x1);
 }
 
-// 80484a2 jne 8048470 <test_target1+0x10>
-L_80484a2:
+// 80488e3 cmp %ebx,%eax
+L_80488e3:
 {
+compare_result = (uint)(eax - ebx);
 }
 
-// 80484a4 mov %edi,%eax
-L_80484a4:
+// 80488e5 jae 80488b0 <test_target1+0x20>
+L_80488e5:
 {
-eax = edi;
+if (compare_result == 0 || compare_result <= 0x80000000) {
+    goto L_80488b0;
+}
 }
 
-// 80484a6 movl $0x4e21,0x804a024
-L_80484a6:
+// 80488e7 add $0x10,%esp
+L_80488e7:
 {
+esp += ( +0x10);
 }
 
-// 80484b0 test %al,%al
-L_80484b0:
-{
-compare_result = (uint)(al & al);
-}
-
-// 80484b2 jne 80484ba <test_target1+0x5a>
-L_80484b2:
-{
-}
-
-// 80484b4 mov %esi,%eax
-L_80484b4:
+// 80488ea mov %esi,%eax
+L_80488ea:
 {
 eax = esi;
 }
 
-// 80484b6 pop %ebx
-L_80484b6:
+// 80488ec pop %ebx
+L_80488ec:
 {
+uint vaddr = esp;
+uint vaddr1_index = vaddr / VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+if (pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488ec;
+    goto L_RETURN;
+}
+byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+if ((vaddr1_offset + 4) > VConsts.PageSize)
+{
+    uint size1 = VConsts.PageSize - vaddr1_offset;
+    uint size2 = 4 - size1;
+    uint vaddr2 = vaddr + size1;
+    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+    if (pte[vaddr2_index].CanRead == false)
+    {
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x80488ec;
+        goto L_RETURN;
+    }
+    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
+    uint get_value = 0;
+    byte *get_ptr = (byte *)get_value;
+    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
+    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
+    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
+    ebx = get_value;
+}
+else
+{
+    ebx = *((uint *)realaddr1);
 }
 
-// 80484b7 pop %esi
-L_80484b7:
-{
+esp += 4;
 }
 
-// 80484b8 pop %edi
-L_80484b8:
+// 80488ed pop %esi
+L_80488ed:
 {
+uint vaddr = esp;
+uint vaddr1_index = vaddr / VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+if (pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488ed;
+    goto L_RETURN;
+}
+byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+if ((vaddr1_offset + 4) > VConsts.PageSize)
+{
+    uint size1 = VConsts.PageSize - vaddr1_offset;
+    uint size2 = 4 - size1;
+    uint vaddr2 = vaddr + size1;
+    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+    if (pte[vaddr2_index].CanRead == false)
+    {
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x80488ed;
+        goto L_RETURN;
+    }
+    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
+    uint get_value = 0;
+    byte *get_ptr = (byte *)get_value;
+    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
+    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
+    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
+    esi = get_value;
+}
+else
+{
+    esi = *((uint *)realaddr1);
 }
 
-// 80484ba mov %esi,0x804a020
-L_80484ba:
-{
+esp += 4;
 }
 
-// 80484c0 jmp 80484b4 <test_target1+0x54>
-L_80484c0:
+// 80488ee ret 
+L_80488ee:
 {
+uint vaddr = esp;
+uint vaddr1_index = vaddr / VConsts.PageSize;
+uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+if (pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488ee;
+    goto L_RETURN;
+}
+byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+if ((vaddr1_offset + 4) > VConsts.PageSize)
+{
+    uint size1 = VConsts.PageSize - vaddr1_offset;
+    uint size2 = 4 - size1;
+    uint vaddr2 = vaddr + size1;
+    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+    if (pte[vaddr2_index].CanRead == false)
+    {
+        exception_string = $"Access violation to 0x{vaddr2:x}.";
+        exception_address = 0x80488ee;
+        goto L_RETURN;
+    }
+    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);
+    uint get_value = 0;
+    byte *get_ptr = (byte *)get_value;
+    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
+    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
+    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
+    next_ip = get_value;
+}
+else
+{
+    next_ip = *((uint *)realaddr1);
 }
 
-// 80484c2 xchg %ax,%ax
-L_80484c2:
-{
+esp += 4;
+goto L_START;
 }
 
-// 80484c4 xchg %ax,%ax
-L_80484c4:
-{
-}
-
-// 80484c6 xchg %ax,%ax
-L_80484c6:
-{
-}
-
-// 80484c8 xchg %ax,%ax
-L_80484c8:
-{
-}
-
-// 80484ca xchg %ax,%ax
-L_80484ca:
-{
-}
-
-// 80484cc xchg %ax,%ax
-L_80484cc:
-{
-}
-
-// 80484ce xchg %ax,%ax
-L_80484ce:
+// 80488ef nop 
+L_80488ef:
 {
 }
 
@@ -386,5 +583,11 @@ L_RETURN:
  state.ExceptionString = exception_string;
  state.ExceptionAddress = exception_address;
 }
+
+public enum FunctionTable
+{
+    test_target1 = 0x8048890,
+}
+
 }
 

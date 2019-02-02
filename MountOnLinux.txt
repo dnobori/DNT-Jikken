@@ -1,0 +1,10 @@
+﻿■ マウント
+cd ~/
+umount /git/
+mkdir -p /git/
+mount -t cifs -o username=localadmin4,password=__Gj178a,domain=pc34 //pc34.sec.softether.co.jp/c$/git /git
+
+
+■ 利用
+cd /git/DNT-Jikken/
+
