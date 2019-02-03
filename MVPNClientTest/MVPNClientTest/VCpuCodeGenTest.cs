@@ -322,6 +322,7 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine($"uint vaddr = {GetCode()};");
             w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
             w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
+            //w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
             w.WriteLine($"if (vaddr1_index == cache_last_page1)");
             w.WriteLine("{");
             if (writeMode)
@@ -576,7 +577,8 @@ namespace SoftEther.WebSocket.Helper
                         w.WriteLine("eax = (uint)(tmp1 / tmp2);");
                         w.WriteLine("edx = (uint)(tmp1 - tmp2 * eax);");
 
-                        w.WriteLine("} else {");
+                        w.WriteLine("} else");
+                        w.WriteLine("{ ");
 
                         w.WriteLine("uint tmp1 = eax;");
                         w.WriteLine($"uint tmp2 = {Operand1.GetValueAccessCode()};");

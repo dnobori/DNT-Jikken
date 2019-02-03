@@ -378,7 +378,8 @@ ulong tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);
 ulong tmp2 = ecx;
 eax = (uint)(tmp1 / tmp2);
 edx = (uint)(tmp1 - tmp2 * eax);
-} else {
+} else
+{ 
 uint tmp1 = eax;
 uint tmp2 = ecx;
 eax = tmp1 / tmp2;
