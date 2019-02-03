@@ -2,7 +2,7 @@
 using System;
 using SoftEther.WebSocket.Helper;
 
-#pragma warning disable CS0164, CS0219, CS1717, CS0162
+#pragma warning disable CS0164, CS0219, CS1717, CS0162, CS0168
 
 public static unsafe class VCode
 {

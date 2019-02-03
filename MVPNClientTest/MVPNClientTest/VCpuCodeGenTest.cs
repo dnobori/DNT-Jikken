@@ -973,7 +973,7 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("using System;");
             Out.WriteLine("using SoftEther.WebSocket.Helper;");
             Out.WriteLine();
-            Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717, CS0162");
+            Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717, CS0162, CS0168");
             Out.WriteLine();
             Out.WriteLine("public static unsafe class VCode");
             Out.WriteLine("{");
