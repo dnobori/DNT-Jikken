@@ -76,7 +76,7 @@ namespace VCpuTest
                     state.Esp -= 4;
                     proc.Memory.Write(state.Esp, VConsts.Magic_Return);
 
-                    VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target1);
+                    VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target2);
 
                     if (state.ExceptionString != null)
                     {
