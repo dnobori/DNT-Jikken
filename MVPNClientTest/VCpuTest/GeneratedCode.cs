@@ -28,6 +28,7 @@ byte *cache_last_realaddr2 = null;
 VMemory Memory = state.Memory;
 VPageTableEntry* pte = Memory.PageTableEntry;
 uint next_ip = ip;
+uint memcache_esp_0x0_pin = 0x7fffffff; uint memcache_esp_0x0_data = 0xcafebeef;
 uint memcache_esp_0xc_pin = 0x7fffffff; uint memcache_esp_0xc_data = 0xcafebeef;
 
 L_START:
@@ -58,6 +59,7 @@ default:
 L_80487c0:
 {
 esp -= 4;
+{
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -70,6 +72,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint write_tmp = esi;
     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
 }
 else
 {
@@ -111,6 +115,9 @@ else
 {
     uint write_tmp =esi;
     *((uint *)realaddr1) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
+}
 }
 }
 
@@ -119,6 +126,7 @@ else
 // 80487c1 push %ebx
 {
 esp -= 4;
+{
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -131,6 +139,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint write_tmp = ebx;
     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
 }
 else
 {
@@ -172,6 +182,9 @@ else
 {
     uint write_tmp =ebx;
     *((uint *)realaddr1) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
+}
 }
 }
 
@@ -195,6 +208,7 @@ compare_result = esp;
 
 // 80487cc movl $0x4e20,0xc(%esp)
 {
+{
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -207,6 +221,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint write_tmp = ( +0x4e20);
     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = write_tmp;
 }
 else
 {
@@ -248,12 +264,17 @@ else
 {
     uint write_tmp =( +0x4e20);
     *((uint *)realaddr1) = write_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = write_tmp;
+}
 }
 }
 
 }
 
 // 80487d4 mov 0xc(%esp),%eax
+{
+if (memcache_esp_0xc_pin == (esp +0xc)) eax= memcache_esp_0xc_data; else 
 {
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -267,6 +288,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     eax= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
 }
 else
 {
@@ -309,6 +332,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     eax= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
+}
 }
 }
 
@@ -441,6 +467,8 @@ compare_result = esi;
 // 804880c mov 0xc(%esp),%eax
 L_804880c:
 {
+if (memcache_esp_0xc_pin == (esp +0xc)) eax= memcache_esp_0xc_data; else 
+{
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -453,6 +481,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     eax= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
 }
 else
 {
@@ -495,6 +525,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     eax= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
+}
 }
 }
 
@@ -532,6 +565,8 @@ eax = esi;
 
 // 804881c pop %ebx
 {
+if (memcache_esp_0x0_pin == esp) ebx= memcache_esp_0x0_data; else 
+{
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -544,6 +579,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     ebx= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
 }
 else
 {
@@ -586,6 +623,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     ebx= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
+}
 }
 }
 
@@ -593,6 +633,8 @@ esp += 4;
 }
 
 // 804881d pop %esi
+{
+if (memcache_esp_0x0_pin == esp) esi= memcache_esp_0x0_data; else 
 {
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -606,6 +648,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     esi= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
 }
 else
 {
@@ -648,6 +692,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     esi= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
+}
 }
 }
 
@@ -655,6 +702,8 @@ esp += 4;
 }
 
 // 804881e ret 
+{
+if (memcache_esp_0x0_pin == esp) next_ip= memcache_esp_0x0_data; else 
 {
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -668,6 +717,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     next_ip= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
 }
 else
 {
@@ -710,6 +761,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     next_ip= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
+}
 }
 }
 
@@ -726,6 +780,7 @@ goto L_START;
 L_8048820:
 {
 esp -= 4;
+{
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -738,6 +793,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint write_tmp = esi;
     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
 }
 else
 {
@@ -779,6 +836,9 @@ else
 {
     uint write_tmp =esi;
     *((uint *)realaddr1) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
+}
 }
 }
 
@@ -787,6 +847,7 @@ else
 // 8048821 push %ebx
 {
 esp -= 4;
+{
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -799,6 +860,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint write_tmp = ebx;
     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
 }
 else
 {
@@ -840,6 +903,9 @@ else
 {
     uint write_tmp =ebx;
     *((uint *)realaddr1) = write_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = write_tmp;
+}
 }
 }
 
@@ -853,6 +919,7 @@ compare_result = esp;
 
 // 8048828 movl $0x7d0,0xc(%esp)
 {
+{
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -865,6 +932,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint write_tmp = ( +0x7d0);
     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = write_tmp;
 }
 else
 {
@@ -906,12 +975,17 @@ else
 {
     uint write_tmp =( +0x7d0);
     *((uint *)realaddr1) = write_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = write_tmp;
+}
 }
 }
 
 }
 
 // 8048830 mov 0xc(%esp),%eax
+{
+if (memcache_esp_0xc_pin == (esp +0xc)) eax= memcache_esp_0xc_data; else 
 {
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -925,6 +999,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     eax= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
 }
 else
 {
@@ -967,6 +1043,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     eax= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
+}
 }
 }
 
@@ -1001,6 +1080,8 @@ eax = 0;
 // 8048840 mov 0xc(%esp),%edx
 L_8048840:
 {
+if (memcache_esp_0xc_pin == (esp +0xc)) edx= memcache_esp_0xc_data; else 
+{
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -1013,6 +1094,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     edx= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
 }
 else
 {
@@ -1055,12 +1138,16 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     edx= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
+}
 }
 }
 
 }
 
 // 8048844 mov %eax,(%ebx,%eax,4)
+{
 {
 uint vaddr = (ebx + eax * 0x4);
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -1117,6 +1204,7 @@ else
     *((uint *)realaddr1) = write_tmp;
 }
 }
+}
 
 }
 
@@ -1157,6 +1245,8 @@ esi = esi;
 // 8048858 mov 0xc(%esp),%edx
 L_8048858:
 {
+if (memcache_esp_0xc_pin == (esp +0xc)) edx= memcache_esp_0xc_data; else 
+{
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -1169,6 +1259,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     edx= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
 }
 else
 {
@@ -1211,6 +1303,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     edx= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
+}
 }
 }
 
@@ -1251,6 +1346,8 @@ edi = (edi + eiz * 0x1);
 // 8048870 mov 0xc(%esp),%ecx
 L_8048870:
 {
+if (memcache_esp_0xc_pin == (esp +0xc)) ecx= memcache_esp_0xc_data; else 
+{
 uint vaddr = (esp +0xc);
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -1263,6 +1360,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     ecx= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
 }
 else
 {
@@ -1305,12 +1404,16 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     ecx= read_tmp;
+    memcache_esp_0xc_pin = (esp +0xc);
+    memcache_esp_0xc_data = read_tmp;
+}
 }
 }
 
 }
 
 // 8048874 add (%ebx,%edx,4),%eax
+{
 {
 uint vaddr = (ebx + edx * 0x4);
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -1368,6 +1471,7 @@ else
     eax+= read_tmp;
 }
 }
+}
 
 compare_result = eax;
 }
@@ -1412,6 +1516,8 @@ compare_result = esp;
 
 // 8048889 pop %ebx
 {
+if (memcache_esp_0x0_pin == esp) ebx= memcache_esp_0x0_data; else 
+{
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
@@ -1424,6 +1530,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     ebx= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
 }
 else
 {
@@ -1466,6 +1574,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     ebx= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
+}
 }
 }
 
@@ -1473,6 +1584,8 @@ esp += 4;
 }
 
 // 804888a pop %esi
+{
+if (memcache_esp_0x0_pin == esp) esi= memcache_esp_0x0_data; else 
 {
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -1486,6 +1599,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     esi= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
 }
 else
 {
@@ -1528,6 +1643,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     esi= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
+}
 }
 }
 
@@ -1535,6 +1653,8 @@ esp += 4;
 }
 
 // 804888b ret 
+{
+if (memcache_esp_0x0_pin == esp) next_ip= memcache_esp_0x0_data; else 
 {
 uint vaddr = esp;
 uint vaddr1_index = vaddr / VConsts.PageSize;
@@ -1548,6 +1668,8 @@ else if (vaddr1_index == cache_last_page2)
 {
     uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
     next_ip= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
 }
 else
 {
@@ -1590,6 +1712,9 @@ else
 {
     uint read_tmp = *((uint *)realaddr1);
     next_ip= read_tmp;
+    memcache_esp_0x0_pin = esp;
+    memcache_esp_0x0_data = read_tmp;
+}
 }
 }
 

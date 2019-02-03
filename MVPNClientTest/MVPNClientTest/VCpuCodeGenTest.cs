@@ -325,6 +325,19 @@ namespace SoftEther.WebSocket.Helper
                 memcache_tag = $"memcache_{this.BaseRegister}_0x{this.Displacement:x}";
             }
 
+            if (memcache_tag != null)
+            {
+                if (writeMode)
+                {
+                }
+                else
+                {
+                    w.WriteLine($"if ({memcache_tag}_pin == {GetCode()}) {srcOrDestinationCode}= {memcache_tag}_data; else ");
+                }
+            }
+
+            w.WriteLine("{");
+
             w.WriteLine($"uint vaddr = {GetCode()};");
             w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
             w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
@@ -348,11 +361,21 @@ namespace SoftEther.WebSocket.Helper
             {
                 w.WriteLine($"    uint write_tmp = {srcOrDestinationCode};");
                 w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;");
+                if (memcache_tag != null)
+                {
+                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.WriteLine($"    {memcache_tag}_data = write_tmp;");
+                }
             }
             else
             {
                 w.WriteLine($"    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));");
                 w.WriteLine($"    {srcOrDestinationCode}= read_tmp;");
+                if (memcache_tag != null)
+                {
+                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.WriteLine($"    {memcache_tag}_data = read_tmp;");
+                }
             }
             w.WriteLine("}");
             w.WriteLine("else");
@@ -417,13 +440,25 @@ namespace SoftEther.WebSocket.Helper
             {
                 w.WriteLine($"    uint write_tmp ={srcOrDestinationCode};");
                 w.WriteLine($"    *((uint *)realaddr1) = write_tmp;");
+                if (memcache_tag != null)
+                {
+                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.WriteLine($"    {memcache_tag}_data = write_tmp;");
+                }
             }
             else
             {
                 w.WriteLine($"    uint read_tmp = *((uint *)realaddr1);");
                 w.WriteLine($"    {srcOrDestinationCode}= read_tmp;");
+                if (memcache_tag != null)
+                {
+                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.WriteLine($"    {memcache_tag}_data = read_tmp;");
+                }
             }
             w.WriteLine("}");
+            w.WriteLine("}");
+
             w.WriteLine("}");
 
             return w.ToString();
@@ -858,6 +893,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     List<VCodeOperand> operands = new List<VCodeOperand>();
                     operands.Add(op.Operand1); operands.Add(op.Operand2);
+                    operands.Add(new VCodeOperand("(%esp)"));
                     foreach (var operand in operands.Where(x => x != null))
                     {
                         if (operand.IsPointer && operand.BaseRegister != null && operand.Scaler == 0 && operand.OffsetRegister == null)
