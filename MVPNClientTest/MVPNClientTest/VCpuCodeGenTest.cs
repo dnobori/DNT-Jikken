@@ -319,7 +319,6 @@ namespace SoftEther.WebSocket.Helper
         {
             StringWriter w = new StringWriter();
             string memcache_tag = null;
-            w.WriteLine("uint write_tmp; uint read_tmp;");
 
             if (this.IsPointer && this.BaseRegister != null && this.Scaler == 0 && this.OffsetRegister == null)
             {
@@ -340,9 +339,9 @@ namespace SoftEther.WebSocket.Helper
 
             w.WriteLine("{");
 
-            w.WriteLine($"uint vaddr = {GetCode()};");
-            w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
-            w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
+            w.WriteLine($"vaddr = {GetCode()};");
+            w.WriteLine($"vaddr1_index = vaddr / VConsts.PageSize;");
+            w.WriteLine($"vaddr1_offset = vaddr % VConsts.PageSize;");
             //w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
             w.WriteLine($"if (vaddr1_index == cache_last_page1)");
             w.WriteLine("{");
@@ -410,44 +409,8 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine($"byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
 
             
-            // beyond two pages
-            w.WriteLine("if ((vaddr1_offset + 4) > VConsts.PageSize)");
-            w.WriteLine("{");
-            w.WriteLine("    uint size1 = VConsts.PageSize - vaddr1_offset;");
-            w.WriteLine("    uint size2 = 4 - size1;");
-            w.WriteLine("    uint vaddr2 = vaddr + size1;");
-
-            w.WriteLine($"    uint vaddr2_index = vaddr2 / VConsts.PageSize;");
-            w.WriteLine($"    if (pte[vaddr2_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
-            w.WriteLine("    {");
-            w.WriteLine("        exception_string = $\"Access violation to 0x{vaddr2:x}.\";");
-            w.WriteLine($"        exception_address = 0x{codeAddress:x};");
-            w.WriteLine("        goto L_RETURN;");
-            w.WriteLine("    }");
-            w.WriteLine($"    byte *realaddr2 = (byte *)(pte[vaddr2_index].RealMemory);");
-            if (writeMode)
-            {
-                w.WriteLine($"    uint set_value = {srcOrDestinationCode};");
-                w.WriteLine("    byte *set_ptr = (byte *)set_value;");
-                w.WriteLine("    if (size1 == 1) { realaddr1[0] = set_ptr[0]; realaddr2[0] = set_ptr[1]; realaddr2[1] = set_ptr[2]; realaddr2[2] = set_ptr[3]; }");
-                w.WriteLine("    else if (size1 == 2) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr2[0] = set_ptr[2]; realaddr2[1] = set_ptr[3]; }");
-                w.WriteLine("    else if (size1 == 3) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr1[2] = set_ptr[2]; realaddr2[0] = set_ptr[3]; }");
-            }
-            else
-            {
-                w.WriteLine($"    uint get_value = 0;");
-                w.WriteLine("    byte *get_ptr = (byte *)get_value;");
-                w.WriteLine("    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }");
-                w.WriteLine("    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }");
-                w.WriteLine("    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }");
-                w.WriteLine($"    {srcOrDestinationCode}= get_value;");
-            }
-
-            w.WriteLine("}");
 
             // single page
-            w.WriteLine("else"); 
-            w.WriteLine("{");
             if (writeMode)
             {
                 w.WriteLine($"     write_tmp ={srcOrDestinationCode};");
@@ -471,7 +434,6 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("}");
             w.WriteLine("}");
 
-            w.WriteLine("}");
 
             return w.ToString();
         }
@@ -921,6 +883,8 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("byte *cache_last_realaddr1 = null;");
             Out.WriteLine("uint cache_last_page2 = 0xffffffff;");
             Out.WriteLine("byte *cache_last_realaddr2 = null;");
+            Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
+            Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
 
             Out.WriteLine("VMemory Memory = state.Memory;");
             Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
