@@ -350,11 +350,21 @@ namespace SoftEther.WebSocket.Helper
             {
                 w.WriteLine($"     write_tmp = {srcOrDestinationCode};");
                 w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;");
+                if (memcache_tag != null)
+                {
+                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.WriteLine($"    {memcache_tag}_data = write_tmp;");
+                }
             }
             else
             {
                 w.WriteLine($"     read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));");
                 w.WriteLine($"    {srcOrDestinationCode}= read_tmp;");
+                if (memcache_tag != null)
+                {
+                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.WriteLine($"    {memcache_tag}_data = read_tmp;");
+                }
             }
             w.WriteLine("}");
             w.WriteLine("else if (vaddr1_index == cache_last_page2)");
@@ -686,7 +696,10 @@ namespace SoftEther.WebSocket.Helper
                         if (ToString().Contains("__stack_chk_fail")) { }
                         else
                         {
-                            throw new NotImplementedException();
+                            w.WriteLine("esp -= 4;");
+                            var destMemory = new VCodeOperand("(%esp)");
+                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"0x{Next.Address:x}"));
+                            WriteJumpCode(w, "true", Operand1);
                         }
                         break;
                     }
@@ -717,6 +730,8 @@ namespace SoftEther.WebSocket.Helper
         VCodeGen Gen;
 
         public VCodeOperand Operand1, Operand2;
+
+        public VCodeOperation Next, Prev;
 
         public VCodeOperation(VCodeGen gen, uint address, string opcode, string arguments)
         {
@@ -847,6 +862,27 @@ namespace SoftEther.WebSocket.Helper
             foreach (var func in FunctionTable)
             {
                 LabelRefs.Add(func.Value);
+            }
+
+            VCodeOperation op_prev = null;
+
+            foreach (VCodeOperation op in OperationLines.Values)
+            {
+                if (op_prev != null)
+                {
+                    op_prev.Next = op;
+                }
+                op.Prev = op_prev;
+
+                op_prev = op;
+            }
+
+            foreach (var op in OperationLines.Values)
+            {
+                if (op.Opcode == "call")
+                {
+                    LabelRefs.Add(op.Next.Address);
+                }
             }
         }
 

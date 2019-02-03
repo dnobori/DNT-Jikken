@@ -1116,6 +1116,31 @@ namespace cs_struct_bench1
             }
         }
 
+        static uint test_target4(uint a)
+        {
+            if (a == 0)
+            {
+                return 0;
+            }
+            else if (a == 1)
+            {
+                return 1;
+            }
+            else
+            {
+                return test_target4(a - 1) + test_target4(a - 2);
+            }
+        }
+
+        static uint test_target3()
+        {
+            uint a = 34;
+
+            return test_target4(a);
+        }
+
+
+
         static uint test_target2()
         {
             uint[] tmp = new uint[2000];
@@ -1225,6 +1250,17 @@ namespace cs_struct_bench1
             Memory<byte> byte12345 = new byte[12345];
 
             var q = new MicroBenchmarkQueue()
+
+
+                .Add(new MicroBenchmark<Memory<byte>>("test_target3", 10, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        test_target3();
+                        // 42ns
+                    }
+                }
+                ), true, 190202)
 
 
                 .Add(new MicroBenchmark<Memory<byte>>("test_target2", 10, (state, iterations) =>

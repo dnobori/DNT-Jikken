@@ -174,6 +174,32 @@ NOINLINE UINT test_target2()
 	//time = 60,848,300
 }
 
+NOINLINE UINT test_target4(UINT a)
+{
+	if (a == 0)
+	{
+		return 0;
+	}
+	else if (a == 1)
+	{
+		return 1;
+	}
+	else
+	{
+		return test_target4(a - 1) + test_target4(a - 2);
+	}
+}
+
+NOINLINE UINT test_target3()
+{
+	volatile UINT a = 34;
+
+	return test_target4(a);
+
+	//ret = 5702887
+	//time = 36,055,870
+}
+
 NOINLINE UINT test_main(UINT count)
 {
 	UINT ret = 0xffffffff;
@@ -181,8 +207,9 @@ NOINLINE UINT test_main(UINT count)
 
 	for (i = 0;i < count;i++)
 	{
-		UINT r = test_target1();
+		//UINT r = test_target1();
 		//UINT r = test_target2();
+		UINT r = test_target3();
 
 		if (ret == 0xffffffff || ret == r)
 		{
