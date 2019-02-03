@@ -583,8 +583,9 @@ namespace SoftEther.WebSocket.Helper
                         w.WriteLine("goto L_START;");
                     }
                     break;
-                    
 
+
+                case "jle": //TODO
                 case "je":
                     {
                         WriteJumpCode(w, "compare_result == 0", Operand1);

@@ -65,17 +65,18 @@ namespace VCpuTest
                 VCpuState state = new VCpuState(proc);
 
                 uint ret = 0xffffffff;
-
+                
                 Stopwatch sw = new Stopwatch();
 
-                sw.Start();
+                //sw.Start();
                 for (int i = 0; i < count; i++)
                 {
+                    if (i == 1) sw.Start();
                     state.Esp = stackPtr;
                     state.Esp -= 4;
                     proc.Memory.Write(state.Esp, VConsts.Magic_Return);
 
-                    VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target3);
+                    VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target1);
 
                     if (state.ExceptionString != null)
                     {
@@ -84,7 +85,7 @@ namespace VCpuTest
                     else
                     {
                         uint r = state.Eax;
-
+                        
                         if (ret == 0xffffffff)
                         {
                             ret = r;
@@ -101,7 +102,7 @@ namespace VCpuTest
                 }
                 sw.Stop();
 
-                long result = sw.Elapsed.Ticks * 100 / count;
+                long result = sw.Elapsed.Ticks * 100 / (count - 1);
 
                 Console.WriteLine($"time = {result:#,0}");
             }

@@ -1162,6 +1162,46 @@ namespace cs_struct_bench1
             return ret;
         }
 
+        ref struct RefStruct
+        {
+            public uint a, b, c, d;
+        }
+
+        static void ref_struct_test2(ref RefStruct x)
+        {
+        }
+
+        static void testtest1(Span<int> array)
+        {
+            ref int x = ref array[0];
+            for (int j = 0; j < 100; j++)
+            {
+                x = (int)Limbo.SInt * 0xcafe;
+                x = 123;
+            }
+            Limbo.UInt += (uint)(x);
+        }
+
+        static void ref_struct_test()
+        {
+            int count = 100;
+            RefStruct x = new RefStruct();
+            for (int i = 0; i < count; i++)
+            {
+                for (int j = 0; j < 100; j++)
+                {
+                    x.a = x.b * 0xcafe + x.c * 0xbeef;
+                    x.a = 0;
+                    x.d = x.a + x.c;
+                }
+                Limbo.UInt += x.a;
+            }
+
+            Span<int> array = stackalloc int[16];
+
+            testtest1(array);
+        }
+
         static void Main(string[] args)
         {
             WriteLine("Started.");
@@ -1251,6 +1291,16 @@ namespace cs_struct_bench1
 
             var q = new MicroBenchmarkQueue()
 
+
+                .Add(new MicroBenchmark<Memory<byte>>("ref_struct_test", 10, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                        ref_struct_test();
+                        // 42ns
+                    }
+                }
+                ), true, 190202)
 
                 .Add(new MicroBenchmark<Memory<byte>>("test_target3", 10, (state, iterations) =>
                 {

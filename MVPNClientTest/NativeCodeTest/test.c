@@ -174,26 +174,6 @@ NOINLINE UINT test_target2()
 	//time = 60,848,300
 }
 
-// Tak
-NOINLINE int test_target6(int x, int y, int z) {
-	return 0;
-	if (x <= y) {
-		return z;
-	}
-	else {
-		return test_target6(test_target6(x - 1, y, z), test_target6(y - 1, z, x), test_target6(z - 1, x, y));
-	}
-}
-
-NOINLINE UINT test_target5()
-{
-	volatile UINT x = 25, y = 7, z = 0;
-	UINT ret = test_target6(x, y, z);
-	return ret;
-	//ret = 1
-	//time = 32,209,370
-}
-
 NOINLINE UINT test_target4(UINT a)
 {
 	if (a == 0)
@@ -220,6 +200,60 @@ NOINLINE UINT test_target3()
 	//time = 36,055,870
 }
 
+//
+//// Tak
+//NOINLINE int test_target6(int x, int y, int z) {
+//	if (x <= y) {
+//		return z;
+//	}
+//	else {
+//		volatile UINT a = 0;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
+//		return test_target6(test_target6(x - 1, y, z), test_target6(y - 1, z, x), test_target6(z - 1, x, y));
+//	}
+//}
+//
+//NOINLINE UINT test_target5()
+//{
+//	volatile UINT x = 25, y = 7, z = 0;
+//	UINT ret = test_target6(x, y, z);
+//	return ret;
+//	//ret = 1
+//	//time = 32,209,370
+//}
+
 NOINLINE UINT test_main(UINT count)
 {
 	UINT ret = 0xffffffff;
@@ -227,10 +261,10 @@ NOINLINE UINT test_main(UINT count)
 
 	for (i = 0;i < count;i++)
 	{
-		//UINT r = test_target1();
+		UINT r = test_target1();
 		//UINT r = test_target2();
 		//UINT r = test_target3();
-		UINT r = test_target5();
+		//UINT r = test_target5();
 
 		if (ret == 0xffffffff || ret == r)
 		{
