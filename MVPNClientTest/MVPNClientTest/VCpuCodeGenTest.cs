@@ -416,7 +416,7 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("    cache_last_page2 = vaddr1_index;");
             w.WriteLine("    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;");
             w.WriteLine("}");
-            w.WriteLine($"byte *realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
+            //w.WriteLine($"realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
 
             
 
@@ -427,7 +427,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     w.Write($"    {memcache_tag}_data = ");
                 }
-                w.WriteLine($"    *((uint *)realaddr1) = {srcOrDestinationCode};");
+                w.WriteLine($"    *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = {srcOrDestinationCode};");
                 if (memcache_tag != null)
                 {
                     w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
@@ -440,7 +440,7 @@ namespace SoftEther.WebSocket.Helper
                 {
                     w.Write($"    {memcache_tag}_data = ");
                 }
-                w.WriteLine(" *((uint *)realaddr1);");
+                w.WriteLine(" *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset)));");
                 if (memcache_tag != null)
                 {
                     w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
@@ -479,7 +479,7 @@ namespace SoftEther.WebSocket.Helper
 
         public void WriteCode(StringWriter w)
         {
-            if (Gen.LabelRefs.Contains(Address))
+            if (Gen.LabelRefs.Contains(Address) || Gen.CallNextRefs.Contains(Address))
             {
                 w.WriteLine($"L_{Address:x}:");
             }
@@ -557,7 +557,7 @@ namespace SoftEther.WebSocket.Helper
                         var destMemory = new VCodeOperand("(%esp)");
                         w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, false, "next_ip"));
                         w.WriteLine("esp += 4;");
-                        w.WriteLine("goto L_START;");
+                        w.WriteLine("goto L_RET_FROM_CALL;");
                     }
                     break;
 
@@ -781,6 +781,7 @@ namespace SoftEther.WebSocket.Helper
         SortedDictionary<uint, VCodeOperation> OperationLines = new SortedDictionary<uint, VCodeOperation>();
         public HashSet<uint> CodeLabels = new HashSet<uint>();
         public HashSet<uint> LabelRefs = new HashSet<uint>();
+        public HashSet<uint> CallNextRefs = new HashSet<uint>();
         public HashSet<string> MemCacheTags = new HashSet<string>();
 
         public override string ToString() => Out.ToString();
@@ -859,7 +860,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 if (op.Opcode == "call")
                 {
-                    LabelRefs.Add(op.Next.Address);
+                    CallNextRefs.Add(op.Next.Address);
                 }
             }
         }
@@ -900,6 +901,7 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("byte *cache_last_realaddr2 = null;");
             Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
             Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
+            Out.WriteLine("byte *realaddr1 = null;");
 
             Out.WriteLine("VMemory Memory = state.Memory;");
             Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
@@ -941,11 +943,36 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
+            //Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
+            //Out.WriteLine("goto L_RETURN;");
+
+            Out.WriteLine("default:");
+            Out.WriteLine($"    exception_string = \"Invalid jump target.\";");
+            Out.WriteLine("    exception_address = next_ip;");
+            Out.WriteLine("    goto L_RETURN;");
+
+            Out.WriteLine("}");
+
+            Out.WriteLine();
+
+            Out.WriteLine("L_RET_FROM_CALL:");
+            Out.WriteLine("switch (next_ip)");
+            Out.WriteLine("{");
+
+            foreach (VCodeOperation op in OperationLines.Values)
+            {
+                if (CallNextRefs.Contains(op.Address))
+                {
+                    Out.Write($"case 0x{op.Address:x}: ");
+                    Out.WriteLine($"goto L_{op.Address:x};");
+                }
+            }
+
             Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
             Out.WriteLine("goto L_RETURN;");
 
             Out.WriteLine("default:");
-            Out.WriteLine($"    exception_string = \"Invalid jump target.\";");
+            Out.WriteLine($"    exception_string = \"Invalid call return target.\";");
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
 

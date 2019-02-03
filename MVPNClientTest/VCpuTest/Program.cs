@@ -52,7 +52,7 @@ namespace VCpuTest
 
         public static void ExecTest()
         {
-            int count = 5;
+            int count = 40;
 
             using (VProcess proc = new VProcess())
             {
@@ -67,7 +67,7 @@ namespace VCpuTest
                 uint ret = 0xffffffff;
                 
                 Stopwatch sw = new Stopwatch();
-
+                
                 //sw.Start();
                 for (int i = 0; i < count; i++)
                 {
