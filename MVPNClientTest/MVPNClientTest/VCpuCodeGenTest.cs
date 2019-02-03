@@ -318,6 +318,12 @@ namespace SoftEther.WebSocket.Helper
         public string GenerateMemoryAccessCode(uint codeAddress, bool writeMode, string srcOrDestinationCode)
         {
             StringWriter w = new StringWriter();
+            string memcache_tag = null;
+
+            if (this.IsPointer && this.BaseRegister != null && this.Scaler == 0 && this.OffsetRegister == null)
+            {
+                memcache_tag = $"memcache_{this.BaseRegister}_0x{this.Displacement:x}";
+            }
 
             w.WriteLine($"uint vaddr = {GetCode()};");
             w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
@@ -327,22 +333,26 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("{");
             if (writeMode)
             {
-                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = {srcOrDestinationCode};");
+                w.WriteLine($"    uint write_tmp = {srcOrDestinationCode};");
+                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;");
             }
             else
             {
-                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));");
+                w.WriteLine($"    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));");
+                w.WriteLine($"    {srcOrDestinationCode}= read_tmp;");
             }
             w.WriteLine("}");
             w.WriteLine("else if (vaddr1_index == cache_last_page2)");
             w.WriteLine("{");
             if (writeMode)
             {
-                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = {srcOrDestinationCode};");
+                w.WriteLine($"    uint write_tmp = {srcOrDestinationCode};");
+                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;");
             }
             else
             {
-                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));");
+                w.WriteLine($"    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));");
+                w.WriteLine($"    {srcOrDestinationCode}= read_tmp;");
             }
             w.WriteLine("}");
             w.WriteLine("else");
@@ -405,11 +415,13 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("{");
             if (writeMode)
             {
-                w.WriteLine($"    *((uint *)realaddr1) ={srcOrDestinationCode};");
+                w.WriteLine($"    uint write_tmp ={srcOrDestinationCode};");
+                w.WriteLine($"    *((uint *)realaddr1) = write_tmp;");
             }
             else
             {
-                w.WriteLine($"    {srcOrDestinationCode}= *((uint *)realaddr1);");
+                w.WriteLine($"    uint read_tmp = *((uint *)realaddr1);");
+                w.WriteLine($"    {srcOrDestinationCode}= read_tmp;");
             }
             w.WriteLine("}");
             w.WriteLine("}");
@@ -739,6 +751,7 @@ namespace SoftEther.WebSocket.Helper
         SortedDictionary<uint, VCodeOperation> OperationLines = new SortedDictionary<uint, VCodeOperation>();
         public HashSet<uint> CodeLabels = new HashSet<uint>();
         public HashSet<uint> LabelRefs = new HashSet<uint>();
+        public HashSet<string> MemCacheTags = new HashSet<string>();
 
         public override string ToString() => Out.ToString();
 
@@ -838,6 +851,26 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("VMemory Memory = state.Memory;");
             Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
             Out.WriteLine("uint next_ip = ip;");
+
+            foreach (VCodeOperation op in OperationLines.Values)
+            {
+                if (op.Opcode != "lea")
+                {
+                    List<VCodeOperand> operands = new List<VCodeOperand>();
+                    operands.Add(op.Operand1); operands.Add(op.Operand2);
+                    foreach (var operand in operands.Where(x => x != null))
+                    {
+                        if (operand.IsPointer && operand.BaseRegister != null && operand.Scaler == 0 && operand.OffsetRegister == null)
+                        {
+                            MemCacheTags.Add($"memcache_{operand.BaseRegister}_0x{operand.Displacement:x}");
+                        }
+                    }
+                }
+            }
+            foreach (string tag in MemCacheTags)
+            {
+                Out.WriteLine($"uint {tag}_pin = 0x7fffffff; uint {tag}_data = 0xcafebeef;");
+            }
 
             Out.WriteLine();
 

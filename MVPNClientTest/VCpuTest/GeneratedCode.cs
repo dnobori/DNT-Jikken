@@ -28,6 +28,7 @@ byte *cache_last_realaddr2 = null;
 VMemory Memory = state.Memory;
 VPageTableEntry* pte = Memory.PageTableEntry;
 uint next_ip = ip;
+uint memcache_esp_0xc_pin = 0x7fffffff; uint memcache_esp_0xc_data = 0xcafebeef;
 
 L_START:
 switch (next_ip)
@@ -62,11 +63,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = esi;
+    uint write_tmp = esi;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = esi;
+    uint write_tmp = esi;
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
 }
 else
 {
@@ -106,7 +109,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    *((uint *)realaddr1) =esi;
+    uint write_tmp =esi;
+    *((uint *)realaddr1) = write_tmp;
 }
 }
 
@@ -120,11 +124,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+    uint write_tmp = ebx;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
+    uint write_tmp = ebx;
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
 }
 else
 {
@@ -164,7 +170,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    *((uint *)realaddr1) =ebx;
+    uint write_tmp =ebx;
+    *((uint *)realaddr1) = write_tmp;
 }
 }
 
@@ -193,11 +200,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x4e20);
+    uint write_tmp = ( +0x4e20);
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x4e20);
+    uint write_tmp = ( +0x4e20);
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
 }
 else
 {
@@ -237,7 +246,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    *((uint *)realaddr1) =( +0x4e20);
+    uint write_tmp =( +0x4e20);
+    *((uint *)realaddr1) = write_tmp;
 }
 }
 
@@ -250,11 +260,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    eax= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    eax= read_tmp;
 }
 else
 {
@@ -295,7 +307,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    eax= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    eax= read_tmp;
 }
 }
 
@@ -433,11 +446,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    eax= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    eax= read_tmp;
 }
 else
 {
@@ -478,7 +493,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    eax= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    eax= read_tmp;
 }
 }
 
@@ -521,11 +537,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    ebx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    ebx= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    ebx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    ebx= read_tmp;
 }
 else
 {
@@ -566,7 +584,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    ebx= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    ebx= read_tmp;
 }
 }
 
@@ -580,11 +599,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    esi= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    esi= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    esi= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    esi= read_tmp;
 }
 else
 {
@@ -625,7 +646,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    esi= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    esi= read_tmp;
 }
 }
 
@@ -639,11 +661,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    next_ip= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    next_ip= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    next_ip= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    next_ip= read_tmp;
 }
 else
 {
@@ -684,7 +708,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    next_ip= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    next_ip= read_tmp;
 }
 }
 
@@ -706,11 +731,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = esi;
+    uint write_tmp = esi;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = esi;
+    uint write_tmp = esi;
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
 }
 else
 {
@@ -750,7 +777,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    *((uint *)realaddr1) =esi;
+    uint write_tmp =esi;
+    *((uint *)realaddr1) = write_tmp;
 }
 }
 
@@ -764,11 +792,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+    uint write_tmp = ebx;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
+    uint write_tmp = ebx;
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
 }
 else
 {
@@ -808,7 +838,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    *((uint *)realaddr1) =ebx;
+    uint write_tmp =ebx;
+    *((uint *)realaddr1) = write_tmp;
 }
 }
 
@@ -827,11 +858,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x7d0);
+    uint write_tmp = ( +0x7d0);
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x7d0);
+    uint write_tmp = ( +0x7d0);
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
 }
 else
 {
@@ -871,7 +904,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    *((uint *)realaddr1) =( +0x7d0);
+    uint write_tmp =( +0x7d0);
+    *((uint *)realaddr1) = write_tmp;
 }
 }
 
@@ -884,11 +918,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    eax= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    eax= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    eax= read_tmp;
 }
 else
 {
@@ -929,7 +965,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    eax= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    eax= read_tmp;
 }
 }
 
@@ -969,11 +1006,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    edx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    edx= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    edx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    edx= read_tmp;
 }
 else
 {
@@ -1014,7 +1053,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    edx= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    edx= read_tmp;
 }
 }
 
@@ -1027,11 +1067,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    uint write_tmp = eax;
+    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = write_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    uint write_tmp = eax;
+    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = write_tmp;
 }
 else
 {
@@ -1071,7 +1113,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    *((uint *)realaddr1) =eax;
+    uint write_tmp =eax;
+    *((uint *)realaddr1) = write_tmp;
 }
 }
 
@@ -1119,11 +1162,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    edx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    edx= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    edx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    edx= read_tmp;
 }
 else
 {
@@ -1164,7 +1209,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    edx= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    edx= read_tmp;
 }
 }
 
@@ -1210,11 +1256,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    ecx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    ecx= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    ecx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    ecx= read_tmp;
 }
 else
 {
@@ -1255,7 +1303,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    ecx= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    ecx= read_tmp;
 }
 }
 
@@ -1268,11 +1317,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    eax+= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    eax+= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    eax+= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    eax+= read_tmp;
 }
 else
 {
@@ -1313,7 +1364,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    eax+= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    eax+= read_tmp;
 }
 }
 
@@ -1365,11 +1417,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    ebx= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    ebx= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    ebx= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    ebx= read_tmp;
 }
 else
 {
@@ -1410,7 +1464,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    ebx= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    ebx= read_tmp;
 }
 }
 
@@ -1424,11 +1479,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    esi= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    esi= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    esi= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    esi= read_tmp;
 }
 else
 {
@@ -1469,7 +1526,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    esi= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    esi= read_tmp;
 }
 }
 
@@ -1483,11 +1541,13 @@ uint vaddr1_index = vaddr / VConsts.PageSize;
 uint vaddr1_offset = vaddr % VConsts.PageSize;
 if (vaddr1_index == cache_last_page1)
 {
-    next_ip= *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));
+    next_ip= read_tmp;
 }
 else if (vaddr1_index == cache_last_page2)
 {
-    next_ip= *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    uint read_tmp = *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));
+    next_ip= read_tmp;
 }
 else
 {
@@ -1528,7 +1588,8 @@ if ((vaddr1_offset + 4) > VConsts.PageSize)
 }
 else
 {
-    next_ip= *((uint *)realaddr1);
+    uint read_tmp = *((uint *)realaddr1);
+    next_ip= read_tmp;
 }
 }
 
