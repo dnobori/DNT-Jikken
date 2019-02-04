@@ -38,6 +38,7 @@ namespace SoftEther.WebSocket.Helper
     {
         public const uint PageSize = 4096;
         public const uint NumPages = (uint)(0x100000000 / PageSize);
+        public const uint Magic_Return = 0xdeadbeef;
     }
 
     public unsafe struct VPageTableEntry
@@ -311,14 +312,10 @@ namespace SoftEther.WebSocket.Helper
         public string GetValueAccessCode()
         {
             if (this.IsPointer) throw new ApplicationException("This operand is a pointer.");
-            if (this.BaseRegister == "bl" && this.OffsetRegister == null && this.Scaler == 0)
-            {
-                return "((ebx) & 0xffff)";
-            }
             return GetCode();
         }
 
-        public string GenerateMemoryAccessCode(uint codeAddress, bool writeMode, string srcOrDestinationCode, string readModeRetType = "uint")
+        public string GenerateMemoryAccessCode(uint codeAddress, bool writeMode, string srcOrDestinationCode)
         {
             StringWriter w = new StringWriter();
             string memcache_tag = null;
@@ -328,8 +325,6 @@ namespace SoftEther.WebSocket.Helper
                 memcache_tag = $"memcache_{this.BaseRegister}_0x{this.Displacement:x}";
             }
 
-            memcache_tag = null;
-
             if (memcache_tag != null)
             {
                 if (writeMode)
@@ -337,21 +332,16 @@ namespace SoftEther.WebSocket.Helper
                 }
                 else
                 {
-                    w.WriteLine($"if ({memcache_tag}_pin == {GetCode()}) {srcOrDestinationCode}= ({readModeRetType}) {memcache_tag}_data; else ");
+                    w.WriteLine($"if ({memcache_tag}_pin == {GetCode()}) {srcOrDestinationCode}= {memcache_tag}_data; else ");
                 }
             }
 
 
             w.WriteLine("{");
 
-            if (writeMode)
-                w.WriteLine("uint write_tmp = 0;");
-            else
-                w.WriteLine("uint read_tmp = 0;");
-
-            w.WriteLine($"uint vaddr = {GetCode()};");
-            w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
-            w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
+            w.WriteLine($"vaddr = {GetCode()};");
+            w.WriteLine($"vaddr1_index = vaddr / VConsts.PageSize;");
+            w.WriteLine($"vaddr1_offset = vaddr % VConsts.PageSize;");
             //w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
             w.WriteLine($"if (vaddr1_index == cache_last_page1)");
             w.WriteLine("{");
@@ -369,12 +359,12 @@ namespace SoftEther.WebSocket.Helper
             }
             else
             {
-                w.Write($"    {srcOrDestinationCode}= ({readModeRetType})( ");
+                w.Write($"    {srcOrDestinationCode}= ");
                 if (memcache_tag != null)
                 {
                     w.Write($"    {memcache_tag}_data = ");
                 }
-                w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );");
+                w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset));");
                 if (memcache_tag != null)
                 {
                     w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
@@ -397,12 +387,12 @@ namespace SoftEther.WebSocket.Helper
             }
             else
             {
-                w.Write($"    {srcOrDestinationCode}= ({readModeRetType})(");
+                w.Write($"    {srcOrDestinationCode}= ");
                 if (memcache_tag != null)
                 {
                     w.Write($"    {memcache_tag}_data = ");
                 }
-                w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );");
+                w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset));");
                 if (memcache_tag != null)
                 {
                     w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
@@ -411,7 +401,7 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("}");
             w.WriteLine("else");
             w.WriteLine("{");
-            w.WriteLine($"if (false&&pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
+            w.WriteLine($"if (pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
             w.WriteLine("{");
             w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
             w.WriteLine($"    exception_address = 0x{codeAddress:x};");
@@ -445,20 +435,18 @@ namespace SoftEther.WebSocket.Helper
             }
             else
             {
-                w.Write($"    {srcOrDestinationCode}= ({readModeRetType})(");
+                w.Write($"    {srcOrDestinationCode}= ");
                 if (memcache_tag != null)
                 {
                     w.Write($"    {memcache_tag}_data = ");
                 }
-                w.WriteLine(" *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );");
+                w.WriteLine(" *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset)));");
                 if (memcache_tag != null)
                 {
                     w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
                 }
             }
             w.WriteLine("}");
-
-
             w.WriteLine("}");
 
 
@@ -496,7 +484,7 @@ namespace SoftEther.WebSocket.Helper
                 w.WriteLine($"L_{Address:x}:");
             }
 
-            //w.WriteLine("{");
+            w.WriteLine("{");
 
             switch (Opcode)
             {
@@ -567,7 +555,7 @@ namespace SoftEther.WebSocket.Helper
                 case "ret":
                     {
                         var destMemory = new VCodeOperand("(%esp)");
-                        w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, false, "next_return", "CallRetAddress"));
+                        w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, false, "next_ip"));
                         w.WriteLine("esp += 4;");
                         w.WriteLine("goto L_RET_FROM_CALL;");
                     }
@@ -688,7 +676,7 @@ namespace SoftEther.WebSocket.Helper
                         {
                             w.WriteLine("esp -= 4;");
                             var destMemory = new VCodeOperand("(%esp)");
-                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress._0x{Next.Address:x}"));
+                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"0x{Next.Address:x}"));
                             WriteJumpCode(w, "true", Operand1);
                         }
                         break;
@@ -698,7 +686,7 @@ namespace SoftEther.WebSocket.Helper
                     throw new ApplicationException("Invalid operation: " + ToString());
             }
 
-            //w.WriteLine("}");
+            w.WriteLine("}");
         }
 
         public string GetFlagCode(string flag)
@@ -891,50 +879,33 @@ namespace SoftEther.WebSocket.Helper
 
         void WriteMainFunction()
         {
-            Out.WriteLine("public enum CallRetAddress {");
-            Out.WriteLine($"    _MagicReturn,");
-            foreach (uint faddr in this.CallNextRefs)
-            {
-                Out.WriteLine($"    _0x{faddr:x},");
-            }
-            Out.WriteLine("}");
-            Out.WriteLine();
-
             Out.WriteLine("public static void Iam_The_IntelCPU_HaHaHa(VCpuState state, uint ip)");
             Out.WriteLine("{");
 
-            Out.WriteLine("uint eax = state.Eax;");
-            Out.WriteLine("uint ebx = state.Ebx;");
-            Out.WriteLine("uint ecx = state.Ecx;");
-            Out.WriteLine("uint edx = state.Edx;");
-            Out.WriteLine("uint esp = state.Esp; ");
-
+            Out.WriteLine("uint eax = state.Eax; ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);");
+            Out.WriteLine("uint ebx = state.Ebx; ref ushort bl = ref *((ushort*)(&ebx) + 0); ref ushort bh = ref *((ushort*)(&ebx) + 1);");
+            Out.WriteLine("uint ecx = state.Ecx; ref ushort cl = ref *((ushort*)(&ecx) + 0); ref ushort ch = ref *((ushort*)(&ecx) + 1);");
+            Out.WriteLine("uint edx = state.Edx; ref ushort dl = ref *((ushort*)(&edx) + 0); ref ushort dh = ref *((ushort*)(&edx) + 1);");
             Out.WriteLine("uint esi = state.Esi; ");
             Out.WriteLine("uint edi = state.Edi; ");
             Out.WriteLine("uint ebp = state.Ebp; ");
-
+            Out.WriteLine("uint esp = state.Esp; ");
+            Out.WriteLine("const uint eiz = 0; ");
+            Out.WriteLine("string exception_string = null;");
+            Out.WriteLine("uint exception_address = 0;");
+            Out.WriteLine("uint compare_result = 0;");
             Out.WriteLine("uint cache_last_page1 = 0xffffffff;");
             Out.WriteLine("uint last_used_cache = 0;");
             Out.WriteLine("byte *cache_last_realaddr1 = null;");
             Out.WriteLine("uint cache_last_page2 = 0xffffffff;");
             Out.WriteLine("byte *cache_last_realaddr2 = null;");
-            //Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
-            //Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
-            Out.WriteLine("uint compare_result = 0;");
-            Out.WriteLine("VPageTableEntry* pte = state.Memory.PageTableEntry;");
-            Out.WriteLine("uint next_ip = ip;");
-            Out.WriteLine("CallRetAddress next_return = (CallRetAddress)0x7fffffff;");
-
-            //Out.WriteLine("ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);");
-            //Out.WriteLine("ref ushort bl = ref *((ushort*)(&ebx) + 0); ref ushort bh = ref *((ushort*)(&ebx) + 1);");
-            //Out.WriteLine("ref ushort cl = ref *((ushort*)(&ecx) + 0); ref ushort ch = ref *((ushort*)(&ecx) + 1);");
-            //Out.WriteLine("ref ushort dl = ref *((ushort*)(&edx) + 0); ref ushort dh = ref *((ushort*)(&edx) + 1);");
-
-            Out.WriteLine("const uint eiz = 0; ");
-            Out.WriteLine("string exception_string = null;");
-            Out.WriteLine("uint exception_address = 0;");
+            Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
+            Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
             Out.WriteLine("byte *realaddr1 = null;");
 
+            Out.WriteLine("VMemory Memory = state.Memory;");
+            Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
+            Out.WriteLine("uint next_ip = ip;");
 
             foreach (VCodeOperation op in OperationLines.Values)
             {
@@ -960,55 +931,47 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine();
 
             Out.WriteLine("L_START:");
-            //            Out.WriteLine("switch (next_ip)");
-            //            Out.WriteLine("{");
-            Out.WriteLine("if (false) { } ");
+            Out.WriteLine("switch (next_ip)");
+            Out.WriteLine("{");
 
-            foreach (var func in FunctionTable.Values)
+            foreach (VCodeOperation op in OperationLines.Values)
             {
-                Out.Write($"else if (next_ip == 0x{func:x}) ");
-                Out.WriteLine($"goto L_{func:x};");
+                if (LabelRefs.Contains(op.Address))
+                {
+                    Out.Write($"case 0x{op.Address:x}: ");
+                    Out.WriteLine($"goto L_{op.Address:x};");
+                }
             }
-
-            //foreach (VCodeOperation op in OperationLines.Values)
-            //{
-            //    if (LabelRefs.Contains(op.Address))
-            //    {
-            //        Out.Write($"case 0x{op.Address:x}: ");
-            //        Out.WriteLine($"goto L_{op.Address:x};");
-            //    }
-            //}
 
             //Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
             //Out.WriteLine("goto L_RETURN;");
 
-            Out.WriteLine(" else {");
+            Out.WriteLine("default:");
             Out.WriteLine($"    exception_string = \"Invalid jump target.\";");
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
-            Out.WriteLine(" } ");
 
-//            Out.WriteLine("}");
+            Out.WriteLine("}");
 
             Out.WriteLine();
 
             Out.WriteLine("L_RET_FROM_CALL:");
-            Out.WriteLine("if (next_return == CallRetAddress._MagicReturn)  ");
-            //Out.WriteLine("{");
-
-            //Out.Write($"case CallRetAddress._MagicReturn: ");
-            Out.WriteLine("goto L_RETURN;");
+            Out.WriteLine("switch (next_ip)");
+            Out.WriteLine("{");
 
             foreach (VCodeOperation op in OperationLines.Values)
             {
                 if (CallNextRefs.Contains(op.Address))
                 {
-                    Out.Write($"else if (next_return ==  CallRetAddress._0x{op.Address:x}) ");
+                    Out.Write($"case 0x{op.Address:x}: ");
                     Out.WriteLine($"goto L_{op.Address:x};");
                 }
             }
 
-            Out.WriteLine(" else {");
+            Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
+            Out.WriteLine("goto L_RETURN;");
+
+            Out.WriteLine("default:");
             Out.WriteLine($"    exception_string = \"Invalid call return target.\";");
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
@@ -1051,7 +1014,6 @@ namespace SoftEther.WebSocket.Helper
 
             Out.WriteLine("// Auto generated by IPA Box Test");
             Out.WriteLine("using System;");
-            Out.WriteLine("using System.Runtime.CompilerServices;");
             Out.WriteLine("using SoftEther.WebSocket.Helper;");
             Out.WriteLine();
             Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717, CS0162, CS0168");
