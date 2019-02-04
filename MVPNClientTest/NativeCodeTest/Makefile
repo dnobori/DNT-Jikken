@@ -1,8 +1,8 @@
 # Makefile
 
-OPTIONS_COMPILE_RELEASE=-m32 -DNDEBUG -DVPN_SPEED -D_REENTRANT -DREENTRANT -D_THREAD_SAFE -D_THREADSAFE -DTHREAD_SAFE -DTHREADSAFE -D_FILE_OFFSET_BITS=64 -fsigned-char -g -O3 -fno-stack-protector
+OPTIONS_COMPILE_RELEASE=-m32 -DNDEBUG -DVPN_SPEED -D_REENTRANT -DREENTRANT -D_THREAD_SAFE -D_THREADSAFE -DTHREAD_SAFE -DTHREADSAFE -D_FILE_OFFSET_BITS=64 -fsigned-char -g -O2 -fno-stack-protector
 
-OPTIONS_LINK_RELEASE=-m32 -fsigned-char -g -O3 -fno-stack-protector
+OPTIONS_LINK_RELEASE=-m32 -fsigned-char -g -O2 -fno-stack-protector
 
 OBJECTS_test=obj/obj/linux/test.o bin/test_lib.asm bin/test_exec.asm
 
