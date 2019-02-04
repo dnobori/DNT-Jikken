@@ -53,7 +53,7 @@ namespace VCpuTest
         public static void ExecTest()
         {
             int count = 5;
-            
+
             using (VProcess proc = new VProcess())
             {
                 proc.Memory.AllocateMemory(0x8000000, 0x100000);
@@ -61,7 +61,7 @@ namespace VCpuTest
                 uint stackPtr = 0x500000 + 0x10000 / 2;
 
                 proc.Memory.AllocateMemory(0x500000, 0x10000);
-                
+
                 VCpuState state = new VCpuState(proc);
 
                 uint ret = 0xffffffff;
@@ -74,7 +74,7 @@ namespace VCpuTest
                     if (i == 1) sw.Start();
                     state.Esp = stackPtr;
                     state.Esp -= 4;
-                    proc.Memory.Write(state.Esp, (uint)VCode.CallRetAddress._MagicReturn);
+                    proc.Memory.Write(state.Esp, VConsts.Magic_Return);
 
                     VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target1);
 
