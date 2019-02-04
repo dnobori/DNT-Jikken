@@ -149,57 +149,57 @@ NOINLINE UINT test_target1()
 	//ret = 2261
 	//time = 51,014,080
 }
-
-NOINLINE UINT test_target2()
-{
-	UINT tmp[2000];
-	volatile UINT p = sizeof(tmp) / sizeof(tmp[0]);
-	UINT i, j;
-	UINT ret = 0;
-
-	for (i = 0;i < p;i++)
-	{
-		tmp[i] = i;
-	}
-	for (j = 0;j < 50000;j++)
-	{
-		for (i = 0;i < p;i++)
-		{
-			ret += tmp[i];
-		}
-	}
-	return ret;
-
-	//ret = 1165752192
-	//time = 60,848,300
-}
-
-NOINLINE UINT test_target4(UINT a)
-{
-	if (a == 0)
-	{
-		return 0;
-	}
-	else if (a == 1)
-	{
-		return 1;
-	}
-	else
-	{
-		return test_target4(a - 1) + test_target4(a - 2);
-	}
-}
-
-NOINLINE UINT test_target3()
-{
-	volatile UINT a = 34;
-
-	return test_target4(a);
-
-	//ret = 5702887
-	//time = 36,055,870
-}
-
+//
+//NOINLINE UINT test_target2()
+//{
+//	UINT tmp[2000];
+//	volatile UINT p = sizeof(tmp) / sizeof(tmp[0]);
+//	UINT i, j;
+//	UINT ret = 0;
+//
+//	for (i = 0;i < p;i++)
+//	{
+//		tmp[i] = i;
+//	}
+//	for (j = 0;j < 50000;j++)
+//	{
+//		for (i = 0;i < p;i++)
+//		{
+//			ret += tmp[i];
+//		}
+//	}
+//	return ret;
+//
+//	//ret = 1165752192
+//	//time = 60,848,300
+//}
+//
+//NOINLINE UINT test_target4(UINT a)
+//{
+//	if (a == 0)
+//	{
+//		return 0;
+//	}
+//	else if (a == 1)
+//	{
+//		return 1;
+//	}
+//	else
+//	{
+//		return test_target4(a - 1) + test_target4(a - 2);
+//	}
+//}
+//
+//NOINLINE UINT test_target3()
+//{
+//	volatile UINT a = 34;
+//
+//	return test_target4(a);
+//
+//	//ret = 5702887
+//	//time = 36,055,870
+//}
+//
 
 //// Tak
 //NOINLINE int test_target6(int x, int y, int z) {

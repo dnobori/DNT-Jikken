@@ -950,12 +950,13 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine();
 
             Out.WriteLine("L_START:");
-            Out.WriteLine("switch (next_ip)");
-            Out.WriteLine("{");
+            //            Out.WriteLine("switch (next_ip)");
+            //            Out.WriteLine("{");
+            Out.WriteLine("if (false) { } ");
 
             foreach (var func in FunctionTable.Values)
             {
-                Out.Write($"case 0x{func:x}: ");
+                Out.Write($"else if (next_ip == 0x{func:x}) ");
                 Out.WriteLine($"goto L_{func:x};");
             }
 
@@ -971,32 +972,33 @@ namespace SoftEther.WebSocket.Helper
             //Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
             //Out.WriteLine("goto L_RETURN;");
 
-            Out.WriteLine("default:");
+            Out.WriteLine(" else {");
             Out.WriteLine($"    exception_string = \"Invalid jump target.\";");
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
+            Out.WriteLine(" } ");
 
-            Out.WriteLine("}");
+//            Out.WriteLine("}");
 
             Out.WriteLine();
 
             Out.WriteLine("L_RET_FROM_CALL:");
-            Out.WriteLine("switch (next_return)");
-            Out.WriteLine("{");
+            Out.WriteLine("if (next_return == CallRetAddress._MagicReturn)  ");
+            //Out.WriteLine("{");
 
-            Out.Write($"case CallRetAddress._MagicReturn: ");
+            //Out.Write($"case CallRetAddress._MagicReturn: ");
             Out.WriteLine("goto L_RETURN;");
 
             foreach (VCodeOperation op in OperationLines.Values)
             {
                 if (CallNextRefs.Contains(op.Address))
                 {
-                    Out.Write($"case CallRetAddress._0x{op.Address:x}: ");
+                    Out.Write($"else if (next_return ==  CallRetAddress._0x{op.Address:x}) ");
                     Out.WriteLine($"goto L_{op.Address:x};");
                 }
             }
 
-            Out.WriteLine("default:");
+            Out.WriteLine(" else {");
             Out.WriteLine($"    exception_string = \"Invalid call return target.\";");
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
