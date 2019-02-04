@@ -328,7 +328,7 @@ namespace SoftEther.WebSocket.Helper
                 memcache_tag = $"memcache_{this.BaseRegister}_0x{this.Displacement:x}";
             }
 
-            //memcache_tag = null;
+            memcache_tag = null;
 
             if (memcache_tag != null)
             {
@@ -342,11 +342,16 @@ namespace SoftEther.WebSocket.Helper
             }
 
 
-            if (memcache_tag != null && writeMode == false)  w.WriteLine("{");
+            w.WriteLine("{");
 
-            w.WriteLine($"vaddr = {GetCode()};");
-            w.WriteLine($"vaddr1_index = vaddr / VConsts.PageSize;");
-            w.WriteLine($"vaddr1_offset = vaddr % VConsts.PageSize;");
+            if (writeMode)
+                w.WriteLine("uint write_tmp = 0;");
+            else
+                w.WriteLine("uint read_tmp = 0;");
+
+            w.WriteLine($"uint vaddr = {GetCode()};");
+            w.WriteLine($"uint vaddr1_index = vaddr / VConsts.PageSize;");
+            w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
             //w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
             w.WriteLine($"if (vaddr1_index == cache_last_page1)");
             w.WriteLine("{");
@@ -454,7 +459,7 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("}");
 
 
-            if (memcache_tag != null && writeMode == false) w.WriteLine("}");
+            w.WriteLine("}");
 
 
             return w.ToString();
@@ -913,8 +918,8 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("byte *cache_last_realaddr1 = null;");
             Out.WriteLine("uint cache_last_page2 = 0xffffffff;");
             Out.WriteLine("byte *cache_last_realaddr2 = null;");
-            Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
-            Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
+            //Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
+            //Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
             Out.WriteLine("uint compare_result = 0;");
             Out.WriteLine("VPageTableEntry* pte = state.Memory.PageTableEntry;");
             Out.WriteLine("uint next_ip = ip;");
