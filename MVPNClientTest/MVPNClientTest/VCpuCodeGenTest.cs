@@ -311,6 +311,10 @@ namespace SoftEther.WebSocket.Helper
         public string GetValueAccessCode()
         {
             if (this.IsPointer) throw new ApplicationException("This operand is a pointer.");
+            if (this.BaseRegister == "bl" && this.OffsetRegister == null && this.Scaler == 0)
+            {
+                return "((ebx) & 0xffff)";
+            }
             return GetCode();
         }
 
@@ -338,7 +342,7 @@ namespace SoftEther.WebSocket.Helper
             }
 
 
-            w.WriteLine("{");
+            if (memcache_tag != null && writeMode == false)  w.WriteLine("{");
 
             w.WriteLine($"vaddr = {GetCode()};");
             w.WriteLine($"vaddr1_index = vaddr / VConsts.PageSize;");
@@ -448,7 +452,9 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
             w.WriteLine("}");
-            w.WriteLine("}");
+
+
+            if (memcache_tag != null && writeMode == false) w.WriteLine("}");
 
 
             return w.ToString();
@@ -910,15 +916,14 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
             Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
             Out.WriteLine("uint compare_result = 0;");
-            Out.WriteLine("VMemory Memory = state.Memory;");
-            Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
+            Out.WriteLine("VPageTableEntry* pte = state.Memory.PageTableEntry;");
             Out.WriteLine("uint next_ip = ip;");
             Out.WriteLine("CallRetAddress next_return = (CallRetAddress)0x7fffffff;");
 
-            Out.WriteLine("ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);");
-            Out.WriteLine("ref ushort bl = ref *((ushort*)(&ebx) + 0); ref ushort bh = ref *((ushort*)(&ebx) + 1);");
-            Out.WriteLine("ref ushort cl = ref *((ushort*)(&ecx) + 0); ref ushort ch = ref *((ushort*)(&ecx) + 1);");
-            Out.WriteLine("ref ushort dl = ref *((ushort*)(&edx) + 0); ref ushort dh = ref *((ushort*)(&edx) + 1);");
+            //Out.WriteLine("ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);");
+            //Out.WriteLine("ref ushort bl = ref *((ushort*)(&ebx) + 0); ref ushort bh = ref *((ushort*)(&ebx) + 1);");
+            //Out.WriteLine("ref ushort cl = ref *((ushort*)(&ecx) + 0); ref ushort ch = ref *((ushort*)(&ecx) + 1);");
+            //Out.WriteLine("ref ushort dl = ref *((ushort*)(&edx) + 0); ref ushort dh = ref *((ushort*)(&edx) + 1);");
 
             Out.WriteLine("const uint eiz = 0; ");
             Out.WriteLine("string exception_string = null;");
