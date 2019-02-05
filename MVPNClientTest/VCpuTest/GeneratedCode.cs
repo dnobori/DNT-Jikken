@@ -99,7 +99,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048740;
@@ -144,7 +144,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048743;
@@ -189,7 +189,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048747;
@@ -229,7 +229,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804874f;
@@ -399,7 +399,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804878c;
@@ -469,7 +469,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804879c;
@@ -510,7 +510,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804879d;
@@ -551,7 +551,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804879e;
@@ -599,7 +599,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487a0;
@@ -639,7 +639,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487a1;
@@ -684,7 +684,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487a8;
@@ -724,7 +724,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487b0;
@@ -791,7 +791,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487c0;
@@ -828,7 +828,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487c4;
@@ -902,7 +902,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487d8;
@@ -969,7 +969,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487e8;
@@ -1006,7 +1006,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x80487ec;
@@ -1084,7 +1084,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048801;
@@ -1125,7 +1125,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048802;
@@ -1166,7 +1166,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048803;
@@ -1220,7 +1220,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048810;
@@ -1260,7 +1260,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048811;
@@ -1306,7 +1306,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048815;
@@ -1404,7 +1404,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048830;
@@ -1444,7 +1444,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048833;
@@ -1519,7 +1519,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048844;
@@ -1560,7 +1560,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048845;
@@ -1601,7 +1601,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048846;
@@ -1665,7 +1665,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048850;
@@ -1706,7 +1706,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048851;
@@ -1747,7 +1747,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048852;
@@ -1826,7 +1826,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048863;
@@ -1866,7 +1866,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804886b;
@@ -1905,7 +1905,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804886f;
@@ -1945,7 +1945,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanWrite == false)
+if (pte[vaddr1_index].CanWrite == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x8048872;
@@ -1995,7 +1995,7 @@ else if (vaddr1_index == cache_last_page2)
 }
 else
 {
-if (false&&pte[vaddr1_index].CanRead == false)
+if (pte[vaddr1_index].CanRead == false)
 {
     exception_string = $"Access violation to 0x{vaddr:x}.";
     exception_address = 0x804887a;
