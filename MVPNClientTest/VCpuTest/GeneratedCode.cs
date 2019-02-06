@@ -11,6 +11,31 @@ public enum CallRetAddress {
     _MagicReturn,
     _0x8048841,
     _0x8048885,
+    _0x80488e1,
+    _0x80488fe,
+    _0x804892e,
+    _0x804895e,
+    _0x804898e,
+    _0x80489be,
+    _0x80489ee,
+    _0x8048a1e,
+    _0x8048a4e,
+    _0x8048a7e,
+    _0x8048aae,
+    _0x8048ade,
+    _0x8048b0e,
+    _0x8048b3e,
+    _0x8048b6e,
+    _0x8048b9e,
+    _0x8048bce,
+    _0x8048bfe,
+    _0x8048c2e,
+    _0x8048c5e,
+    _0x8048c86,
+    _0x8048c9b,
+    _0x8048ca8,
+    _0x8048cb7,
+    _0x8048cff,
 }
 
 public static void Iam_The_IntelCPU_HaHaHa(VCpuState state, uint ip)
@@ -47,6 +72,11 @@ uint memcache_esp_0x0_pin = 0x7fffffff; uint memcache_esp_0x0_data = 0xcafebeef;
 uint memcache_esp_0xc_pin = 0x7fffffff; uint memcache_esp_0xc_data = 0xcafebeef;
 uint memcache_esp_0x10_pin = 0x7fffffff; uint memcache_esp_0x10_data = 0xcafebeef;
 uint memcache_esp_0x18_pin = 0x7fffffff; uint memcache_esp_0x18_data = 0xcafebeef;
+uint memcache_esp_0x40_pin = 0x7fffffff; uint memcache_esp_0x40_data = 0xcafebeef;
+uint memcache_esp_0x44_pin = 0x7fffffff; uint memcache_esp_0x44_data = 0xcafebeef;
+uint memcache_esp_0x48_pin = 0x7fffffff; uint memcache_esp_0x48_data = 0xcafebeef;
+uint memcache_esp_0x1c_pin = 0x7fffffff; uint memcache_esp_0x1c_data = 0xcafebeef;
+uint memcache_esp_0x8_pin = 0x7fffffff; uint memcache_esp_0x8_data = 0xcafebeef;
 
 L_START:
 switch (next_ip)
@@ -55,6 +85,8 @@ case 0x8048740: goto L_8048740;
 case 0x80487a0: goto L_80487a0;
 case 0x8048810: goto L_8048810;
 case 0x8048870: goto L_8048870;
+case 0x8048890: goto L_8048890;
+case 0x8048cd0: goto L_8048cd0;
 default:
     exception_string = "Invalid jump target.";
     exception_address = next_ip;
@@ -67,6 +99,31 @@ switch (next_return)
 case CallRetAddress._MagicReturn: goto L_RETURN;
 case CallRetAddress._0x8048841: goto L_8048841;
 case CallRetAddress._0x8048885: goto L_8048885;
+case CallRetAddress._0x80488e1: goto L_80488e1;
+case CallRetAddress._0x80488fe: goto L_80488fe;
+case CallRetAddress._0x804892e: goto L_804892e;
+case CallRetAddress._0x804895e: goto L_804895e;
+case CallRetAddress._0x804898e: goto L_804898e;
+case CallRetAddress._0x80489be: goto L_80489be;
+case CallRetAddress._0x80489ee: goto L_80489ee;
+case CallRetAddress._0x8048a1e: goto L_8048a1e;
+case CallRetAddress._0x8048a4e: goto L_8048a4e;
+case CallRetAddress._0x8048a7e: goto L_8048a7e;
+case CallRetAddress._0x8048aae: goto L_8048aae;
+case CallRetAddress._0x8048ade: goto L_8048ade;
+case CallRetAddress._0x8048b0e: goto L_8048b0e;
+case CallRetAddress._0x8048b3e: goto L_8048b3e;
+case CallRetAddress._0x8048b6e: goto L_8048b6e;
+case CallRetAddress._0x8048b9e: goto L_8048b9e;
+case CallRetAddress._0x8048bce: goto L_8048bce;
+case CallRetAddress._0x8048bfe: goto L_8048bfe;
+case CallRetAddress._0x8048c2e: goto L_8048c2e;
+case CallRetAddress._0x8048c5e: goto L_8048c5e;
+case CallRetAddress._0x8048c86: goto L_8048c86;
+case CallRetAddress._0x8048c9b: goto L_8048c9b;
+case CallRetAddress._0x8048ca8: goto L_8048ca8;
+case CallRetAddress._0x8048cb7: goto L_8048cb7;
+case CallRetAddress._0x8048cff: goto L_8048cff;
 default:
     exception_string = "Invalid call return target.";
     exception_address = next_ip;
@@ -1802,6 +1859,8610 @@ goto L_RET_FROM_CALL;
 // 8048889 lea 0x0(%esi,%eiz,1),%esi
 esi = (esi + eiz * 0x1);
 
+// function test_target6();
+// 8048890 push %ebp
+L_8048890:
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebp;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebp;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048890;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ebp;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048891 push %edi
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048891;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048892 push %esi
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048892;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048893 push %ebx
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048893;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048894 sub $0x2c,%esp
+esp -= ( +0x2c);
+compare_result = esp;
+
+// 8048897 mov 0x40(%esp),%ebx
+if (memcache_esp_0x40_pin == (esp +0x40)) ebx= (uint) memcache_esp_0x40_data; else 
+{
+vaddr = (esp +0x40);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    ebx= (uint)(     memcache_esp_0x40_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x40_pin = (esp +0x40);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    ebx= (uint)(    memcache_esp_0x40_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x40_pin = (esp +0x40);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048897;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    ebx= (uint)(    memcache_esp_0x40_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x40_pin = (esp +0x40);
+}
+}
+
+
+// 804889b mov 0x44(%esp),%esi
+if (memcache_esp_0x44_pin == (esp +0x44)) esi= (uint) memcache_esp_0x44_data; else 
+{
+vaddr = (esp +0x44);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    esi= (uint)(     memcache_esp_0x44_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x44_pin = (esp +0x44);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    esi= (uint)(    memcache_esp_0x44_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x44_pin = (esp +0x44);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804889b;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    esi= (uint)(    memcache_esp_0x44_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x44_pin = (esp +0x44);
+}
+}
+
+
+// 804889f mov 0x48(%esp),%edi
+if (memcache_esp_0x48_pin == (esp +0x48)) edi= (uint) memcache_esp_0x48_data; else 
+{
+vaddr = (esp +0x48);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    edi= (uint)(     memcache_esp_0x48_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x48_pin = (esp +0x48);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    edi= (uint)(    memcache_esp_0x48_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x48_pin = (esp +0x48);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804889f;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    edi= (uint)(    memcache_esp_0x48_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x48_pin = (esp +0x48);
+}
+}
+
+
+// 80488a3 cmp %esi,%ebx
+compare_result = (uint)(ebx - esi);
+
+// 80488a5 mov %edi,%eax
+eax = edi;
+
+// 80488a7 jle 8048cba <test_target6+0x42a>
+if (compare_result == 0) {
+    goto L_8048cba;
+}
+
+// 80488ad movl $0x0,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = 0x0;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = 0x0;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488ad;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = 0x0;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80488b5 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488b5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80488b9 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80488bb jne 80488d3 <test_target6+0x43>
+if (compare_result != 0) {
+    goto L_80488d3;
+}
+
+// 80488bd jmp 8048910 <test_target6+0x80>
+if (true) {
+    goto L_8048910;
+}
+
+// 80488bf nop 
+
+// 80488c0 mov 0x1c(%esp),%eax
+L_80488c0:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488c0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80488c4 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 80488c7 mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488c7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80488cb mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488cb;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80488cf test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80488d1 je 8048910 <test_target6+0x80>
+if (compare_result == 0) {
+    goto L_8048910;
+}
+
+// 80488d3 sub $0x4,%esp
+L_80488d3:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 80488d6 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488d6;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80488d8 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488d8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80488da push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488da;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80488dc call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x80488e1;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x80488e1;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488dc;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x80488e1;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 80488e1 add $0x10,%esp
+L_80488e1:
+esp += ( +0x10);
+compare_result = esp;
+
+// 80488e4 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80488e6 jne 80488c0 <test_target6+0x30>
+if (compare_result != 0) {
+    goto L_80488c0;
+}
+
+// 80488e8 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488e8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80488ec test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80488ee je 8048940 <test_target6+0xb0>
+if (compare_result == 0) {
+    goto L_8048940;
+}
+
+// 80488f0 sub $0x4,%esp
+L_80488f0:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 80488f3 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488f3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80488f5 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488f5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80488f7 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488f7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80488f9 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x80488fe;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x80488fe;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488f9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x80488fe;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 80488fe add $0x10,%esp
+L_80488fe:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048901 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048903 je 8048940 <test_target6+0xb0>
+if (compare_result == 0) {
+    goto L_8048940;
+}
+
+// 8048905 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048905;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048909 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 804890c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804890c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048910 mov 0x1c(%esp),%eax
+L_8048910:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048910;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048914 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048916 jne 80488f0 <test_target6+0x60>
+if (compare_result != 0) {
+    goto L_80488f0;
+}
+
+// 8048918 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048918;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 804891c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 804891e je 8048970 <test_target6+0xe0>
+if (compare_result == 0) {
+    goto L_8048970;
+}
+
+// 8048920 sub $0x4,%esp
+L_8048920:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048923 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048923;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048925 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048925;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048927 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048927;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048929 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x804892e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x804892e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048929;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x804892e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 804892e add $0x10,%esp
+L_804892e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048931 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048933 je 8048970 <test_target6+0xe0>
+if (compare_result == 0) {
+    goto L_8048970;
+}
+
+// 8048935 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048935;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048939 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 804893c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804893c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048940 mov 0x1c(%esp),%eax
+L_8048940:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048940;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048944 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048946 jne 8048920 <test_target6+0x90>
+if (compare_result != 0) {
+    goto L_8048920;
+}
+
+// 8048948 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048948;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 804894c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 804894e je 80489a0 <test_target6+0x110>
+if (compare_result == 0) {
+    goto L_80489a0;
+}
+
+// 8048950 sub $0x4,%esp
+L_8048950:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048953 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048953;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048955 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048955;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048957 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048957;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048959 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x804895e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x804895e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048959;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x804895e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 804895e add $0x10,%esp
+L_804895e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048961 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048963 je 80489a0 <test_target6+0x110>
+if (compare_result == 0) {
+    goto L_80489a0;
+}
+
+// 8048965 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048965;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048969 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 804896c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804896c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048970 mov 0x1c(%esp),%eax
+L_8048970:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048970;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048974 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048976 jne 8048950 <test_target6+0xc0>
+if (compare_result != 0) {
+    goto L_8048950;
+}
+
+// 8048978 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048978;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 804897c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 804897e je 80489d0 <test_target6+0x140>
+if (compare_result == 0) {
+    goto L_80489d0;
+}
+
+// 8048980 sub $0x4,%esp
+L_8048980:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048983 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048983;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048985 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048985;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048987 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048987;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048989 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x804898e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x804898e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048989;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x804898e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 804898e add $0x10,%esp
+L_804898e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048991 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048993 je 80489d0 <test_target6+0x140>
+if (compare_result == 0) {
+    goto L_80489d0;
+}
+
+// 8048995 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048995;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048999 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 804899c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804899c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489a0 mov 0x1c(%esp),%eax
+L_80489a0:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489a0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489a4 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80489a6 jne 8048980 <test_target6+0xf0>
+if (compare_result != 0) {
+    goto L_8048980;
+}
+
+// 80489a8 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489a8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489ac test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80489ae je 8048a00 <test_target6+0x170>
+if (compare_result == 0) {
+    goto L_8048a00;
+}
+
+// 80489b0 sub $0x4,%esp
+L_80489b0:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 80489b3 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489b3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80489b5 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489b5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80489b7 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489b7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80489b9 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x80489be;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x80489be;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489b9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x80489be;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 80489be add $0x10,%esp
+L_80489be:
+esp += ( +0x10);
+compare_result = esp;
+
+// 80489c1 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80489c3 je 8048a00 <test_target6+0x170>
+if (compare_result == 0) {
+    goto L_8048a00;
+}
+
+// 80489c5 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489c5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489c9 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 80489cc mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489cc;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489d0 mov 0x1c(%esp),%eax
+L_80489d0:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489d0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489d4 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80489d6 jne 80489b0 <test_target6+0x120>
+if (compare_result != 0) {
+    goto L_80489b0;
+}
+
+// 80489d8 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489d8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489dc test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80489de je 8048a30 <test_target6+0x1a0>
+if (compare_result == 0) {
+    goto L_8048a30;
+}
+
+// 80489e0 sub $0x4,%esp
+L_80489e0:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 80489e3 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489e3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80489e5 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489e5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80489e7 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489e7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 80489e9 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x80489ee;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x80489ee;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489e9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x80489ee;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 80489ee add $0x10,%esp
+L_80489ee:
+esp += ( +0x10);
+compare_result = esp;
+
+// 80489f1 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 80489f3 je 8048a30 <test_target6+0x1a0>
+if (compare_result == 0) {
+    goto L_8048a30;
+}
+
+// 80489f5 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489f5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 80489f9 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 80489fc mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80489fc;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a00 mov 0x1c(%esp),%eax
+L_8048a00:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a00;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a04 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a06 jne 80489e0 <test_target6+0x150>
+if (compare_result != 0) {
+    goto L_80489e0;
+}
+
+// 8048a08 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a08;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a0c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a0e je 8048a60 <test_target6+0x1d0>
+if (compare_result == 0) {
+    goto L_8048a60;
+}
+
+// 8048a10 sub $0x4,%esp
+L_8048a10:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048a13 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a13;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a15 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a15;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a17 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a17;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a19 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048a1e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048a1e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a19;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048a1e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048a1e add $0x10,%esp
+L_8048a1e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048a21 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a23 je 8048a60 <test_target6+0x1d0>
+if (compare_result == 0) {
+    goto L_8048a60;
+}
+
+// 8048a25 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a25;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a29 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048a2c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a2c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a30 mov 0x1c(%esp),%eax
+L_8048a30:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a30;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a34 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a36 jne 8048a10 <test_target6+0x180>
+if (compare_result != 0) {
+    goto L_8048a10;
+}
+
+// 8048a38 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a38;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a3c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a3e je 8048a90 <test_target6+0x200>
+if (compare_result == 0) {
+    goto L_8048a90;
+}
+
+// 8048a40 sub $0x4,%esp
+L_8048a40:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048a43 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a43;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a45 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a45;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a47 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a47;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a49 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048a4e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048a4e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a49;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048a4e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048a4e add $0x10,%esp
+L_8048a4e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048a51 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a53 je 8048a90 <test_target6+0x200>
+if (compare_result == 0) {
+    goto L_8048a90;
+}
+
+// 8048a55 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a55;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a59 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048a5c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a5c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a60 mov 0x1c(%esp),%eax
+L_8048a60:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a60;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a64 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a66 jne 8048a40 <test_target6+0x1b0>
+if (compare_result != 0) {
+    goto L_8048a40;
+}
+
+// 8048a68 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a68;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a6c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a6e je 8048ac0 <test_target6+0x230>
+if (compare_result == 0) {
+    goto L_8048ac0;
+}
+
+// 8048a70 sub $0x4,%esp
+L_8048a70:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048a73 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a73;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a75 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a75;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a77 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a77;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048a79 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048a7e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048a7e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a79;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048a7e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048a7e add $0x10,%esp
+L_8048a7e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048a81 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a83 je 8048ac0 <test_target6+0x230>
+if (compare_result == 0) {
+    goto L_8048ac0;
+}
+
+// 8048a85 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a85;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a89 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048a8c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a8c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a90 mov 0x1c(%esp),%eax
+L_8048a90:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a90;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a94 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a96 jne 8048a70 <test_target6+0x1e0>
+if (compare_result != 0) {
+    goto L_8048a70;
+}
+
+// 8048a98 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048a98;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048a9c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048a9e je 8048af0 <test_target6+0x260>
+if (compare_result == 0) {
+    goto L_8048af0;
+}
+
+// 8048aa0 sub $0x4,%esp
+L_8048aa0:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048aa3 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048aa3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048aa5 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048aa5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048aa7 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048aa7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048aa9 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048aae;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048aae;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048aa9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048aae;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048aae add $0x10,%esp
+L_8048aae:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048ab1 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048ab3 je 8048af0 <test_target6+0x260>
+if (compare_result == 0) {
+    goto L_8048af0;
+}
+
+// 8048ab5 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ab5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048ab9 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048abc mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048abc;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048ac0 mov 0x1c(%esp),%eax
+L_8048ac0:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ac0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048ac4 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048ac6 jne 8048aa0 <test_target6+0x210>
+if (compare_result != 0) {
+    goto L_8048aa0;
+}
+
+// 8048ac8 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ac8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048acc test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048ace je 8048b20 <test_target6+0x290>
+if (compare_result == 0) {
+    goto L_8048b20;
+}
+
+// 8048ad0 sub $0x4,%esp
+L_8048ad0:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048ad3 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ad3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048ad5 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ad5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048ad7 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ad7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048ad9 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048ade;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048ade;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ad9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048ade;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048ade add $0x10,%esp
+L_8048ade:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048ae1 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048ae3 je 8048b20 <test_target6+0x290>
+if (compare_result == 0) {
+    goto L_8048b20;
+}
+
+// 8048ae5 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ae5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048ae9 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048aec mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048aec;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048af0 mov 0x1c(%esp),%eax
+L_8048af0:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048af0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048af4 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048af6 jne 8048ad0 <test_target6+0x240>
+if (compare_result != 0) {
+    goto L_8048ad0;
+}
+
+// 8048af8 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048af8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048afc test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048afe je 8048b50 <test_target6+0x2c0>
+if (compare_result == 0) {
+    goto L_8048b50;
+}
+
+// 8048b00 sub $0x4,%esp
+L_8048b00:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048b03 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b03;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b05 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b05;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b07 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b07;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b09 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b0e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b0e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b09;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048b0e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048b0e add $0x10,%esp
+L_8048b0e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048b11 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b13 je 8048b50 <test_target6+0x2c0>
+if (compare_result == 0) {
+    goto L_8048b50;
+}
+
+// 8048b15 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b15;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b19 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048b1c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b1c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b20 mov 0x1c(%esp),%eax
+L_8048b20:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b20;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b24 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b26 jne 8048b00 <test_target6+0x270>
+if (compare_result != 0) {
+    goto L_8048b00;
+}
+
+// 8048b28 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b28;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b2c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b2e je 8048b80 <test_target6+0x2f0>
+if (compare_result == 0) {
+    goto L_8048b80;
+}
+
+// 8048b30 sub $0x4,%esp
+L_8048b30:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048b33 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b33;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b35 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b35;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b37 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b37;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b39 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b3e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b3e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b39;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048b3e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048b3e add $0x10,%esp
+L_8048b3e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048b41 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b43 je 8048b80 <test_target6+0x2f0>
+if (compare_result == 0) {
+    goto L_8048b80;
+}
+
+// 8048b45 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b45;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b49 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048b4c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b4c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b50 mov 0x1c(%esp),%eax
+L_8048b50:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b50;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b54 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b56 jne 8048b30 <test_target6+0x2a0>
+if (compare_result != 0) {
+    goto L_8048b30;
+}
+
+// 8048b58 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b58;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b5c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b5e je 8048bb0 <test_target6+0x320>
+if (compare_result == 0) {
+    goto L_8048bb0;
+}
+
+// 8048b60 sub $0x4,%esp
+L_8048b60:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048b63 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b63;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b65 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b65;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b67 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b67;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b69 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b6e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b6e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b69;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048b6e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048b6e add $0x10,%esp
+L_8048b6e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048b71 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b73 je 8048bb0 <test_target6+0x320>
+if (compare_result == 0) {
+    goto L_8048bb0;
+}
+
+// 8048b75 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b75;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b79 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048b7c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b7c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b80 mov 0x1c(%esp),%eax
+L_8048b80:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b80;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b84 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b86 jne 8048b60 <test_target6+0x2d0>
+if (compare_result != 0) {
+    goto L_8048b60;
+}
+
+// 8048b88 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b88;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048b8c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048b8e je 8048be0 <test_target6+0x350>
+if (compare_result == 0) {
+    goto L_8048be0;
+}
+
+// 8048b90 sub $0x4,%esp
+L_8048b90:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048b93 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b93;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b95 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b95;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b97 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b97;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048b99 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b9e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048b9e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048b99;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048b9e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048b9e add $0x10,%esp
+L_8048b9e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048ba1 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048ba3 je 8048be0 <test_target6+0x350>
+if (compare_result == 0) {
+    goto L_8048be0;
+}
+
+// 8048ba5 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ba5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048ba9 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048bac mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bac;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048bb0 mov 0x1c(%esp),%eax
+L_8048bb0:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bb0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048bb4 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048bb6 jne 8048b90 <test_target6+0x300>
+if (compare_result != 0) {
+    goto L_8048b90;
+}
+
+// 8048bb8 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bb8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048bbc test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048bbe je 8048c10 <test_target6+0x380>
+if (compare_result == 0) {
+    goto L_8048c10;
+}
+
+// 8048bc0 sub $0x4,%esp
+L_8048bc0:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048bc3 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bc3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048bc5 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bc5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048bc7 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bc7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048bc9 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048bce;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048bce;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bc9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048bce;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048bce add $0x10,%esp
+L_8048bce:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048bd1 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048bd3 je 8048c10 <test_target6+0x380>
+if (compare_result == 0) {
+    goto L_8048c10;
+}
+
+// 8048bd5 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bd5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048bd9 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048bdc mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bdc;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048be0 mov 0x1c(%esp),%eax
+L_8048be0:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048be0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048be4 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048be6 jne 8048bc0 <test_target6+0x330>
+if (compare_result != 0) {
+    goto L_8048bc0;
+}
+
+// 8048be8 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048be8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048bec test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048bee je 8048c40 <test_target6+0x3b0>
+if (compare_result == 0) {
+    goto L_8048c40;
+}
+
+// 8048bf0 sub $0x4,%esp
+L_8048bf0:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048bf3 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bf3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048bf5 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bf5;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048bf7 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bf7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048bf9 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048bfe;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048bfe;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048bf9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048bfe;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048bfe add $0x10,%esp
+L_8048bfe:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048c01 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c03 je 8048c40 <test_target6+0x3b0>
+if (compare_result == 0) {
+    goto L_8048c40;
+}
+
+// 8048c05 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c05;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c09 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048c0c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c0c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c10 mov 0x1c(%esp),%eax
+L_8048c10:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c10;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c14 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c16 jne 8048bf0 <test_target6+0x360>
+if (compare_result != 0) {
+    goto L_8048bf0;
+}
+
+// 8048c18 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c18;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c1c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c1e je 8048c70 <test_target6+0x3e0>
+if (compare_result == 0) {
+    goto L_8048c70;
+}
+
+// 8048c20 sub $0x4,%esp
+L_8048c20:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048c23 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c23;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c25 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c25;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c27 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c27;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c29 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c2e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c2e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c29;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048c2e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048c2e add $0x10,%esp
+L_8048c2e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048c31 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c33 je 8048c70 <test_target6+0x3e0>
+if (compare_result == 0) {
+    goto L_8048c70;
+}
+
+// 8048c35 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c35;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c39 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048c3c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c3c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c40 mov 0x1c(%esp),%eax
+L_8048c40:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c40;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c44 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c46 jne 8048c20 <test_target6+0x390>
+if (compare_result != 0) {
+    goto L_8048c20;
+}
+
+// 8048c48 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c48;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c4c test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c4e je 8048c78 <test_target6+0x3e8>
+if (compare_result == 0) {
+    goto L_8048c78;
+}
+
+// 8048c50 sub $0x4,%esp
+L_8048c50:
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048c53 push $0x3
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c53;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x3);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c55 push $0x2
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c55;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x2);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c57 push $0x1
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c57;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x1);
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c59 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c5e;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c5e;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c59;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048c5e;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048c5e add $0x10,%esp
+L_8048c5e:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048c61 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c63 je 8048c78 <test_target6+0x3e8>
+if (compare_result == 0) {
+    goto L_8048c78;
+}
+
+// 8048c65 mov 0x1c(%esp),%eax
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c65;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c69 add $0x1,%eax
+eax += ( +0x1);
+compare_result = eax;
+
+// 8048c6c mov %eax,0x1c(%esp)
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c6c;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c70 mov 0x1c(%esp),%eax
+L_8048c70:
+if (memcache_esp_0x1c_pin == (esp +0x1c)) eax= (uint) memcache_esp_0x1c_data; else 
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c70;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x1c_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c74 test %eax,%eax
+compare_result = (uint)(eax);
+
+// 8048c76 jne 8048c50 <test_target6+0x3c0>
+if (compare_result != 0) {
+    goto L_8048c50;
+}
+
+// 8048c78 lea -0x1(%edi),%eax
+L_8048c78:
+eax = (edi -0x1);
+
+// 8048c7b sub $0x4,%esp
+esp -= ( +0x4);
+compare_result = esp;
+
+// 8048c7e push %esi
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c7e;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c7f push %ebx
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c7f;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c80 push %eax
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c80;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c81 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c86;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c86;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c81;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048c86;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048c86 mov %eax,0x1c(%esp)
+L_8048c86:
+{
+vaddr = (esp +0x1c);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x1c_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c86;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x1c_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x1c_pin = (esp +0x1c);
+}
+}
+
+
+// 8048c8a lea -0x1(%esi),%eax
+eax = (esi -0x1);
+
+// 8048c8d add $0xc,%esp
+esp += ( +0xc);
+compare_result = esp;
+
+// 8048c90 push %ebx
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c90;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c91 push %edi
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c91;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c92 sub $0x1,%ebx
+ebx -= ( +0x1);
+compare_result = ebx;
+
+// 8048c95 push %eax
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c95;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048c96 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c9b;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048c9b;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048c96;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048c9b;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048c9b add $0xc,%esp
+L_8048c9b:
+esp += ( +0xc);
+compare_result = esp;
+
+// 8048c9e mov %eax,%ebp
+ebp = eax;
+
+// 8048ca0 push %edi
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ca0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = edi;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048ca1 push %esi
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ca1;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = esi;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048ca2 push %ebx
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ca2;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ebx;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048ca3 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048ca8;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048ca8;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ca3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048ca8;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048ca8 add $0xc,%esp
+L_8048ca8:
+esp += ( +0xc);
+compare_result = esp;
+
+// 8048cab mov 0x10(%esp),%edx
+if (memcache_esp_0x10_pin == (esp +0x10)) edx= (uint) memcache_esp_0x10_data; else 
+{
+vaddr = (esp +0x10);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    edx= (uint)(     memcache_esp_0x10_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    edx= (uint)(    memcache_esp_0x10_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cab;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    edx= (uint)(    memcache_esp_0x10_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+}
+
+
+// 8048caf push %edx
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = edx;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = edx;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048caf;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = edx;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048cb0 push %ebp
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ebp;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ebp;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cb0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ebp;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048cb1 push %eax
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cb1;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048cb2 call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048cb7;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048cb7;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cb2;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048cb7;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048cb7 add $0x10,%esp
+L_8048cb7:
+esp += ( +0x10);
+compare_result = esp;
+
+// 8048cba add $0x2c,%esp
+L_8048cba:
+esp += ( +0x2c);
+compare_result = esp;
+
+// 8048cbd pop %ebx
+if (memcache_esp_0x0_pin == esp) ebx= (uint) memcache_esp_0x0_data; else 
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    ebx= (uint)(     memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    ebx= (uint)(    memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cbd;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    ebx= (uint)(    memcache_esp_0x0_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+esp += 4;
+
+// 8048cbe pop %esi
+if (memcache_esp_0x0_pin == esp) esi= (uint) memcache_esp_0x0_data; else 
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    esi= (uint)(     memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    esi= (uint)(    memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cbe;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    esi= (uint)(    memcache_esp_0x0_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+esp += 4;
+
+// 8048cbf pop %edi
+if (memcache_esp_0x0_pin == esp) edi= (uint) memcache_esp_0x0_data; else 
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    edi= (uint)(     memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    edi= (uint)(    memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cbf;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    edi= (uint)(    memcache_esp_0x0_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+esp += 4;
+
+// 8048cc0 pop %ebp
+if (memcache_esp_0x0_pin == esp) ebp= (uint) memcache_esp_0x0_data; else 
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    ebp= (uint)(     memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    ebp= (uint)(    memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cc0;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    ebp= (uint)(    memcache_esp_0x0_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+esp += 4;
+
+// 8048cc1 ret 
+if (memcache_esp_0x0_pin == esp) next_return= (CallRetAddress) memcache_esp_0x0_data; else 
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    next_return= (CallRetAddress)(     memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    next_return= (CallRetAddress)(    memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cc1;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    next_return= (CallRetAddress)(    memcache_esp_0x0_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+esp += 4;
+goto L_RET_FROM_CALL;
+
+// 8048cc2 lea 0x0(%esi,%eiz,1),%esi
+esi = (esi + eiz * 0x1);
+
+// 8048cc9 lea 0x0(%edi,%eiz,1),%edi
+edi = (edi + eiz * 0x1);
+
+// function test_target5();
+// 8048cd0 sub $0x20,%esp
+L_8048cd0:
+esp -= ( +0x20);
+compare_result = esp;
+
+// 8048cd3 movl $0x19,0x8(%esp)
+{
+vaddr = (esp +0x8);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x8_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x19);
+    memcache_esp_0x8_pin = (esp +0x8);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x8_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x19);
+    memcache_esp_0x8_pin = (esp +0x8);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cd3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x8_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x19);
+    memcache_esp_0x8_pin = (esp +0x8);
+}
+}
+
+
+// 8048cdb movl $0x7,0xc(%esp)
+{
+vaddr = (esp +0xc);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0xc_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ( +0x7);
+    memcache_esp_0xc_pin = (esp +0xc);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0xc_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ( +0x7);
+    memcache_esp_0xc_pin = (esp +0xc);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cdb;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0xc_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ( +0x7);
+    memcache_esp_0xc_pin = (esp +0xc);
+}
+}
+
+
+// 8048ce3 movl $0x0,0x10(%esp)
+{
+vaddr = (esp +0x10);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x10_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = 0x0;
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x10_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = 0x0;
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ce3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x10_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = 0x0;
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+}
+
+
+// 8048ceb mov 0x10(%esp),%ecx
+if (memcache_esp_0x10_pin == (esp +0x10)) ecx= (uint) memcache_esp_0x10_data; else 
+{
+vaddr = (esp +0x10);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    ecx= (uint)(     memcache_esp_0x10_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    ecx= (uint)(    memcache_esp_0x10_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048ceb;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    ecx= (uint)(    memcache_esp_0x10_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x10_pin = (esp +0x10);
+}
+}
+
+
+// 8048cef mov 0xc(%esp),%edx
+if (memcache_esp_0xc_pin == (esp +0xc)) edx= (uint) memcache_esp_0xc_data; else 
+{
+vaddr = (esp +0xc);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    edx= (uint)(     memcache_esp_0xc_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0xc_pin = (esp +0xc);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    edx= (uint)(    memcache_esp_0xc_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0xc_pin = (esp +0xc);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cef;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    edx= (uint)(    memcache_esp_0xc_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0xc_pin = (esp +0xc);
+}
+}
+
+
+// 8048cf3 mov 0x8(%esp),%eax
+if (memcache_esp_0x8_pin == (esp +0x8)) eax= (uint) memcache_esp_0x8_data; else 
+{
+vaddr = (esp +0x8);
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    eax= (uint)(     memcache_esp_0x8_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x8_pin = (esp +0x8);
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    eax= (uint)(    memcache_esp_0x8_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x8_pin = (esp +0x8);
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cf3;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    eax= (uint)(    memcache_esp_0x8_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x8_pin = (esp +0x8);
+}
+}
+
+
+// 8048cf7 push %ecx
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = ecx;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = ecx;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cf7;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = ecx;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048cf8 push %edx
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = edx;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = edx;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cf8;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = edx;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048cf9 push %eax
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cf9;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = eax;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+
+// 8048cfa call 8048890 <test_target6>
+esp -= 4;
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = (uint)CallRetAddress._0x8048cff;
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    memcache_esp_0x0_data =     *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = (uint)CallRetAddress._0x8048cff;
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanWrite == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048cfa;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    memcache_esp_0x0_data =     *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = (uint)CallRetAddress._0x8048cff;
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+if (true) {
+    goto L_8048890;
+}
+
+// 8048cff add $0x2c,%esp
+L_8048cff:
+esp += ( +0x2c);
+compare_result = esp;
+
+// 8048d02 ret 
+if (memcache_esp_0x0_pin == esp) next_return= (CallRetAddress) memcache_esp_0x0_data; else 
+{
+vaddr = esp;
+vaddr1_index = vaddr / VConsts.PageSize;
+vaddr1_offset = vaddr % VConsts.PageSize;
+if (vaddr1_index == cache_last_page1)
+{
+    next_return= (CallRetAddress)(     memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else if (vaddr1_index == cache_last_page2)
+{
+    next_return= (CallRetAddress)(    memcache_esp_0x0_data =  *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );
+    memcache_esp_0x0_pin = esp;
+}
+else
+{
+if (false&&pte[vaddr1_index].CanRead == false)
+{
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x8048d02;
+    goto L_RETURN;
+}
+if (((last_used_cache++) % 2) == 0)
+{
+    cache_last_page1 = vaddr1_index;
+    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;
+} else {
+    cache_last_page2 = vaddr1_index;
+    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;
+}
+    next_return= (CallRetAddress)(    memcache_esp_0x0_data =  *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );
+    memcache_esp_0x0_pin = esp;
+}
+}
+
+esp += 4;
+goto L_RET_FROM_CALL;
+
+// 8048d03 lea 0x0(%esi),%esi
+esi = esi;
+
+// 8048d09 lea 0x0(%edi,%eiz,1),%edi
+edi = (edi + eiz * 0x1);
+
  // Restore CPU state
 L_RETURN:
  state.Eax = eax;  state.Ebx = ebx;  state.Ecx = ecx;  state.Edx = edx; 
@@ -1816,6 +10477,8 @@ public enum FunctionTable
     test_target2 = 0x80487a0,
     test_target4 = 0x8048810,
     test_target3 = 0x8048870,
+    test_target6 = 0x8048890,
+    test_target5 = 0x8048cd0,
 }
 
 }
