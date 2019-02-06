@@ -209,7 +209,7 @@ NOINLINE int test_target6(int x, int y, int z) {
 	else {
 		volatile UINT a = 0;
 		while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
-		a++; //a++;//a++;a++;a++;a++;a++;//a++;a++;a++;a++; a++;a++;a++;a++;a++;a++;a++;a++;//a++;a++; a++;a++;a++;a++;a++;a++;a++;a++;a++;a++; a++;a++;a++;a++;a++;a++;a++;a++;a++;
+		a++; a++;//a++;a++;a++;a++;a++;//a++;a++;a++;a++; a++;a++;a++;a++;a++;a++;a++;a++;//a++;a++; a++;a++;a++;a++;a++;a++;a++;a++;a++;a++; a++;a++;a++;a++;a++;a++;a++;a++;a++;
 		//while (a && test_target6(1, 2, 3)) a++; 
 		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;
 		//while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++; while (a && test_target6(1, 2, 3)) a++;

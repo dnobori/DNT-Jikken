@@ -77,7 +77,7 @@ namespace VCpuTest
                     proc.Memory.Write(state.Esp, (uint)VCode.CallRetAddress._MagicReturn);
 
                     VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target1);
-
+                    
                     if (state.ExceptionString != null)
                     {
                         throw new ApplicationException($"Error: {state.ExceptionString} at 0x{state.ExceptionAddress:x}.");
