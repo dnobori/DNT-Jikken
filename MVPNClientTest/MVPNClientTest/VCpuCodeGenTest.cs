@@ -485,7 +485,7 @@ namespace SoftEther.WebSocket.Helper
                 w.WriteLine($"L_{Address:x}:");
             }
 
-            w.WriteLine("{");
+            //w.WriteLine("{");
 
             switch (Opcode)
             {
@@ -690,7 +690,7 @@ namespace SoftEther.WebSocket.Helper
                     throw new ApplicationException("Invalid operation: " + ToString());
             }
 
-            w.WriteLine("}");
+            //w.WriteLine("}");
         }
 
         public string GetFlagCode(string flag)
@@ -955,14 +955,19 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("switch (next_ip)");
             Out.WriteLine("{");
 
-            foreach (VCodeOperation op in OperationLines.Values)
+            foreach (var func in FunctionTable.Values)
             {
-                if (LabelRefs.Contains(op.Address))
-                {
-                    Out.Write($"case 0x{op.Address:x}: ");
-                    Out.WriteLine($"goto L_{op.Address:x};");
-                }
+                Out.Write($"case 0x{func:x}: ");
+                Out.WriteLine($"goto L_{func:x};");
             }
+            //foreach (VCodeOperation op in OperationLines.Values)
+            //{
+            //    if (LabelRefs.Contains(op.Address))
+            //    {
+            //        Out.Write($"case 0x{op.Address:x}: ");
+            //        Out.WriteLine($"goto L_{op.Address:x};");
+            //    }
+            //}
 
 
             //foreach (VCodeOperation op in OperationLines.Values)
