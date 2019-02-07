@@ -23,7 +23,7 @@
   </ItemGroup>
 
   <Target Name="PreBuild" BeforeTargets="PreBuildEvent">
-    <Exec Command="rem dotnet run --no-restore --project $(SolutionDir)\MVPNClientTest\MVPNClientTest.csproj" />
+    <Exec Command="dotnet run --no-restore --project $(SolutionDir)\MVPNClientTest\MVPNClientTest.csproj" />
   </Target>
 
 </Project>
