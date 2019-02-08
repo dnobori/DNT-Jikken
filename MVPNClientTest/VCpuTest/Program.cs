@@ -52,7 +52,7 @@ namespace VCpuTest
 
         public static void ExecTest()
         {
-            int count = 5;
+            int count = 11;
 
             using (VProcess proc = new VProcess())
             {

@@ -272,8 +272,8 @@ NOINLINE UINT test_main(UINT count)
 
 	for (i = 0;i < count;i++)
 	{
-		//UINT r = test_target1();
-		UINT r = test_target2();
+		UINT r = test_target3();
+		//UINT r = test_target2();
 		//UINT r = test_target3();
 		//UINT r = test_target5();
 
@@ -301,20 +301,6 @@ int main()
 	UINT64 result;
 
 	UINT ret;
-
-	while (true)
-	{
-		start = TickHighres64();
-
-		ret = test_main(count);
-
-		end = TickHighres64();
-
-		result = (end - start) / (UINT64)count;
-
-		ToStr3(tmp, result);
-		printf("time = %s\n", tmp);
-	}
 
 	start = TickHighres64();
 	

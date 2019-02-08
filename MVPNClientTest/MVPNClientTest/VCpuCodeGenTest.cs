@@ -47,7 +47,7 @@ namespace SoftEther.WebSocket.Helper
         public const uint NumPages = (uint)(0x100000000 / PageSize);
         public const uint Magic_Return = 0xdeadbeef;
 
-        public const AddressingMode Addressing = AddressingMode.Contiguous;
+        public const AddressingMode Addressing = AddressingMode.Paging;
 
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
         public static bool NoCheckRange = false;
@@ -419,8 +419,8 @@ namespace SoftEther.WebSocket.Helper
                 w.WriteLine("{");
 
                 w.WriteLine($"vaddr = {GetCode()};");
-                w.WriteLine($"vaddr1_index = vaddr / VConsts.PageSize;");
-                w.WriteLine($"vaddr1_offset = vaddr % VConsts.PageSize;");
+                w.WriteLine($"vaddr1_index = vaddr / {VConsts.PageSize};");
+                w.WriteLine($"vaddr1_offset = vaddr % {VConsts.PageSize};");
                 //w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
                 w.WriteLine($"if (vaddr1_index == cache_last_page1)");
                 w.WriteLine("{");
@@ -481,9 +481,14 @@ namespace SoftEther.WebSocket.Helper
                 w.WriteLine("else");
                 w.WriteLine("{");
                 //w.WriteLine($"if (pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
-                w.WriteLine($"if (false&&pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
+                w.WriteLine($"if (pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
                 w.WriteLine("{");
-                w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
+
+                if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                    w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
+                else
+                    w.WriteLine("    sprintf(exception_string, \"Access violation to 0x%x.\", vaddr);");
+
                 w.WriteLine($"    exception_address = 0x{codeAddress:x};");
                 w.WriteLine("    goto L_RETURN;");
                 w.WriteLine("}");
@@ -497,7 +502,6 @@ namespace SoftEther.WebSocket.Helper
                 w.WriteLine("    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;");
                 w.WriteLine("}");
                 //w.WriteLine($"realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
-
 
 
                 // single page
@@ -535,8 +539,11 @@ namespace SoftEther.WebSocket.Helper
 
                 if (VConsts.NoCheckRange == false)
                 {
-                    w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end){");
-
+                    if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                        w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end){");
+                    else
+                        w.WriteLine("if ((vaddr < cont_start || vaddr >= cont_end)){");
+                    
                     if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
                     {
                         w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
@@ -545,8 +552,9 @@ namespace SoftEther.WebSocket.Helper
                     }
                     else
                     {
-                        //w.WriteLine("    sprintf(exception_string, \"Access violation to 0x%x.\", vaddr);");
-                        w.WriteLine("eax++;");
+                        w.WriteLine("    sprintf(exception_string, \"Access violation to 0x%x.\", vaddr);");
+                        w.WriteLine($"    exception_address = 0x{codeAddress:x};");
+                        w.WriteLine("    goto L_RETURN;");
                     }
 
                     w.WriteLine("}");

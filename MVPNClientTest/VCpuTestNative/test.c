@@ -13,9 +13,6 @@ typedef	unsigned int		BOOL;
 #define	TRUE				1
 #define	FALSE				0
 #endif
-typedef	unsigned int		bool;
-#define	true				1
-#define	false				0
 #ifndef	_WINDOWS_
 typedef	unsigned int		UINT;
 typedef	unsigned int		UINT32;
@@ -131,13 +128,78 @@ void ToStr3(char *str, UINT64 v)
 }
 
 
+void mem_write(VPageTableEntry *pte, uint address, uint value)
+{
+	uint vaddr = address;
+	uint vaddr1_index = vaddr / 4096;
+	uint vaddr1_offset = vaddr % 4096;
+	if (pte[vaddr1_index].CanWrite == false)
+	{
+		printf("Access violation to 0x%x.", vaddr);
+		exit(0);
+	}
+	*((uint*)((byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = value;
+}
+
+uint mem_read(VPageTableEntry *pte, uint address)
+{
+	uint vaddr = address;
+	uint vaddr1_index = vaddr / 4096;
+	uint vaddr1_offset = vaddr % 4096;
+	if (pte[vaddr1_index].CanWrite == false)
+	{
+		printf("Access violation to 0x%x.", vaddr);
+		exit(0);
+	}
+	return *((uint*)((byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset)));
+}
+
+
+
+void AllignMemoryToPage(uint startAddress, uint size, uint *pageNumberStart, uint *pageCount)
+{
+	*pageNumberStart = startAddress / 4096;
+
+	*pageCount = (startAddress + size) / 4096 - *pageNumberStart;
+}
+
+void AllocateMemory(VMemory *memory, uint startAddress, uint size, bool canRead, bool canWrite)
+{
+	uint pageNumberStart, pageCount;
+	AllignMemoryToPage(startAddress, size, &pageNumberStart, &pageCount);
+	for (uint i = pageNumberStart; i < pageNumberStart + pageCount; i++)
+	{
+		VPageTableEntry* e = &memory->PageTableEntry[i];
+		if (e->RealMemory != null)
+		{
+			printf("Page number %u, count %u already exists.\n", pageNumberStart, pageCount);
+		}
+	}
+	for (uint i = pageNumberStart; i < pageNumberStart + pageCount; i++)
+	{
+		VPageTableEntry* e = &memory->PageTableEntry[i];
+		e->RealMemory = (byte*)malloc((int)4096);
+		e->CanRead = canRead;
+		e->CanWrite = canWrite;
+	}
+}
 
 int main()
 {
-	uint count = 5;
+	uint count = 10;
 	uint stackPtr = 0x500000 + 0x10000 / 2;
 
 	VMemory *memory = malloc(sizeof(VMemory));
+
+	memory->PageTableEntry = malloc((int)(sizeof(VPageTableEntry) * (uint)(0x100000000 / 4096)));
+	for (uint i = 0; i < (uint)(0x100000000 / 4096); i++)
+	{
+		memory->PageTableEntry[i].RealMemory = null;
+		memory->PageTableEntry[i].CanRead = memory->PageTableEntry[i].CanWrite = false;
+	}
+
+	AllocateMemory(memory, 0x8000000, 0x100000, true, true);
+	AllocateMemory(memory, 0x500000, 0x10000, true, true);
 
 	memory->ContiguousMemory = malloc(0x8000000 + 0x100000 - 0x500000);
 	memory->ContiguousStart = 0x500000;
@@ -158,6 +220,8 @@ int main()
 		state->Esp -= 4;
 
 		*((uint*)(byte*)(memory->ContiguousMemory + state->Esp - memory->ContiguousStart)) = CallRetAddress__MagicReturn;
+
+		mem_write(memory->PageTableEntry, state->Esp, CallRetAddress__MagicReturn);
 
 		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target3);
 

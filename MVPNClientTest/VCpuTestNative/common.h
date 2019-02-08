@@ -1,16 +1,25 @@
 #pragma  once
 
+#ifdef _WIN32
+#else
+#define likely(x)   __builtin_expect(!!(x), 1)
+#define unlikely(x) __builtin_expect(!!(x), 0)
+#endif
+
 typedef	unsigned short		ushort;
 
 typedef	unsigned int		uint;
 typedef	unsigned long long	ulong;
 typedef	unsigned char		byte;
 
+typedef	unsigned int		bool;
+#define	true				1
+#define	false				0
 
 #define	null ((void *)0)
 
 #ifdef GENERATED_CODE_C
-int __cdecl sprintf(
+int  sprintf(
 	char*       const _Buffer,
 	char const* const _Format,
 	...);
@@ -23,23 +32,25 @@ int __cdecl sprintf(
 
 typedef struct VPageTableEntry
 {
-	int a;
+	byte* RealMemory;
+	bool CanRead;
+	bool CanWrite;
 } VPageTableEntry;
 
 typedef struct VMemory
 {
-	VPageTableEntry *PageTableEntry;
-	byte *ContiguousMemory;
-	uint ContiguousStart;
-	uint ContiguousEnd;
+	volatile VPageTableEntry *PageTableEntry;
+	volatile byte *ContiguousMemory;
+	volatile uint ContiguousStart;
+	volatile uint ContiguousEnd;
 } VMemory;
 
 typedef struct VCpuState
 {
-	VMemory *Memory;
-	uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp;
-	char ExceptionString[256];
-	uint ExceptionAddress;
+	volatile VMemory *Memory;
+	volatile uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp;
+	volatile char ExceptionString[256];
+	volatile uint ExceptionAddress;
 } VCpuState;
 
 void Iam_The_IntelCPU_HaHaHa(VCpuState *state, uint ip);

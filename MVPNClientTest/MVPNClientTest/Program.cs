@@ -31,7 +31,7 @@ namespace MVPNClientTest
             //    return;
             //}
 
-            VConsts.NoCheckRange = false;
+            //VConsts.NoCheckRange = true;
 
             VConsts.CodeGenTarget = CodeGenTargetEnum.CSharp;
             VCpuCodeGenTest.CodeGen();
