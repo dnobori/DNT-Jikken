@@ -80,84 +80,135 @@ default:
 // function test_target1();
 // 80488a0 push %esi
 L_80488a0:
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = esi;
 
+}
 
 // 80488a1 push %ebx
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ebx;
 
+}
 
 // 80488a2 xor %esi,%esi
+{
 esi = 0;
+}
 
 // 80488a4 mov $0x3,%ebx
+{
 ebx = ( +0x3);
+}
 
 // 80488a9 sub $0x10,%esp
+{
 esp -= ( +0x10);
 compare_result = esp;
+}
 
 // 80488ac movl $0x4e20,0xc(%esp)
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ( +0x4e20);
 
+}
 
 // 80488b4 mov 0xc(%esp),%eax
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 eax= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 80488b8 cmp $0x2,%eax
+{
 compare_result = (uint)(eax - ( +0x2));
+}
 
 // 80488bb jbe 80488f7 <test_target1+0x57>
+{
 if (compare_result == 0 || compare_result >= 0x80000000) {
     goto L_80488f7;
 }
+}
 
 // 80488bd lea 0x0(%esi),%esi
+{
 esi = esi;
+}
 
 // 80488c0 cmp $0x2,%ebx
 L_80488c0:
+{
 compare_result = (uint)(ebx - ( +0x2));
+}
 
 // 80488c3 jbe 80488e9 <test_target1+0x49>
+{
 if (compare_result == 0 || compare_result >= 0x80000000) {
     goto L_80488e9;
 }
+}
 
 // 80488c5 test $0x1,%bl
+{
 compare_result = (uint)(*bl & ( +0x1));
+}
 
 // 80488c8 je 80488ec <test_target1+0x4c>
+{
 if (compare_result == 0) {
     goto L_80488ec;
 }
+}
 
 // 80488ca mov $0x2,%ecx
+{
 ecx = ( +0x2);
+}
 
 // 80488cf jmp 80488e2 <test_target1+0x42>
+{
 if (true) {
     goto L_80488e2;
 }
+}
 
 // 80488d1 lea 0x0(%esi,%eiz,1),%esi
+{
 esi = (esi + eiz * 0x1);
+}
 
 // 80488d8 xor %edx,%edx
 L_80488d8:
+{
 edx = 0;
+}
 
 // 80488da mov %ebx,%eax
+{
 eax = ebx;
+}
 
 // 80488dc div %ecx
+{
 if (edx != 0) {
 ulong tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);
 ulong tmp2 = ecx;
@@ -170,474 +221,773 @@ uint tmp2 = ecx;
 eax = tmp1 / tmp2;
 edx = tmp1 - tmp2 * eax;
 }
+}
 
 // 80488de test %edx,%edx
+{
 compare_result = (uint)(edx);
+}
 
 // 80488e0 je 80488ec <test_target1+0x4c>
+{
 if (compare_result == 0) {
     goto L_80488ec;
+}
 }
 
 // 80488e2 add $0x1,%ecx
 L_80488e2:
+{
 ecx += ( +0x1);
 compare_result = ecx;
+}
 
 // 80488e5 cmp %ebx,%ecx
+{
 compare_result = (uint)(ecx - ebx);
+}
 
 // 80488e7 jne 80488d8 <test_target1+0x38>
+{
 if (compare_result != 0) {
     goto L_80488d8;
+}
 }
 
 // 80488e9 add $0x1,%esi
 L_80488e9:
+{
 esi += ( +0x1);
 compare_result = esi;
+}
 
 // 80488ec mov 0xc(%esp),%eax
 L_80488ec:
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 eax= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 80488f0 add $0x1,%ebx
+{
 ebx += ( +0x1);
 compare_result = ebx;
+}
 
 // 80488f3 cmp %ebx,%eax
+{
 compare_result = (uint)(eax - ebx);
+}
 
 // 80488f5 jae 80488c0 <test_target1+0x20>
+{
 if (compare_result <= 0x80000000) {
     goto L_80488c0;
+}
 }
 
 // 80488f7 add $0x10,%esp
 L_80488f7:
+{
 esp += ( +0x10);
 compare_result = esp;
+}
 
 // 80488fa mov %esi,%eax
+{
 eax = esi;
+}
 
 // 80488fc pop %ebx
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 ebx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 80488fd pop %esi
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 esi= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 80488fe ret 
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 next_return= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
 goto L_RET_FROM_CALL;
+}
 
 // 80488ff nop 
+{
+}
 
 // function test_target2();
 // 8048900 push %esi
 L_8048900:
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = esi;
 
+}
 
 // 8048901 push %ebx
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ebx;
 
+}
 
 // 8048902 sub $0x1f50,%esp
+{
 esp -= ( +0x1f50);
 compare_result = esp;
+}
 
 // 8048908 movl $0x7d0,0xc(%esp)
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ( +0x7d0);
 
+}
 
 // 8048910 mov 0xc(%esp),%eax
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 eax= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 8048914 test %eax,%eax
+{
 compare_result = (uint)(eax);
+}
 
 // 8048916 je 804892e <test_target2+0x2e>
+{
 if (compare_result == 0) {
     goto L_804892e;
 }
+}
 
 // 8048918 lea 0x10(%esp),%ebx
+{
 ebx = (esp +0x10);
+}
 
 // 804891c xor %eax,%eax
+{
 eax = 0;
+}
 
 // 804891e xchg %ax,%ax
+{
+}
 
 // 8048920 mov 0xc(%esp),%edx
 L_8048920:
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 edx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 8048924 mov %eax,(%ebx,%eax,4)
+{
 vaddr = (ebx + eax * 0x4);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = eax;
 
+}
 
 // 8048927 add $0x1,%eax
+{
 eax += ( +0x1);
 compare_result = eax;
+}
 
 // 804892a cmp %eax,%edx
+{
 compare_result = (uint)(edx - eax);
+}
 
 // 804892c ja 8048920 <test_target2+0x20>
+{
 if (compare_result != 0 && compare_result <= 0x80000000) {
     goto L_8048920;
+}
 }
 
 // 804892e mov $0xc350,%esi
 L_804892e:
+{
 esi = ( +0xc350);
+}
 
 // 8048933 xor %eax,%eax
+{
 eax = 0;
+}
 
 // 8048935 lea 0x0(%esi),%esi
+{
 esi = esi;
+}
 
 // 8048938 mov 0xc(%esp),%edx
 L_8048938:
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 edx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 804893c test %edx,%edx
+{
 compare_result = (uint)(edx);
+}
 
 // 804893e je 804895e <test_target2+0x5e>
+{
 if (compare_result == 0) {
     goto L_804895e;
 }
+}
 
 // 8048940 lea 0x10(%esp),%ebx
+{
 ebx = (esp +0x10);
+}
 
 // 8048944 xor %edx,%edx
+{
 edx = 0;
+}
 
 // 8048946 lea 0x0(%esi),%esi
+{
 esi = esi;
+}
 
 // 8048949 lea 0x0(%edi,%eiz,1),%edi
+{
 edi = (edi + eiz * 0x1);
+}
 
 // 8048950 mov 0xc(%esp),%ecx
 L_8048950:
+{
 vaddr = (esp +0xc);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 ecx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 8048954 add (%ebx,%edx,4),%eax
+{
 vaddr = (ebx + edx * 0x4);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 eax+= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 compare_result = eax;
+}
 
 // 8048957 add $0x1,%edx
+{
 edx += ( +0x1);
 compare_result = edx;
+}
 
 // 804895a cmp %edx,%ecx
+{
 compare_result = (uint)(ecx - edx);
+}
 
 // 804895c ja 8048950 <test_target2+0x50>
+{
 if (compare_result != 0 && compare_result <= 0x80000000) {
     goto L_8048950;
+}
 }
 
 // 804895e sub $0x1,%esi
 L_804895e:
+{
 esi -= ( +0x1);
 compare_result = esi;
+}
 
 // 8048961 jne 8048938 <test_target2+0x38>
+{
 if (compare_result != 0) {
     goto L_8048938;
 }
+}
 
 // 8048963 add $0x1f50,%esp
+{
 esp += ( +0x1f50);
 compare_result = esp;
+}
 
 // 8048969 pop %ebx
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 ebx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 804896a pop %esi
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 esi= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 804896b ret 
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 next_return= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
 goto L_RET_FROM_CALL;
+}
 
 // 804896c lea 0x0(%esi,%eiz,1),%esi
+{
 esi = (esi + eiz * 0x1);
+}
 
 // function test_target4();
 // 8048970 push %esi
 L_8048970:
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = esi;
 
+}
 
 // 8048971 push %ebx
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ebx;
 
+}
 
 // 8048972 sub $0x4,%esp
+{
 esp -= ( +0x4);
 compare_result = esp;
+}
 
 // 8048975 mov 0x10(%esp),%ebx
+{
 vaddr = (esp +0x10);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 ebx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 8048979 test %ebx,%ebx
+{
 compare_result = (uint)(ebx);
+}
 
 // 804897b je 80489c3 <test_target4+0x53>
+{
 if (compare_result == 0) {
     goto L_80489c3;
 }
+}
 
 // 804897d cmp $0x1,%ebx
+{
 compare_result = (uint)(ebx - ( +0x1));
+}
 
 // 8048980 je 80489c7 <test_target4+0x57>
+{
 if (compare_result == 0) {
     goto L_80489c7;
 }
+}
 
 // 8048982 xor %esi,%esi
+{
 esi = 0;
+}
 
 // 8048984 jmp 8048995 <test_target4+0x25>
+{
 if (true) {
     goto L_8048995;
 }
+}
 
 // 8048986 lea 0x0(%esi),%esi
+{
 esi = esi;
+}
 
 // 8048989 lea 0x0(%edi,%eiz,1),%edi
+{
 edi = (edi + eiz * 0x1);
+}
 
 // 8048990 cmp $0x1,%ebx
 L_8048990:
+{
 compare_result = (uint)(ebx - ( +0x1));
+}
 
 // 8048993 je 80489b8 <test_target4+0x48>
+{
 if (compare_result == 0) {
     goto L_80489b8;
+}
 }
 
 // 8048995 lea -0x1(%ebx),%eax
 L_8048995:
+{
 eax = (ebx -0x1);
+}
 
 // 8048998 sub $0xc,%esp
+{
 esp -= ( +0xc);
 compare_result = esp;
+}
 
 // 804899b push %eax
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = eax;
 
+}
 
 // 804899c call 8048970 <test_target4>
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = (uint)CallRetAddress__0x80489a1;
 
 if (true) {
     goto L_8048970;
 }
+}
 
 // 80489a1 add $0x10,%esp
 L_80489a1:
+{
 esp += ( +0x10);
 compare_result = esp;
+}
 
 // 80489a4 add %eax,%esi
+{
 esi += eax;
 compare_result = esi;
+}
 
 // 80489a6 sub $0x2,%ebx
+{
 ebx -= ( +0x2);
 compare_result = ebx;
+}
 
 // 80489a9 jne 8048990 <test_target4+0x20>
+{
 if (compare_result != 0) {
     goto L_8048990;
+}
 }
 
 // 80489ab add $0x4,%esp
 L_80489ab:
+{
 esp += ( +0x4);
 compare_result = esp;
+}
 
 // 80489ae mov %esi,%eax
+{
 eax = esi;
+}
 
 // 80489b0 pop %ebx
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 ebx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 80489b1 pop %esi
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 esi= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 80489b2 ret 
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 next_return= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
 goto L_RET_FROM_CALL;
+}
 
 // 80489b3 nop 
+{
+}
 
 // 80489b4 lea 0x0(%esi,%eiz,1),%esi
+{
 esi = (esi + eiz * 0x1);
+}
 
 // 80489b8 add $0x1,%esi
 L_80489b8:
+{
 esi += ( +0x1);
 compare_result = esi;
+}
 
 // 80489bb add $0x4,%esp
+{
 esp += ( +0x4);
 compare_result = esp;
+}
 
 // 80489be mov %esi,%eax
+{
 eax = esi;
+}
 
 // 80489c0 pop %ebx
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 ebx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 80489c1 pop %esi
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 esi= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
+}
 
 // 80489c2 ret 
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 next_return= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
 goto L_RET_FROM_CALL;
+}
 
 // 80489c3 xor %esi,%esi
 L_80489c3:
+{
 esi = 0;
+}
 
 // 80489c5 jmp 80489ab <test_target4+0x3b>
+{
 if (true) {
     goto L_80489ab;
+}
 }
 
 // 80489c7 mov $0x1,%esi
 L_80489c7:
+{
 esi = ( +0x1);
+}
 
 // 80489cc jmp 80489ab <test_target4+0x3b>
+{
 if (true) {
     goto L_80489ab;
 }
+}
 
 // 80489ce xchg %ax,%ax
+{
+}
 
 // function test_target3();
 // 80489d0 sub $0x28,%esp
 L_80489d0:
+{
 esp -= ( +0x28);
 compare_result = esp;
+}
 
 // 80489d3 movl $0x22,0x18(%esp)
+{
 vaddr = (esp +0x18);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ( +0x22);
 
+}
 
 // 80489db mov 0x18(%esp),%eax
+{
 vaddr = (esp +0x18);
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 eax= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
+}
 
 // 80489df push %eax
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = eax;
 
+}
 
 // 80489e0 call 8048970 <test_target4>
+{
 esp -= 4;
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 *((uint*)(byte*)(cont_memory_minus_start + vaddr)) = (uint)CallRetAddress__0x80489e5;
 
 if (true) {
     goto L_8048970;
 }
+}
 
 // 80489e5 add $0x2c,%esp
 L_80489e5:
+{
 esp += ( +0x2c);
 compare_result = esp;
+}
 
 // 80489e8 ret 
+{
 vaddr = esp;
+if (vaddr < cont_start || vaddr >= cont_end){
+eax++;
+}
 next_return= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
 
 esp += 4;
 goto L_RET_FROM_CALL;
+}
 
 // 80489e9 lea 0x0(%esi,%eiz,1),%esi
+{
 esi = (esi + eiz * 0x1);
+}
 
  // Restore CPU state
 L_RETURN:

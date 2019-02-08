@@ -122,6 +122,7 @@
       <DisableSpecificWarnings>4996;4311;4312;4789</DisableSpecificWarnings>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <AssemblerOutput>AssemblyAndSourceCode</AssemblerOutput>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -154,6 +155,7 @@
       <CompileAs>CompileAsC</CompileAs>
       <DisableSpecificWarnings>4996;4311;4312;4789</DisableSpecificWarnings>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -174,7 +176,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -190,6 +192,8 @@
       <DisableSpecificWarnings>4996;4311;4312;4789</DisableSpecificWarnings>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
       <AssemblerOutput>All</AssemblerOutput>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -210,7 +214,7 @@
     <ClCompile>
       <PrecompiledHeader>NotUsing</PrecompiledHeader>
       <WarningLevel>Level3</WarningLevel>
-      <Optimization>Full</Optimization>
+      <Optimization>MaxSpeed</Optimization>
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>false</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
@@ -225,6 +229,8 @@
       <CompileAs>CompileAsC</CompileAs>
       <DisableSpecificWarnings>4996;4311;4312;4789</DisableSpecificWarnings>
       <MultiProcessorCompilation>false</MultiProcessorCompilation>
+      <BufferSecurityCheck>false</BufferSecurityCheck>
+      <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

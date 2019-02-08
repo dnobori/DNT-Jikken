@@ -50,6 +50,7 @@ namespace SoftEther.WebSocket.Helper
         public const AddressingMode Addressing = AddressingMode.Contiguous;
 
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
+        public static bool NoCheckRange = false;
     }
 
     public unsafe struct VPageTableEntry
@@ -532,11 +533,24 @@ namespace SoftEther.WebSocket.Helper
             {
                 w.WriteLine($"vaddr = {GetCode()};");
 
-                /*w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end){");
-                w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
-                w.WriteLine($"    exception_address = 0x{codeAddress:x};");
-                w.WriteLine("    goto L_RETURN;");
-                w.WriteLine("}");*/
+                if (VConsts.NoCheckRange == false)
+                {
+                    w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end){");
+
+                    if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                    {
+                        w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
+                        w.WriteLine($"    exception_address = 0x{codeAddress:x};");
+                        w.WriteLine("    goto L_RETURN;");
+                    }
+                    else
+                    {
+                        //w.WriteLine("    sprintf(exception_string, \"Access violation to 0x%x.\", vaddr);");
+                        w.WriteLine("eax++;");
+                    }
+
+                    w.WriteLine("}");
+                }
 
                 if (writeMode)
                 {
@@ -582,7 +596,7 @@ namespace SoftEther.WebSocket.Helper
                 w.WriteLine($"L_{Address:x}:");
             }
 
-            //w.WriteLine("{");
+            w.WriteLine("{");
 
             switch (Opcode)
             {
@@ -791,7 +805,7 @@ namespace SoftEther.WebSocket.Helper
                     throw new ApplicationException("Invalid operation: " + ToString());
             }
 
-            //w.WriteLine("}");
+            w.WriteLine("}");
         }
 
         public string GetFlagCode(string flag)
