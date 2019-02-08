@@ -56,11 +56,17 @@ namespace VCpuTest
 
             using (VProcess proc = new VProcess())
             {
-                proc.Memory.AllocateMemory(0x8000000, 0x100000);
-
                 uint stackPtr = 0x500000 + 0x10000 / 2;
 
-                proc.Memory.AllocateMemory(0x500000, 0x10000);
+                if (VConsts.Addressing == AddressingMode.Paging)
+                {
+                    proc.Memory.AllocateMemory(0x8000000, 0x100000);
+                    proc.Memory.AllocateMemory(0x500000, 0x10000);
+                }
+                else
+                {
+                    proc.Memory.AllocateContiguousMemory(0x500000, 0x8000000 + 0x100000 - 0x500000);
+                }
 
                 VCpuState state = new VCpuState(proc);
 
@@ -76,7 +82,7 @@ namespace VCpuTest
                     state.Esp -= 4;
                     proc.Memory.Write(state.Esp, (uint)VCode.CallRetAddress._MagicReturn);
 
-                    VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target1);
+                    VCode.Iam_The_IntelCPU_HaHaHa(state, (uint)VCode.FunctionTable.test_target2);
 
                     if (state.ExceptionString != null)
                     {

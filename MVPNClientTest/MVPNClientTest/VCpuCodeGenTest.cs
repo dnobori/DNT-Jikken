@@ -34,11 +34,22 @@ using System.Security.Authentication;
 
 namespace SoftEther.WebSocket.Helper
 {
+    [Flags]
+    public enum CodeGenTargetEnum
+    {
+        CSharp,
+        C,
+    }
+
     public static class VConsts
     {
         public const uint PageSize = 4096;
         public const uint NumPages = (uint)(0x100000000 / PageSize);
         public const uint Magic_Return = 0xdeadbeef;
+
+        public const AddressingMode Addressing = AddressingMode.Contiguous;
+
+        public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
     }
 
     public unsafe struct VPageTableEntry
@@ -64,75 +75,99 @@ namespace SoftEther.WebSocket.Helper
 
         public void Write(uint address, uint value)
         {
-            VPageTableEntry* pte = PageTableEntry;
-            uint vaddr = address;
-            uint vaddr1_index = vaddr / VConsts.PageSize;
-            uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
-            if (pte[vaddr1_index].CanWrite == false)
+            if (VConsts.Addressing == AddressingMode.Paging)
             {
-                throw new ApplicationException($"Access violation to 0x{vaddr:x}.");
-            }
-            byte* realaddr1 = (byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset);
-            if ((vaddr1_offset + 4) > VConsts.PageSize)
-            {
-                uint size1 = VConsts.PageSize - vaddr1_offset;
-                uint size2 = 4 - size1;
-                uint vaddr2 = vaddr + size1;
-                uint vaddr2_index = vaddr2 / VConsts.PageSize;
-                if (pte[vaddr2_index].CanWrite == false)
+                VPageTableEntry* pte = PageTableEntry;
+                uint vaddr = address;
+                uint vaddr1_index = vaddr / VConsts.PageSize;
+                uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+                if (pte[vaddr1_index].CanWrite == false)
                 {
-                    throw new ApplicationException($"Access violation to 0x{vaddr2:x}.");
+                    throw new ApplicationException($"Access violation to 0x{vaddr:x}.");
                 }
-                byte* realaddr2 = (byte*)(pte[vaddr2_index].RealMemory);
-                uint set_value = value;
-                byte* set_ptr = (byte*)set_value;
-                if (size1 == 1) { realaddr1[0] = set_ptr[0]; realaddr2[0] = set_ptr[1]; realaddr2[1] = set_ptr[2]; realaddr2[2] = set_ptr[3]; }
-                else if (size1 == 2) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr2[0] = set_ptr[2]; realaddr2[1] = set_ptr[3]; }
-                else if (size1 == 3) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr1[2] = set_ptr[2]; realaddr2[0] = set_ptr[3]; }
+                byte* realaddr1 = (byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+                if ((vaddr1_offset + 4) > VConsts.PageSize)
+                {
+                    uint size1 = VConsts.PageSize - vaddr1_offset;
+                    uint size2 = 4 - size1;
+                    uint vaddr2 = vaddr + size1;
+                    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+                    if (pte[vaddr2_index].CanWrite == false)
+                    {
+                        throw new ApplicationException($"Access violation to 0x{vaddr2:x}.");
+                    }
+                    byte* realaddr2 = (byte*)(pte[vaddr2_index].RealMemory);
+                    uint set_value = value;
+                    byte* set_ptr = (byte*)set_value;
+                    if (size1 == 1) { realaddr1[0] = set_ptr[0]; realaddr2[0] = set_ptr[1]; realaddr2[1] = set_ptr[2]; realaddr2[2] = set_ptr[3]; }
+                    else if (size1 == 2) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr2[0] = set_ptr[2]; realaddr2[1] = set_ptr[3]; }
+                    else if (size1 == 3) { realaddr1[0] = set_ptr[0]; realaddr1[1] = set_ptr[1]; realaddr1[2] = set_ptr[2]; realaddr2[0] = set_ptr[3]; }
+                }
+                else
+                {
+                    *((uint*)realaddr1) = value;
+                }
             }
             else
             {
-                *((uint*)realaddr1) = value;
+                if (address < this.ContiguousStart || address >= this.ContiguousEnd)
+                {
+                    throw new ApplicationException($"Access violation to 0x{address:x}.");
+                }
+                *((uint*)(byte*)(this.ContiguousMemory + address - this.ContiguousStart)) = value;
             }
         }
 
         public uint Read(uint address)
         {
-            VPageTableEntry* pte = PageTableEntry;
-            uint vaddr = address;
-            uint vaddr1_index = vaddr / VConsts.PageSize;
-            uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
-            if (pte[vaddr1_index].CanRead == false)
+            if (VConsts.Addressing == AddressingMode.Paging)
             {
-                throw new ApplicationException($"Access violation to 0x{vaddr:x}.");
-            }
-            byte* realaddr1 = (byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset);
-            if ((vaddr1_offset + 4) > VConsts.PageSize)
-            {
-                uint size1 = VConsts.PageSize - vaddr1_offset;
-                uint size2 = 4 - size1;
-                uint vaddr2 = vaddr + size1;
-                uint vaddr2_index = vaddr2 / VConsts.PageSize;
-                if (pte[vaddr2_index].CanRead == false)
+                VPageTableEntry* pte = PageTableEntry;
+                uint vaddr = address;
+                uint vaddr1_index = vaddr / VConsts.PageSize;
+                uint vaddr1_offset = vaddr - vaddr1_index * VConsts.PageSize;
+                if (pte[vaddr1_index].CanRead == false)
                 {
-                    throw new ApplicationException($"Access violation to 0x{vaddr2:x}.");
+                    throw new ApplicationException($"Access violation to 0x{vaddr:x}.");
                 }
-                byte* realaddr2 = (byte*)(pte[vaddr2_index].RealMemory);
-                uint get_value = 0;
-                byte* get_ptr = (byte*)get_value;
-                if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
-                else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
-                else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
-                return get_value;
+                byte* realaddr1 = (byte*)(pte[vaddr1_index].RealMemory + vaddr1_offset);
+                if ((vaddr1_offset + 4) > VConsts.PageSize)
+                {
+                    uint size1 = VConsts.PageSize - vaddr1_offset;
+                    uint size2 = 4 - size1;
+                    uint vaddr2 = vaddr + size1;
+                    uint vaddr2_index = vaddr2 / VConsts.PageSize;
+                    if (pte[vaddr2_index].CanRead == false)
+                    {
+                        throw new ApplicationException($"Access violation to 0x{vaddr2:x}.");
+                    }
+                    byte* realaddr2 = (byte*)(pte[vaddr2_index].RealMemory);
+                    uint get_value = 0;
+                    byte* get_ptr = (byte*)get_value;
+                    if (size1 == 1) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr2[0]; get_ptr[2] = realaddr2[1]; get_ptr[3] = realaddr2[2]; }
+                    else if (size1 == 2) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr2[0]; get_ptr[3] = realaddr2[1]; }
+                    else if (size1 == 3) { get_ptr[0] = realaddr1[0]; get_ptr[1] = realaddr1[1]; get_ptr[2] = realaddr1[2]; get_ptr[3] = realaddr2[0]; }
+                    return get_value;
+                }
+                else
+                {
+                    return *((uint*)realaddr1);
+                }
             }
             else
             {
-                return *((uint*)realaddr1);
+                if (address < this.ContiguousStart || address >= this.ContiguousEnd)
+                {
+                    throw new ApplicationException($"Access violation to 0x{address:x}.");
+                }
+                return *((uint*)(byte*)(this.ContiguousMemory + address - this.ContiguousStart));
             }
         }
 
         public void AllocateMemory(uint startAddress, uint size, bool canRead = true, bool canWrite = true)
         {
+            if (VConsts.Addressing != AddressingMode.Paging) throw new ApplicationException("Not paging.");
+
             AllignMemoryToPage(startAddress, size, out uint pageNumberStart, out uint pageCount);
             for (uint i = pageNumberStart; i < pageNumberStart + pageCount; i++)
             {
@@ -149,7 +184,20 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void AllignMemoryToPage(uint startAddress, uint size, out uint pageNumberStart, out uint pageCount)
+        public byte* ContiguousMemory = null;
+        public uint ContiguousStart = 0;
+        public uint ContiguousEnd = 0;
+
+        public void AllocateContiguousMemory(uint startAddress, uint size)
+        {
+            if (ContiguousMemory != null) throw new ApplicationException("Already allocated.");
+
+            ContiguousMemory = (byte*)Marshal.AllocCoTaskMem((int)size);
+            ContiguousStart = startAddress;
+            ContiguousEnd = size;
+        }
+
+        void AllignMemoryToPage(uint startAddress, uint size, out uint pageNumberStart, out uint pageCount)
         {
             pageNumberStart = startAddress / VConsts.PageSize;
 
@@ -190,6 +238,12 @@ namespace SoftEther.WebSocket.Helper
             this.Process = process;
             this.Memory = this.Process.Memory;
         }
+    }
+
+    public enum AddressingMode
+    {
+        Paging,
+        Contiguous,
     }
 
     public class VProcess : IDisposable
@@ -300,7 +354,25 @@ namespace SoftEther.WebSocket.Helper
             if (this.IsLabel) throw new ApplicationException("This operand is a label.");
             string str = "";
             if (this.BaseRegister != null)
-                str += this.BaseRegister;
+                str = this.BaseRegister;
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.C)
+            {
+                switch (str)
+                {
+                    case "al":
+                    case "bl":
+                    case "cl":
+                    case "dl":
+                    case "ah":
+                    case "bh":
+                    case "ch":
+                    case "dh":
+                        str = "*" + str;
+                        break;
+                }
+            }
+
             if (this.OffsetRegister != null && this.Scaler != 0)
                 str = "(" + str + " + " + this.OffsetRegister + " * " + "0x" + this.Scaler.ToString("x") + ")";
             if (this.Displacement != 0)
@@ -318,138 +390,163 @@ namespace SoftEther.WebSocket.Helper
         public string GenerateMemoryAccessCode(uint codeAddress, bool writeMode, string srcOrDestinationCode, string readModeRetType = "uint")
         {
             StringWriter w = new StringWriter();
-            string memcache_tag = null;
 
-            if (this.IsPointer && this.BaseRegister != null && this.Scaler == 0 && this.OffsetRegister == null)
-            {
-                memcache_tag = $"memcache_{this.BaseRegister}_0x{this.Displacement:x}";
-            }
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.C)
+                readModeRetType = "uint";
 
-            if (memcache_tag != null)
+            if (VConsts.Addressing == AddressingMode.Paging)
             {
+                string memcache_tag = null;
+
+                if (this.IsPointer && this.BaseRegister != null && this.Scaler == 0 && this.OffsetRegister == null)
+                {
+                    memcache_tag = $"memcache_{this.BaseRegister}_0x{this.Displacement:x}";
+                }
+
+                if (memcache_tag != null)
+                {
+                    if (writeMode)
+                    {
+                    }
+                    else
+                    {
+                        w.WriteLine($"if ({memcache_tag}_pin == {GetCode()}) {srcOrDestinationCode}= ({readModeRetType}) {memcache_tag}_data; else ");
+                    }
+                }
+
+
+                w.WriteLine("{");
+
+                w.WriteLine($"vaddr = {GetCode()};");
+                w.WriteLine($"vaddr1_index = vaddr / VConsts.PageSize;");
+                w.WriteLine($"vaddr1_offset = vaddr % VConsts.PageSize;");
+                //w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
+                w.WriteLine($"if (vaddr1_index == cache_last_page1)");
+                w.WriteLine("{");
                 if (writeMode)
                 {
+                    if (memcache_tag != null)
+                    {
+                        w.Write($"    {memcache_tag}_data = ");
+                    }
+                    w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = {srcOrDestinationCode};");
+                    if (memcache_tag != null)
+                    {
+                        w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    }
                 }
                 else
                 {
-                    w.WriteLine($"if ({memcache_tag}_pin == {GetCode()}) {srcOrDestinationCode}= ({readModeRetType}) {memcache_tag}_data; else ");
+                    w.Write($"    {srcOrDestinationCode}= ({readModeRetType})( ");
+                    if (memcache_tag != null)
+                    {
+                        w.Write($"    {memcache_tag}_data = ");
+                    }
+                    w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );");
+                    if (memcache_tag != null)
+                    {
+                        w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    }
                 }
-            }
+                w.WriteLine("}");
+                w.WriteLine("else if (vaddr1_index == cache_last_page2)");
+                w.WriteLine("{");
+                if (writeMode)
+                {
+                    if (memcache_tag != null)
+                    {
+                        w.Write($"    {memcache_tag}_data = ");
+                    }
+                    w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = {srcOrDestinationCode};");
+                    if (memcache_tag != null)
+                    {
+                        w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    }
+                }
+                else
+                {
+                    w.Write($"    {srcOrDestinationCode}= ({readModeRetType})(");
+                    if (memcache_tag != null)
+                    {
+                        w.Write($"    {memcache_tag}_data = ");
+                    }
+                    w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );");
+                    if (memcache_tag != null)
+                    {
+                        w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    }
+                }
+                w.WriteLine("}");
+                w.WriteLine("else");
+                w.WriteLine("{");
+                //w.WriteLine($"if (pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
+                w.WriteLine($"if (false&&pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
+                w.WriteLine("{");
+                w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
+                w.WriteLine($"    exception_address = 0x{codeAddress:x};");
+                w.WriteLine("    goto L_RETURN;");
+                w.WriteLine("}");
+
+                w.WriteLine("if (((last_used_cache++) % 2) == 0)");
+                w.WriteLine("{");
+                w.WriteLine("    cache_last_page1 = vaddr1_index;");
+                w.WriteLine("    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;");
+                w.WriteLine("} else {");
+                w.WriteLine("    cache_last_page2 = vaddr1_index;");
+                w.WriteLine("    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;");
+                w.WriteLine("}");
+                //w.WriteLine($"realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
 
 
-            w.WriteLine("{");
 
-            w.WriteLine($"vaddr = {GetCode()};");
-            w.WriteLine($"vaddr1_index = vaddr / VConsts.PageSize;");
-            w.WriteLine($"vaddr1_offset = vaddr % VConsts.PageSize;");
-            //w.WriteLine($"uint vaddr1_offset = vaddr % VConsts.PageSize;");
-            w.WriteLine($"if (vaddr1_index == cache_last_page1)");
-            w.WriteLine("{");
-            if (writeMode)
-            {
-                if (memcache_tag != null)
+                // single page
+                if (writeMode)
                 {
-                    w.Write($"    {memcache_tag}_data = ");
+                    if (memcache_tag != null)
+                    {
+                        w.Write($"    {memcache_tag}_data = ");
+                    }
+                    w.WriteLine($"    *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = {srcOrDestinationCode};");
+                    if (memcache_tag != null)
+                    {
+                        w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    }
                 }
-                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) = {srcOrDestinationCode};");
-                if (memcache_tag != null)
+                else
                 {
-                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.Write($"    {srcOrDestinationCode}= ({readModeRetType})(");
+                    if (memcache_tag != null)
+                    {
+                        w.Write($"    {memcache_tag}_data = ");
+                    }
+                    w.WriteLine(" *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );");
+                    if (memcache_tag != null)
+                    {
+                        w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    }
                 }
-            }
-            else
-            {
-                w.Write($"    {srcOrDestinationCode}= ({readModeRetType})( ");
-                if (memcache_tag != null)
-                {
-                    w.Write($"    {memcache_tag}_data = ");
-                }
-                w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr1) + vaddr1_offset)) );");
-                if (memcache_tag != null)
-                {
-                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
-                }
-            }
-            w.WriteLine("}");
-            w.WriteLine("else if (vaddr1_index == cache_last_page2)");
-            w.WriteLine("{");
-            if (writeMode)
-            {
-                if (memcache_tag != null)
-                {
-                    w.Write($"    {memcache_tag}_data = ");
-                }
-                w.WriteLine($"    *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) = {srcOrDestinationCode};");
-                if (memcache_tag != null)
-                {
-                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
-                }
-            }
-            else
-            {
-                w.Write($"    {srcOrDestinationCode}= ({readModeRetType})(");
-                if (memcache_tag != null)
-                {
-                    w.Write($"    {memcache_tag}_data = ");
-                }
-                w.WriteLine(" *((uint *)(((byte *)cache_last_realaddr2) + vaddr1_offset)) );");
-                if (memcache_tag != null)
-                {
-                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
-                }
-            }
-            w.WriteLine("}");
-            w.WriteLine("else");
-            w.WriteLine("{");
-            //w.WriteLine($"if (pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
-            w.WriteLine($"if (false&&pte[vaddr1_index].{(writeMode ? "CanWrite" : "CanRead")} == false)");
-            w.WriteLine("{");
-            w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
-            w.WriteLine($"    exception_address = 0x{codeAddress:x};");
-            w.WriteLine("    goto L_RETURN;");
-            w.WriteLine("}");
-
-            w.WriteLine("if (((last_used_cache++) % 2) == 0)");
-            w.WriteLine("{");
-            w.WriteLine("    cache_last_page1 = vaddr1_index;");
-            w.WriteLine("    cache_last_realaddr1 = pte[vaddr1_index].RealMemory;");
-            w.WriteLine("} else {");
-            w.WriteLine("    cache_last_page2 = vaddr1_index;");
-            w.WriteLine("    cache_last_realaddr2 = pte[vaddr1_index].RealMemory;");
-            w.WriteLine("}");
-            //w.WriteLine($"realaddr1 = (byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset);");
-
-            
-
-            // single page
-            if (writeMode)
-            {
-                if (memcache_tag != null)
-                {
-                    w.Write($"    {memcache_tag}_data = ");
-                }
-                w.WriteLine($"    *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) = {srcOrDestinationCode};");
-                if (memcache_tag != null)
-                {
-                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
-                }
+                w.WriteLine("}");
+                w.WriteLine("}");
             }
             else
             {
-                w.Write($"    {srcOrDestinationCode}= ({readModeRetType})(");
-                if (memcache_tag != null)
+                w.WriteLine($"vaddr = {GetCode()};");
+
+                /*w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end){");
+                w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
+                w.WriteLine($"    exception_address = 0x{codeAddress:x};");
+                w.WriteLine("    goto L_RETURN;");
+                w.WriteLine("}");*/
+
+                if (writeMode)
                 {
-                    w.Write($"    {memcache_tag}_data = ");
+                    w.WriteLine($"*((uint*)(byte*)(cont_memory_minus_start + vaddr)) = {srcOrDestinationCode};");
                 }
-                w.WriteLine(" *((uint *)((byte *)(pte[vaddr1_index].RealMemory + vaddr1_offset))) );");
-                if (memcache_tag != null)
+                else
                 {
-                    w.WriteLine($"    {memcache_tag}_pin = {GetCode()};");
+                    w.WriteLine($"{srcOrDestinationCode}= ({readModeRetType})(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );");
                 }
             }
-            w.WriteLine("}");
-            w.WriteLine("}");
-
 
             return w.ToString();
         }
@@ -680,7 +777,11 @@ namespace SoftEther.WebSocket.Helper
                         {
                             w.WriteLine("esp -= 4;");
                             var destMemory = new VCodeOperand("(%esp)");
-                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress._0x{Next.Address:x}"));
+                            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                                w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress._0x{Next.Address:x}"));
+                            else
+                                w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress__0x{Next.Address:x}"));
+
                             WriteJumpCode(w, "true", Operand1);
                         }
                         break;
@@ -871,39 +972,83 @@ namespace SoftEther.WebSocket.Helper
 
         void WriteFunctionTable()
         {
-            Out.WriteLine("public enum FunctionTable");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine("public enum FunctionTable");
+            else
+                Out.WriteLine("enum FunctionTable");
+
             Out.WriteLine("{");
             foreach (string functionName in this.FunctionTable.Keys)
             {
-                Out.WriteLine($"    {functionName} = 0x{FunctionTable[functionName]:x},");
+                if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                    Out.WriteLine($"    {functionName} = 0x{FunctionTable[functionName]:x},");
+                else
+                    Out.WriteLine($"    FunctionTable_{functionName} = 0x{FunctionTable[functionName]:x},");
             }
             Out.WriteLine("}");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.C)
+                Out.WriteLine(";");
             Out.WriteLine("");
         }
 
         void WriteMainFunction()
         {
-            Out.WriteLine("public enum CallRetAddress {");
-            Out.WriteLine($"    _MagicReturn,");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine("public enum CallRetAddress {");
+            else
+                Out.WriteLine("enum CallRetAddress {");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine($"    _MagicReturn,");
+            else
+                Out.WriteLine($"    CallRetAddress__MagicReturn,");
+
             foreach (uint faddr in this.CallNextRefs)
             {
-                Out.WriteLine($"    _0x{faddr:x},");
+                if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                    Out.WriteLine($"    _0x{faddr:x},");
+                else
+                    Out.WriteLine($"    CallRetAddress__0x{faddr:x},");
             }
             Out.WriteLine("}");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.C)
+                Out.WriteLine(";");
+
             Out.WriteLine();
 
-            Out.WriteLine("public static void Iam_The_IntelCPU_HaHaHa(VCpuState state, uint ip)");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine("public static void Iam_The_IntelCPU_HaHaHa(VCpuState state, uint ip)");
+            else
+            {
+                Out.WriteLine("#ifndef  HEADER_ONLY");
+                Out.WriteLine("void Iam_The_IntelCPU_HaHaHa(VCpuState *state, uint ip)");
+            }
+
             Out.WriteLine("{");
 
-            Out.WriteLine("uint eax = state.Eax;");
-            Out.WriteLine("uint ebx = state.Ebx;");
-            Out.WriteLine("uint ecx = state.Ecx;");
-            Out.WriteLine("uint edx = state.Edx;");
-            Out.WriteLine("uint esp = state.Esp; ");
-
-            Out.WriteLine("uint esi = state.Esi; ");
-            Out.WriteLine("uint edi = state.Edi; ");
-            Out.WriteLine("uint ebp = state.Ebp; ");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+            {
+                Out.WriteLine("uint eax = state.Eax;");
+                Out.WriteLine("uint ebx = state.Ebx;");
+                Out.WriteLine("uint ecx = state.Ecx;");
+                Out.WriteLine("uint edx = state.Edx;");
+                Out.WriteLine("uint esp = state.Esp; ");
+                Out.WriteLine("uint esi = state.Esi; ");
+                Out.WriteLine("uint edi = state.Edi; ");
+                Out.WriteLine("uint ebp = state.Ebp; ");
+            }
+            else
+            {
+                Out.WriteLine("uint eax = state->Eax;");
+                Out.WriteLine("uint ebx = state->Ebx;");
+                Out.WriteLine("uint ecx = state->Ecx;");
+                Out.WriteLine("uint edx = state->Edx;");
+                Out.WriteLine("uint esp = state->Esp; ");
+                Out.WriteLine("uint esi = state->Esi; ");
+                Out.WriteLine("uint edi = state->Edi; ");
+                Out.WriteLine("uint ebp = state->Ebp; ");
+            }
 
             Out.WriteLine("uint cache_last_page1 = 0xffffffff;");
             Out.WriteLine("uint last_used_cache = 0;");
@@ -913,18 +1058,55 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("uint vaddr = 0, vaddr1_index = 0, vaddr1_offset = 0;");
             Out.WriteLine("uint write_tmp = 0, read_tmp = 0;");
             Out.WriteLine("uint compare_result = 0;");
-            Out.WriteLine("VMemory Memory = state.Memory;");
-            Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
-            Out.WriteLine("uint next_ip = ip;");
-            Out.WriteLine("CallRetAddress next_return = (CallRetAddress)0x7fffffff;");
 
-            Out.WriteLine("ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);");
-            Out.WriteLine("ref ushort bl = ref *((ushort*)(&ebx) + 0); ref ushort bh = ref *((ushort*)(&ebx) + 1);");
-            Out.WriteLine("ref ushort cl = ref *((ushort*)(&ecx) + 0); ref ushort ch = ref *((ushort*)(&ecx) + 1);");
-            Out.WriteLine("ref ushort dl = ref *((ushort*)(&edx) + 0); ref ushort dh = ref *((ushort*)(&edx) + 1);");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+            {
+                Out.WriteLine("VMemory Memory = state.Memory;");
+                Out.WriteLine("VPageTableEntry* pte = Memory.PageTableEntry;");
+                Out.WriteLine("byte *cont_memory = Memory.ContiguousMemory;");
+                Out.WriteLine("uint cont_start = Memory.ContiguousStart;");
+                Out.WriteLine("uint cont_end = Memory.ContiguousEnd;");
+                Out.WriteLine("byte *cont_memory_minus_start = (byte *)(Memory.ContiguousMemory - cont_start);");
+            }
+            else
+            {
+                Out.WriteLine("VMemory *Memory = state->Memory;");
+                Out.WriteLine("VPageTableEntry* pte = Memory->PageTableEntry;");
+                Out.WriteLine("byte *cont_memory = Memory->ContiguousMemory;");
+                Out.WriteLine("uint cont_start = Memory->ContiguousStart;");
+                Out.WriteLine("uint cont_end = Memory->ContiguousEnd;");
+                Out.WriteLine("byte *cont_memory_minus_start = (byte *)(Memory->ContiguousMemory - cont_start);");
+            }
+
+            Out.WriteLine("uint next_ip = ip;");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine("CallRetAddress next_return = (CallRetAddress)0x7fffffff;");
+            else
+                Out.WriteLine("uint next_return = 0x7fffffff;");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+            {
+                Out.WriteLine("ref ushort al = ref *((ushort*)(&eax) + 0); ref ushort ah = ref *((ushort*)(&eax) + 1);");
+                Out.WriteLine("ref ushort bl = ref *((ushort*)(&ebx) + 0); ref ushort bh = ref *((ushort*)(&ebx) + 1);");
+                Out.WriteLine("ref ushort cl = ref *((ushort*)(&ecx) + 0); ref ushort ch = ref *((ushort*)(&ecx) + 1);");
+                Out.WriteLine("ref ushort dl = ref *((ushort*)(&edx) + 0); ref ushort dh = ref *((ushort*)(&edx) + 1);");
+            }
+            else
+            {
+                Out.WriteLine("ushort *al = ((ushort*)(&eax) + 0); ushort *ah = ((ushort*)(&eax) + 1);");
+                Out.WriteLine("ushort *bl = ((ushort*)(&ebx) + 0); ushort *bh = ((ushort*)(&ebx) + 1);");
+                Out.WriteLine("ushort *cl = ((ushort*)(&ecx) + 0); ushort *ch = ((ushort*)(&ecx) + 1);");
+                Out.WriteLine("ushort *dl = ((ushort*)(&edx) + 0); ushort *dh = ((ushort*)(&edx) + 1);");
+            }
 
             Out.WriteLine("const uint eiz = 0; ");
-            Out.WriteLine("string exception_string = null;");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine("string exception_string = null;");
+            else
+                Out.WriteLine("char exception_string[256] = {0};");
+
             Out.WriteLine("uint exception_address = 0;");
             Out.WriteLine("byte *realaddr1 = null;");
 
@@ -983,7 +1165,10 @@ namespace SoftEther.WebSocket.Helper
             //Out.WriteLine("goto L_RETURN;");
 
             Out.WriteLine("default:");
-            Out.WriteLine($"    exception_string = \"Invalid jump target.\";");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine($"    exception_string = \"Invalid jump target.\";");
+            else
+                Out.WriteLine($"    sprintf(exception_string, \"Invalid jump target.\");");
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
 
@@ -997,14 +1182,21 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("switch (next_return)");
             Out.WriteLine("{");
 
-            Out.Write($"case CallRetAddress._MagicReturn: ");
+            if (VConsts.CodeGenTarget== CodeGenTargetEnum.CSharp)
+                Out.Write($"case CallRetAddress._MagicReturn: ");
+            else
+                Out.Write($"case CallRetAddress__MagicReturn: ");
+
             Out.WriteLine("goto L_RETURN;");
 
             foreach (VCodeOperation op in OperationLines.Values)
             {
                 if (CallNextRefs.Contains(op.Address))
                 {
-                    Out.Write($"case CallRetAddress._0x{op.Address:x}: ");
+                    if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                        Out.Write($"case CallRetAddress._0x{op.Address:x}: ");
+                    else
+                        Out.Write($"case CallRetAddress__0x{op.Address:x}: ");
                     Out.WriteLine($"goto L_{op.Address:x};");
                 }
             }
@@ -1026,7 +1218,10 @@ namespace SoftEther.WebSocket.Helper
             //Out.WriteLine("goto L_RETURN;");
 
             Out.WriteLine("default:");
-            Out.WriteLine($"    exception_string = \"Invalid call return target.\";");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                Out.WriteLine($"    exception_string = \"Invalid call return target.\";");
+            else
+                Out.WriteLine($"    sprintf(exception_string, \"Invalid call return target.\");");
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
 
@@ -1048,33 +1243,69 @@ namespace SoftEther.WebSocket.Helper
 
             Out.WriteLine(" // Restore CPU state");
             Out.WriteLine("L_RETURN:");
-            Out.Write(" state.Eax = eax; ");
-            Out.Write(" state.Ebx = ebx; ");
-            Out.Write(" state.Ecx = ecx; ");
-            Out.WriteLine(" state.Edx = edx; ");
-            Out.Write(" state.Esi = esi; ");
-            Out.Write(" state.Edi = edi; ");
-            Out.Write(" state.Ebp = ebp; ");
-            Out.WriteLine(" state.Esp = esp; ");
-            Out.WriteLine(" state.ExceptionString = exception_string;");
-            Out.WriteLine(" state.ExceptionAddress = exception_address;");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+            {
+                Out.Write(" state.Eax = eax; ");
+                Out.Write(" state.Ebx = ebx; ");
+                Out.Write(" state.Ecx = ecx; ");
+                Out.WriteLine(" state.Edx = edx; ");
+                Out.Write(" state.Esi = esi; ");
+                Out.Write(" state.Edi = edi; ");
+                Out.Write(" state.Ebp = ebp; ");
+                Out.WriteLine(" state.Esp = esp; ");
+                Out.WriteLine(" state.ExceptionString = exception_string;");
+                Out.WriteLine(" state.ExceptionAddress = exception_address;");
+            }
+            else
+            {
+                Out.Write(" state->Eax = eax; ");
+                Out.Write(" state->Ebx = ebx; ");
+                Out.Write(" state->Ecx = ecx; ");
+                Out.WriteLine(" state->Edx = edx; ");
+                Out.Write(" state->Esi = esi; ");
+                Out.Write(" state->Edi = edi; ");
+                Out.Write(" state->Ebp = ebp; ");
+                Out.WriteLine(" state->Esp = esp; ");
+                Out.WriteLine(" strcpy(state->ExceptionString, exception_string);");
+                Out.WriteLine(" state->ExceptionAddress = exception_address;");
+            }
 
             Out.WriteLine("}");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.C)
+            {
+                Out.WriteLine("#endif");
+            }
         }
         
         public void DoMain()
         {
             Out = new StringWriter();
 
-            Out.WriteLine("// Auto generated by IPA Box Test");
-            Out.WriteLine("using System;");
-            Out.WriteLine("using System.Runtime.CompilerServices;");
-            Out.WriteLine("using SoftEther.WebSocket.Helper;");
-            Out.WriteLine();
-            Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717, CS0162, CS0168");
-            Out.WriteLine();
-            Out.WriteLine("public static unsafe class VCode");
-            Out.WriteLine("{");
+            Out.WriteLine($"// Auto generated by IPA Box Test for {VConsts.CodeGenTarget}");
+
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+            {
+                Out.WriteLine("using System;");
+                Out.WriteLine("using System.Runtime.CompilerServices;");
+                Out.WriteLine("using SoftEther.WebSocket.Helper;");
+                Out.WriteLine();
+                Out.WriteLine("#pragma warning disable CS0164, CS0219, CS1717, CS0162, CS0168");
+                Out.WriteLine();
+                Out.WriteLine("public static unsafe class VCode");
+                Out.WriteLine("{");
+            }
+            else
+            {
+                Out.WriteLine(
+@"
+
+#define GENERATED_CODE_C
+#include ""common.h""
+
+");
+            }
 
             WriteMainFunction();
 
@@ -1082,7 +1313,11 @@ namespace SoftEther.WebSocket.Helper
 
             WriteFunctionTable();
 
-            Out.WriteLine("}");
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+            {
+                Out.WriteLine("}");
+            }
+
             Out.WriteLine();
         }
     }
@@ -1091,11 +1326,16 @@ namespace SoftEther.WebSocket.Helper
     {
         public static void CodeGen()
         {
-            Console.WriteLine("IPA Box CodeGen Test");
+            Console.WriteLine($"IPA Box CodeGen Test for {VConsts.CodeGenTarget}");
             Console.WriteLine();
 
             string srcAsm = @"C:\git\DNT-Jikken\MVPNClientTest\NativeCodeTest\bin\test_exec.asm";
-            string dstCs = @"C:\git\DNT-Jikken\MVPNClientTest\VCpuTest\GeneratedCode.cs";
+            string dstCs;
+            
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                dstCs = @"C:\git\DNT-Jikken\MVPNClientTest\VCpuTest\GeneratedCode.cs";
+            else
+                dstCs = @"C:\git\DNT-Jikken\MVPNClientTest\VCpuTestNative\GeneratedCode.c";
 
             string[] includeFunctions = new string[]
                 {

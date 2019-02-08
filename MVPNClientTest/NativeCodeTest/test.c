@@ -4,6 +4,7 @@
 #include <windows.h>
 #define NOINLINE	__declspec(noinline)
 #else
+#include <time.h>
 #define NOINLINE	__attribute__((noinline))
 #endif
 
@@ -52,9 +53,16 @@ UINT64 TickHighres64()
 {
 	return (UINT64)(MsGetHiResTimeSpan(MsGetHiResCounter()));
 }
+UINT64 Tick64()
+{
+	return Tick64() / 1000000ull;
+}
 #else
-UINT64 TickHighres64() {
-	return 0;
+UINT64 TickHighres64()
+{
+	struct timespec t = { 0 };
+	clock_gettime(CLOCK_MONOTONIC, &t);
+	return ((UINT64)((UINT32)t.tv_sec)) * 1000LL + (UINT64)t.tv_nsec / 1000000LL;
 }
 #endif
 void ToStr64(char *str, UINT64 value)
@@ -264,8 +272,8 @@ NOINLINE UINT test_main(UINT count)
 
 	for (i = 0;i < count;i++)
 	{
-		UINT r = test_target1();
-		//UINT r = test_target2();
+		//UINT r = test_target1();
+		UINT r = test_target2();
 		//UINT r = test_target3();
 		//UINT r = test_target5();
 
@@ -293,6 +301,20 @@ int main()
 	UINT64 result;
 
 	UINT ret;
+
+	while (true)
+	{
+		start = TickHighres64();
+
+		ret = test_main(count);
+
+		end = TickHighres64();
+
+		result = (end - start) / (UINT64)count;
+
+		ToStr3(tmp, result);
+		printf("time = %s\n", tmp);
+	}
 
 	start = TickHighres64();
 	

@@ -31,6 +31,10 @@ namespace MVPNClientTest
             //    return;
             //}
 
+            VConsts.CodeGenTarget = CodeGenTargetEnum.CSharp;
+            VCpuCodeGenTest.CodeGen();
+
+            VConsts.CodeGenTarget = CodeGenTargetEnum.C;
             VCpuCodeGenTest.CodeGen();
 
             //PipeTest.TestMain();
