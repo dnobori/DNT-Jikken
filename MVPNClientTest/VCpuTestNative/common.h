@@ -51,6 +51,7 @@ typedef struct VCpuState
 	volatile uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp;
 	volatile char ExceptionString[256];
 	volatile uint ExceptionAddress;
+	volatile bool Interrupt;
 } VCpuState;
 
 void Iam_The_IntelCPU_HaHaHa(VCpuState *state, uint ip);

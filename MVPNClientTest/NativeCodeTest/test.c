@@ -272,7 +272,7 @@ NOINLINE UINT test_main(UINT count)
 
 	for (i = 0;i < count;i++)
 	{
-		UINT r = test_target3();
+		UINT r = test_target2();
 		//UINT r = test_target2();
 		//UINT r = test_target3();
 		//UINT r = test_target5();

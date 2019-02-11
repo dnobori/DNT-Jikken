@@ -41,16 +41,29 @@ namespace SoftEther.WebSocket.Helper
         C,
     }
 
+    [Flags]
+    public enum FastCheckTypeEnum
+    {
+        NoCheck,
+        Fast1,
+        Fast2,
+    }
+
     public static class VConsts
     {
         public const uint PageSize = 4096;
         public const uint NumPages = (uint)(0x100000000 / PageSize);
         public const uint Magic_Return = 0xdeadbeef;
+        
+        public const bool Test_InterpreterMode = false;
+        public const bool Test_AllLabel = false;
+        public const bool Test_DualCode = false;
+        public const bool Test_Interrupt = true;
 
-        public const AddressingMode Addressing = AddressingMode.Paging;
+        public const AddressingMode Addressing = AddressingMode.Contiguous;
+        public const FastCheckTypeEnum FastCheckType = FastCheckTypeEnum.NoCheck;
 
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
-        public static bool NoCheckRange = false;
     }
 
     public unsafe struct VPageTableEntry
@@ -230,6 +243,7 @@ namespace SoftEther.WebSocket.Helper
         public uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp;
         public string ExceptionString;
         public uint ExceptionAddress;
+        public volatile bool Interrupt;
 
         public VProcess Process;
         public VMemory Memory;
@@ -537,12 +551,24 @@ namespace SoftEther.WebSocket.Helper
             {
                 w.WriteLine($"vaddr = {GetCode()};");
 
-                if (VConsts.NoCheckRange == false)
+                if (VConsts.FastCheckType != FastCheckTypeEnum.NoCheck)
                 {
-                    if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
-                        w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end){");
+                    w.WriteLine("#if !NO_CHECK");
+
+                    if (VConsts.FastCheckType == FastCheckTypeEnum.Fast2)
+                    {
+                        if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                            w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end || vaddr < cont_start2 || vaddr >= cont_end2){");
+                        else
+                            w.WriteLine("if ((vaddr < cont_start || vaddr >= cont_end || vaddr < cont_start2 || vaddr >= cont_end2)){");
+                    }
                     else
-                        w.WriteLine("if ((vaddr < cont_start || vaddr >= cont_end)){");
+                    {
+                        if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                            w.WriteLine("if (vaddr < cont_start || vaddr >= cont_end){");
+                        else
+                            w.WriteLine("if ((vaddr < cont_start || vaddr >= cont_end)){");
+                    }
                     
                     if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
                     {
@@ -558,6 +584,8 @@ namespace SoftEther.WebSocket.Helper
                     }
 
                     w.WriteLine("}");
+
+                    w.WriteLine("#endif // !NO_CHECK");
                 }
 
                 if (writeMode)
@@ -580,12 +608,20 @@ namespace SoftEther.WebSocket.Helper
         {
             w.WriteLine($"if ({condition}) {{");
 
+            //if (operand.Displacement < Address)
+            {
+                WriteTestInterruptCode(w);
+            }
+
             if (operand.IsLabel == false) throw new ApplicationException("Operand is not a label.");
 
             if (Gen.CodeLabels.Contains(operand.Displacement))
             {
                 //w.WriteLine("compare_result = 0;");
-                w.WriteLine($"    goto L_{operand.Displacement:x};");
+                if (VConsts.Test_DualCode == false)
+                    w.WriteLine($"    goto L_{operand.Displacement:x};");
+                else
+                    w.WriteLine($"    goto L_FAST_{operand.Displacement:x};");
             }
             else
             {
@@ -597,14 +633,47 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("}");
         }
 
-        public void WriteCode(StringWriter w)
+        void WriteTestInterruptCode(StringWriter w)
         {
-            if (Gen.LabelRefs.Contains(Address) || Gen.CallNextRefs.Contains(Address))
+            if (VConsts.Test_Interrupt)
             {
-                w.WriteLine($"L_{Address:x}:");
+                if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                    w.WriteLine($"if (state.Interrupt)");
+                else
+                    w.WriteLine($"if (state->Interrupt)");
+
+                w.WriteLine("{");
+
+                //if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                //    w.WriteLine("    exception_string = $\"Interrupt at 0x{vaddr:x}.\";");
+                //else
+                //    w.WriteLine("    sprintf(exception_string, \"Interrupt at 0x%x.\", vaddr);");
+
+                w.WriteLine($"    exception_address = 0x{this.Address:x};");
+                w.WriteLine("    goto L_RETURN;");
+                w.WriteLine("}");
+            }
+        }
+
+        public void WriteCode(StringWriter w, bool is_dual_fast)
+        {
+            if (is_dual_fast == false)
+            {
+                if (Gen.LabelRefs.Contains(Address) || Gen.CallNextRefs.Contains(Address) || VConsts.Test_InterpreterMode || VConsts.Test_AllLabel)
+                {
+                    w.WriteLine($"L_{Address:x}:");
+                }
+            }
+            else
+            {
+                if (Gen.LabelRefs.Contains(Address) || Gen.CallNextRefs.Contains(Address))
+                {
+                    w.WriteLine($"L_FAST_{Address:x}:");
+                }
             }
 
             w.WriteLine("{");
+
 
             switch (Opcode)
             {
@@ -692,6 +761,12 @@ namespace SoftEther.WebSocket.Helper
                         break;
                     }
 
+                case "jb":
+                    {
+                        WriteJumpCode(w, "compare_result >= 0x80000000", Operand1);
+                        break;
+                    }
+
                 case "jbe":
                     {
                         WriteJumpCode(w, "compare_result == 0 || compare_result >= 0x80000000", Operand1);
@@ -769,6 +844,21 @@ namespace SoftEther.WebSocket.Helper
                         break;
                     }
 
+                case "inc":
+                    {
+                        //if (Address == 0x8048874) break;
+                        if (Operand1.IsPointer == false)
+                        {
+                            w.WriteLine(Operand1.GetValueAccessCode() + "++;");
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+                        w.WriteLine($"compare_result = {Operand1.GetValueAccessCode()};");
+                        break;
+                    }
+
                 case "sub":
                     {
                         w.WriteLine($"{Operand2.GetValueAccessCode()} -= {Operand1.GetValueAccessCode()};");
@@ -777,8 +867,28 @@ namespace SoftEther.WebSocket.Helper
                     }
 
                 case "cmp":
+                case "cmpl":
                     {
-                        w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()} - {Operand1.GetValueAccessCode()});");
+                        if (Operand1.IsPointer && Operand2.IsPointer == false)
+                        {
+                            w.WriteLine("uint cmp1;");
+                            w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, "cmp1"));
+                            w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()} - cmp1);");
+                        }
+                        else  if (Operand1.IsPointer == false && Operand2.IsPointer)
+                        {
+                            w.WriteLine("uint cmp1;");
+                            w.WriteLine(Operand2.GenerateMemoryAccessCode(Address, false, "cmp1"));
+                            w.WriteLine($"compare_result = (uint)(cmp1 - {Operand1.GetValueAccessCode()});");
+                        }
+                        else if (Operand1.IsPointer == false && Operand2.IsPointer == false)
+                        {
+                            w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()} - {Operand1.GetValueAccessCode()});");
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
                         break;
                     }
 
@@ -788,6 +898,8 @@ namespace SoftEther.WebSocket.Helper
                     }
 
                 case "nop":
+                case "nopl":
+                case "nopw":
                     {
                         break;
                     }
@@ -811,6 +923,19 @@ namespace SoftEther.WebSocket.Helper
 
                 default:
                     throw new ApplicationException("Invalid operation: " + ToString());
+            }
+
+            if (VConsts.Test_InterpreterMode)
+            {
+                if (this.Next != null)
+                {
+                    w.WriteLine($"next_ip = 0x{this.Next.Address:X};");
+                    w.WriteLine("goto L_START;");
+                }
+                else
+                {
+                    w.WriteLine("goto L_RETURN;");
+                }
             }
 
             w.WriteLine("}");
@@ -1025,12 +1150,25 @@ namespace SoftEther.WebSocket.Helper
             else
                 Out.WriteLine($"    CallRetAddress__MagicReturn,");
 
-            foreach (uint faddr in this.CallNextRefs)
+            if (VConsts.Test_AllLabel == false)
             {
-                if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
-                    Out.WriteLine($"    _0x{faddr:x},");
-                else
-                    Out.WriteLine($"    CallRetAddress__0x{faddr:x},");
+                foreach (uint faddr in this.CallNextRefs)
+                {
+                    if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                        Out.WriteLine($"    _0x{faddr:x},");
+                    else
+                        Out.WriteLine($"    CallRetAddress__0x{faddr:x},");
+                }
+            }
+            else
+            {
+                foreach (uint faddr in this.CodeLabels)
+                {
+                    if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                        Out.WriteLine($"    _0x{faddr:x},");
+                    else
+                        Out.WriteLine($"    CallRetAddress__0x{faddr:x},");
+                }
             }
             Out.WriteLine("}");
 
@@ -1088,6 +1226,11 @@ namespace SoftEther.WebSocket.Helper
                 Out.WriteLine("byte *cont_memory = Memory.ContiguousMemory;");
                 Out.WriteLine("uint cont_start = Memory.ContiguousStart;");
                 Out.WriteLine("uint cont_end = Memory.ContiguousEnd;");
+                if (VConsts.FastCheckType == FastCheckTypeEnum.Fast2)
+                {
+                    Out.WriteLine("uint cont_start2 = Memory.ContiguousStart;");
+                    Out.WriteLine("uint cont_end2 = Memory.ContiguousEnd;");
+                }
                 Out.WriteLine("byte *cont_memory_minus_start = (byte *)(Memory.ContiguousMemory - cont_start);");
             }
             else
@@ -1097,6 +1240,11 @@ namespace SoftEther.WebSocket.Helper
                 Out.WriteLine("byte *cont_memory = Memory->ContiguousMemory;");
                 Out.WriteLine("uint cont_start = Memory->ContiguousStart;");
                 Out.WriteLine("uint cont_end = Memory->ContiguousEnd;");
+                if (VConsts.FastCheckType == FastCheckTypeEnum.Fast2)
+                {
+                    Out.WriteLine("uint cont_start2 = Memory->ContiguousStart;");
+                    Out.WriteLine("uint cont_end2 = Memory->ContiguousEnd;");
+                }
                 Out.WriteLine("byte *cont_memory_minus_start = (byte *)(Memory->ContiguousMemory - cont_start);");
             }
 
@@ -1159,29 +1307,25 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("switch (next_ip)");
             Out.WriteLine("{");
 
-            foreach (var func in FunctionTable.Values)
+            if (VConsts.Test_InterpreterMode == false && VConsts.Test_AllLabel == false)
             {
-                Out.Write($"case 0x{func:x}: ");
-                Out.WriteLine($"goto L_{func:x};");
+                foreach (var func in FunctionTable.Values)
+                {
+                    Out.Write($"case 0x{func:x}: ");
+                    Out.WriteLine($"goto L_{func:x};");
+                }
             }
-            //foreach (VCodeOperation op in OperationLines.Values)
-            //{
-            //    if (LabelRefs.Contains(op.Address))
-            //    {
-            //        Out.Write($"case 0x{op.Address:x}: ");
-            //        Out.WriteLine($"goto L_{op.Address:x};");
-            //    }
-            //}
-
-
-            //foreach (VCodeOperation op in OperationLines.Values)
-            //{
-            //    if (LabelRefs.Contains(op.Address))
-            //    {
-            //        Out.Write($"case 0x{op.Address:x}: ");
-            //        Out.WriteLine($"goto L_{op.Address:x};");
-            //    }
-            //}
+            else
+            {
+                foreach (VCodeOperation op in OperationLines.Values)
+                {
+                    //if (LabelRefs.Contains(op.Address))
+                    {
+                        Out.Write($"case 0x{op.Address:x}: ");
+                        Out.WriteLine($"goto L_{op.Address:x};");
+                    }
+                }
+            }
 
             //Out.Write($"case 0x{VConsts.Magic_Return:x}: ");
             //Out.WriteLine("goto L_RETURN;");
@@ -1213,7 +1357,7 @@ namespace SoftEther.WebSocket.Helper
 
             foreach (VCodeOperation op in OperationLines.Values)
             {
-                if (CallNextRefs.Contains(op.Address))
+                if (CallNextRefs.Contains(op.Address) || VConsts.Test_AllLabel)
                 {
                     if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
                         Out.Write($"case CallRetAddress._0x{op.Address:x}: ");
@@ -1259,8 +1403,23 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 Out.WriteLine($"// {op.ToString()}");
-                op.WriteCode(Out);
+                op.WriteCode(Out, false);
                 Out.WriteLine();
+            }
+
+            if (VConsts.Test_DualCode)
+            {
+                foreach (VCodeOperation op in OperationLines.Values)
+                {
+                    if (FunctionTable.Values.Contains(op.Address))
+                    {
+                        Out.WriteLine($"// function {FunctionTable.Where(x => x.Value == op.Address).Select(x => x.Key).Single()}();");
+                    }
+
+                    Out.WriteLine($"// {op.ToString()}");
+                    op.WriteCode(Out, true);
+                    Out.WriteLine();
+                }
             }
 
             Out.WriteLine(" // Restore CPU state");

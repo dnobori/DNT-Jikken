@@ -9,6 +9,8 @@ OBJECTS_test=obj/obj/linux/test.o bin/test_lib.asm bin/test_exec.asm
 OPTIONS_COMPILE=$(OPTIONS_COMPILE_RELEASE)
 OPTIONS_LINK=$(OPTIONS_LINK_RELEASE)
 
+CC=gcc
+
 
 # Build Action
 default:	build
@@ -39,7 +41,7 @@ bin/test64: obj/obj/linux/test64.o
 
 clean:
 	-rm -f $(OBJECTS_test)
-	-rm -f bin/test
+	-rm -f bin/test bin/test64
 
 help:
 	@echo "make"

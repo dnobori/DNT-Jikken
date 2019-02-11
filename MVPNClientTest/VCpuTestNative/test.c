@@ -223,7 +223,7 @@ int main()
 
 		mem_write(memory->PageTableEntry, state->Esp, CallRetAddress__MagicReturn);
 
-		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target3);
+		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target2);
 
 		if (state->ExceptionString[0] != 0)
 		{

@@ -16,6 +16,7 @@ using System.Buffers.Binary;
 using System.Net.NetworkInformation;
 using System.Net;
 using System.IO;
+using System.IO.MemoryMappedFiles;
 
 namespace cs_struct_bench1
 {
@@ -1440,14 +1441,39 @@ namespace cs_struct_bench1
             testtest1(array);
         }
 
+        unsafe class PureC
+        {
+            public delegate uint pure_c_test1();
+
+            public pure_c_test1 pure_c_test1_ptr;
+            public IntPtr pure_c_test1_intptr;
+
+
+            public PureC(Memory<byte> binary)
+            {
+                MemoryMappedFile mmapfile = MemoryMappedFile.CreateNew("test", 4096 * 16, MemoryMappedFileAccess.ReadWriteExecute, MemoryMappedFileOptions.DelayAllocatePages, HandleInheritability.None);
+
+                MemoryMappedViewAccessor mmap = mmapfile.CreateViewAccessor(0, 4096 * 16, MemoryMappedFileAccess.ReadWriteExecute);
+
+                byte* bptr = null;
+                mmap.SafeMemoryMappedViewHandle.AcquirePointer(ref bptr);
+
+                IntPtr ptr = (IntPtr)bptr;
+                Marshal.Copy(binary.Span.ToArray(), 0, ptr, binary.Length);
+
+                IntPtr func_ptr;
+
+                func_ptr = ptr + 0x50;
+
+                pure_c_test1_intptr = func_ptr;
+                pure_c_test1_ptr = Marshal.GetDelegateForFunctionPointer<pure_c_test1>(func_ptr);
+            }
+        }
+
         static void Main(string[] args)
         {
             WriteLine("Started.");
             WriteLine();
-
-            if (true)
-            {
-            }
 
             if (false)
             {
@@ -1527,7 +1553,30 @@ namespace cs_struct_bench1
 
             Memory<byte> byte12345 = new byte[12345];
 
+            Memory<byte> bin = default;
+            try
+            {
+                bin = File.ReadAllBytes(@"C:\git\DNT-Jikken\cs-struct-bench1\test_pure_c\obj\obj\linux\test64.o").AsMemory(64);
+            }
+            catch { }
+
+            if (true)
+            {
+                PureC pc = new PureC(bin);
+                uint ret = pc.pure_c_test1_ptr();
+                Console.WriteLine(ret);
+                return;
+            }
+
             var q = new MicroBenchmarkQueue()
+
+                .Add(new MicroBenchmark<Memory<byte>>("PureC_Binary_Exec", 1000, (state, iterations) =>
+                {
+                    for (int i = 0; i < iterations; i++)
+                    {
+                    }
+                }
+                ), true, 190210)
 
 
                 .Add(new MicroBenchmark<Memory<byte>>("OptimizationThresholdTestClass", 1000, (state, iterations) =>
@@ -1535,7 +1584,6 @@ namespace cs_struct_bench1
                     for (int i = 0; i < iterations; i++)
                     {
                         OptimizationThresholdTestClass.Test();
-                        // 42ns
                     }
                 }
                 ), true, 190202)
