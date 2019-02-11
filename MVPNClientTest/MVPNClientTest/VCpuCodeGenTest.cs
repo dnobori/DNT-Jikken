@@ -58,10 +58,10 @@ namespace SoftEther.WebSocket.Helper
         public const bool Test_InterpreterMode = false;
         public const bool Test_AllLabel = false;
         public const bool Test_DualCode = false;
-        public const bool Test_Interrupt = true;
+        public const bool Test_Interrupt = false;
 
-        public const AddressingMode Addressing = AddressingMode.Contiguous;
-        public const FastCheckTypeEnum FastCheckType = FastCheckTypeEnum.NoCheck;
+        public const AddressingMode Addressing = AddressingMode.Paging;
+        public const FastCheckTypeEnum FastCheckType = FastCheckTypeEnum.Fast2;
 
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
     }
@@ -674,14 +674,24 @@ namespace SoftEther.WebSocket.Helper
 
             w.WriteLine("{");
 
-
+            
             switch (Opcode)
             {
+                case "pushl":
                 case "push":
                     {
                         w.WriteLine("esp -= 4;");
                         var destMemory = new VCodeOperand("(%esp)");
-                        w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, Operand1.GetValueAccessCode()));
+                        if (Operand1.IsPointer == false)
+                        {
+                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, Operand1.GetValueAccessCode()));
+                        }
+                        else
+                        {
+                            w.WriteLine("uint tmp1;");
+                            w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, "tmp1"));
+                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, "tmp1"));
+                        }
                         break;
                     }
 

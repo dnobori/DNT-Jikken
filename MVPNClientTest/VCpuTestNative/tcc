@@ -1,0 +1,42 @@
+# Makefile
+
+OPTIONS_COMPILE_RELEASE=-DNDEBUG -DVPN_SPEED -D_REENTRANT -DREENTRANT -D_THREAD_SAFE -D_THREADSAFE -DTHREAD_SAFE -DTHREADSAFE -D_FILE_OFFSET_BITS=64 -fsigned-char -g -O2 -fno-stack-protector
+
+OPTIONS_LINK_RELEASE=-fsigned-char -g -O2 -fno-stack-protector
+
+OBJECTS_test=obj/obj/linux_tcc/test.o obj/obj/linux_tcc/code.o
+
+OPTIONS_COMPILE=$(OPTIONS_COMPILE_RELEASE)
+OPTIONS_LINK=$(OPTIONS_LINK_RELEASE)
+
+CC=tcc
+
+
+# Build Action
+default:	build
+
+build:	$(OBJECTS_test) bin/test_tcc
+
+obj/obj/linux_tcc/test.o: test.c common.h
+	@mkdir -p obj/obj/linux_tcc/
+	@mkdir -p bin/
+	$(CC) -m64 $(OPTIONS_COMPILE) -c test.c -o obj/obj/linux_tcc/test.o
+
+obj/obj/linux_tcc/code.o: GeneratedCode.c common.h
+	@mkdir -p obj/obj/linux_tcc/
+	@mkdir -p bin/
+	$(CC) -m64 $(OPTIONS_COMPILE) -c GeneratedCode.c -o obj/obj/linux_tcc/code.o
+
+bin/test_tcc: obj/obj/linux_tcc/test.o obj/obj/linux_tcc/code.o
+	$(CC) -m64 obj/obj/linux_tcc/test.o obj/obj/linux_tcc/code.o $(OPTIONS_LINK) -o bin/test_tcc
+
+clean:
+	-rm -f $(OBJECTS_test)
+	-rm -f bin/test_tcc
+
+help:
+	@echo "make"
+	@echo "make install"
+	@echo "make clean"
+
+

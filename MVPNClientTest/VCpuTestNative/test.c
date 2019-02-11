@@ -188,13 +188,17 @@ int main()
 {
 	uint count = 10;
 	uint stackPtr = 0x500000 + 0x10000 / 2;
+	ulong size;
 
 	VMemory *memory = malloc(sizeof(VMemory));
-
-	memory->PageTableEntry = malloc((int)(sizeof(VPageTableEntry) * (uint)(0x100000000 / 4096)));
+   
+    size = (int)(sizeof(VPageTableEntry) * (uint)(0x100000000 / 4096));
+	memory->PageTableEntry = malloc(size);
 	for (uint i = 0; i < (uint)(0x100000000 / 4096); i++)
 	{
+		printf("1\n");
 		memory->PageTableEntry[i].RealMemory = null;
+		printf("2\n");
 		memory->PageTableEntry[i].CanRead = memory->PageTableEntry[i].CanWrite = false;
 	}
 
