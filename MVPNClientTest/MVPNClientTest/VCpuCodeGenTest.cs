@@ -60,8 +60,8 @@ namespace SoftEther.WebSocket.Helper
         public const bool Test_DualCode = false;
         public const bool Test_Interrupt = false;
 
-        public const AddressingMode Addressing = AddressingMode.Paging;
-        public const FastCheckTypeEnum FastCheckType = FastCheckTypeEnum.Fast2;
+        public const AddressingMode Addressing = AddressingMode.Contiguous;
+        public const FastCheckTypeEnum FastCheckType = FastCheckTypeEnum.Fast1;
 
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
     }

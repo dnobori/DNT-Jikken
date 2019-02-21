@@ -184,8 +184,32 @@ void AllocateMemory(VMemory *memory, uint startAddress, uint size, bool canRead,
 	}
 }
 
+MS_ABI NOINLINE void c2asm_func2(C2ASM *t);
+
+MS_ABI NOINLINE void c2asm_func1(C2ASM *t)
+{
+	t->c = t->a * 0x28B8888 /* = 42698888 */ + t->b * 0x4E20000 /* = 81920000 */;
+}
+
+MS_ABI NOINLINE void c2asm_test1()
+{
+	C2ASM t;
+	
+	memset(&t, 0, sizeof(t));
+
+	t.a = 0x351111  /* = 3477777 */;
+	t.b = 0x2567777 /* = 39221111 */;
+	
+	c2asm_func2(&t);
+	
+	printf("c = %X\n", t.c);
+	// c = 68B1908
+}
+
 int main()
 {
+	c2asm_test1(); return;
+
 	uint count = 10;
 	uint stackPtr = 0x500000 + 0x10000 / 2;
 	ulong size;
@@ -196,9 +220,7 @@ int main()
 	memory->PageTableEntry = malloc(size);
 	for (uint i = 0; i < (uint)(0x100000000 / 4096); i++)
 	{
-		printf("1\n");
 		memory->PageTableEntry[i].RealMemory = null;
-		printf("2\n");
 		memory->PageTableEntry[i].CanRead = memory->PageTableEntry[i].CanWrite = false;
 	}
 

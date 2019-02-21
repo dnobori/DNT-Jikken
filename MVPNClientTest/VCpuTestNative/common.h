@@ -29,6 +29,14 @@ int  sprintf(
 
 #endif // GENERATED_CODE_C
 
+#ifdef _WIN32
+#define NOINLINE	__declspec(noinline)
+#define MS_ABI
+#else
+#define NOINLINE	__attribute__((noinline))
+#define MS_ABI		__attribute__((ms_abi))
+#endif
+
 
 typedef struct VPageTableEntry
 {
@@ -55,4 +63,11 @@ typedef struct VCpuState
 } VCpuState;
 
 void Iam_The_IntelCPU_HaHaHa(VCpuState *state, uint ip);
+
+typedef struct C2ASM
+{
+	uint a;
+	uint b;
+	uint c;
+} C2ASM;
 
