@@ -201,7 +201,7 @@ MS_ABI NOINLINE void c2asm_test1()
 	t.b = 0x2567777 /* = 39221111 */;
 	
 	c2asm_func2(&t);
-	
+	 
 	printf("c = %X\n", t.c);
 	// c = 68B1908
 }

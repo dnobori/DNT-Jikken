@@ -7,8 +7,11 @@ build:obj/obj/x64_gas_for_vc/c2asm_func2_vc.o
 obj/obj/x64_gas_for_vc/c2asm_func2.o: c2asm_func2.s
 	@mkdir -p obj/obj/x64_gas_for_vc/
 	@mkdir -p bin/
-	as -64 -c c2asm_func2.s -o obj/obj/x64_gas_for_vc/c2asm_func2.o
+	as -64 --gstabs+ -c c2asm_func2.s -o obj/obj/x64_gas_for_vc/c2asm_func2.o
 
 obj/obj/x64_gas_for_vc/c2asm_func2_vc.o: obj/obj/x64_gas_for_vc/c2asm_func2.o
-	objcopy --output-format=pe-bigobj-x86-64 obj/obj/x64_gas_for_vc/c2asm_func2.o obj/obj/x64_gas_for_vc/c2asm_func2_vc.o
+	objcopy --debugging --output-format=pe-x86-64 obj/obj/x64_gas_for_vc/c2asm_func2.o obj/obj/x64_gas_for_vc/c2asm_func2_vc.o
+
+clean:
+	rm -f obj/obj/x64_gas_for_vc/c2asm_func2.o obj/obj/x64_gas_for_vc/c2asm_func2_vc.o
 
