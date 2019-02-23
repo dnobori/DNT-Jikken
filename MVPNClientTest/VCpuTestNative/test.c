@@ -185,6 +185,7 @@ void AllocateMemory(VMemory *memory, uint startAddress, uint size, bool canRead,
 }
 
 MS_ABI NOINLINE void c2asm_func2(C2ASM *t);
+MS_ABI NOINLINE void dynasm(C2ASM *t);
 
 MS_ABI NOINLINE void c2asm_func1(C2ASM *t)
 {
@@ -196,14 +197,17 @@ MS_ABI NOINLINE void c2asm_test1()
 	C2ASM t;
 	
 	memset(&t, 0, sizeof(t));
-
+	
 	t.a = 0x351111  /* = 3477777 */;
 	t.b = 0x2567777 /* = 39221111 */;
 	
+	t.f = 4;
 	c2asm_func2(&t);
 	 
 	printf("c = %X\n", t.c);
 	// c = 68B1908
+
+	printf("d = %X\n", t.d);
 }
 
 int main()

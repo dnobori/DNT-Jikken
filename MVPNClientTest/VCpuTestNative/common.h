@@ -32,9 +32,11 @@ int  sprintf(
 #ifdef _WIN32
 #define NOINLINE	__declspec(noinline)
 #define MS_ABI
+#define PACKED
 #else
 #define NOINLINE	__attribute__((noinline))
 #define MS_ABI		__attribute__((ms_abi))
+#define	PACKED		__attribute__ ((__packed__))
 #endif
 
 
@@ -69,5 +71,26 @@ typedef struct C2ASM
 	uint a;
 	uint b;
 	uint c;
+	uint d, e, f;
 } C2ASM;
+
+
+#ifdef	_WIN32
+#pragma pack(push, 1)
+#endif	// _WIN32
+
+typedef struct DYNASM_CPU_STATE
+{
+	volatile byte *ContMemMinusStart;
+	volatile uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp, Eflags;
+
+	volatile uint StartIp;
+	volatile uint ExceptionAddress;
+	volatile uint ExceptionType;
+} DYNASM_CPU_STATE PACKED;
+
+#ifdef	_WIN32
+#pragma pack(pop)
+#endif	// _WIN32
+
 

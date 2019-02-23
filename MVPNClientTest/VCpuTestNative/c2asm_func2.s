@@ -1,17 +1,27 @@
+.include "dynasm_include.s"
+
 	.text
 	.globl	c2asm_func2
-	.globl	abc123
 	.type	c2asm_func2, @function
 c2asm_func2:
-.LFB30:
 	.cfi_startproc
-	imull	$42698888, (%rcx), %edx
-	imull	$81920000, 4(%rcx), %eax
-abc123:
+	movq	%rcx, %r8
+	imull	$42698888, C2ASM_a(%rcx), %edx
+	imull	$81920000, C2ASM_b(%rcx), %eax
 	addl	%edx, %eax
-	movl	%eax, 8(%rcx)
+aa:
+	mov %eax, %r12d
+	shr %r12d
+	and $0xFF, %r12d
+	movl	%eax, C2ASM_c(%rcx)
+	SET_D_MEM	C2ASM_f(%rcx)
+	cmpl	%eax, %eax
+	pushfq
+	movl	(%rsp), %r9d
+	SET_D	%r9d
+	popfq
 	ret
 	.cfi_endproc
-.LFE30:
-	.size	c2asm_func2, .-c2asm_func2
+
+
 

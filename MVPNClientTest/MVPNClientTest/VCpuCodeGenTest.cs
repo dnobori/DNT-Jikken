@@ -54,7 +54,7 @@ namespace SoftEther.WebSocket.Helper
         public const uint PageSize = 4096;
         public const uint NumPages = (uint)(0x100000000 / PageSize);
         public const uint Magic_Return = 0xdeadbeef;
-        
+
         public const bool Test_InterpreterMode = false;
         public const bool Test_AllLabel = false;
         public const bool Test_DualCode = false;
@@ -79,7 +79,7 @@ namespace SoftEther.WebSocket.Helper
 
         public VMemory()
         {
-            PageTableEntry = (VPageTableEntry *)Marshal.AllocCoTaskMem((int)(sizeof(VPageTableEntry) * VConsts.NumPages));
+            PageTableEntry = (VPageTableEntry*)Marshal.AllocCoTaskMem((int)(sizeof(VPageTableEntry) * VConsts.NumPages));
             for (int i = 0; i < VConsts.NumPages; i++)
             {
                 PageTableEntry[i].RealMemory = null;
@@ -279,6 +279,17 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    class AsmCode
+    {
+        public string PreLines => WriterPreLines.ToString();
+        public string PostLines => WriterPostLines.ToString();
+        public string RealRegister;
+        public bool UseTmp;
+
+        public StringWriter WriterPreLines = new StringWriter();
+        public StringWriter WriterPostLines = new StringWriter();
+    }
+
     class VCodeOperand
     {
         public bool IsPointer = false;
@@ -286,7 +297,7 @@ namespace SoftEther.WebSocket.Helper
         public uint Displacement = 0;
         public bool IsDisplacementNegative = false;
         public string BaseRegister = null;
-        public string OffsetRegister = null;
+        public string IndexRegister = null;
         public uint Scaler = 0;
 
         public VCodeOperand(string src)
@@ -309,7 +320,7 @@ namespace SoftEther.WebSocket.Helper
                     BaseRegister = GetRegisterName(tokens[0]);
                     if (tokens.Length >= 2)
                     {
-                        OffsetRegister = GetRegisterName(tokens[1]);
+                        IndexRegister = GetRegisterName(tokens[1]);
                         if (tokens.Length >= 3)
                         {
                             Scaler = Convert.ToUInt32(tokens[2], 16);
@@ -364,6 +375,26 @@ namespace SoftEther.WebSocket.Helper
             return src.Substring(1);
         }
 
+        public string GetAsmRegisterOrImm()
+        {
+            if (this.IsLabel) throw new ApplicationException("This operand is a label.");
+            if (this.IsPointer) throw new ApplicationException("This operand is a pointer.");
+
+            if (this.BaseRegister != null && this.Displacement != 0)
+            {
+                throw new ApplicationException("this.BaseRegister != null && this.Displacement != 0");
+            }
+
+            if (this.BaseRegister != null)
+            {
+                return "%" + this.BaseRegister;
+            }
+            else
+            {
+                return "$" + (this.IsDisplacementNegative ? "-" : "") + "0x" + this.Displacement.ToString("x");
+            }
+        }
+
         public string GetCode()
         {
             if (this.IsLabel) throw new ApplicationException("This operand is a label.");
@@ -388,8 +419,8 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            if (this.OffsetRegister != null && this.Scaler != 0)
-                str = "(" + str + " + " + this.OffsetRegister + " * " + "0x" + this.Scaler.ToString("x") + ")";
+            if (this.IndexRegister != null && this.Scaler != 0)
+                str = "(" + str + " + " + this.IndexRegister + " * " + "0x" + this.Scaler.ToString("x") + ")";
             if (this.Displacement != 0)
                 str = "(" + str + (this.IsDisplacementNegative ? " -" : " +") + "0x" + this.Displacement.ToString("x") + ")";
             if (str == "") str = "0x" + this.Displacement.ToString("x");
@@ -400,6 +431,51 @@ namespace SoftEther.WebSocket.Helper
         {
             if (this.IsPointer) throw new ApplicationException("This operand is a pointer.");
             return GetCode();
+        }
+
+        public AsmCode AsmGenerateMemoryAccessCode(uint codeAddress, bool writeMode, string tmpRegister = "r12")
+        {
+            AsmCode ret = new AsmCode();
+            ret.UseTmp = true;
+
+            // calc virtual address
+            AsmVirtualRegisterReader baseRegisterReader = new AsmVirtualRegisterReader(this.BaseRegister, "error");
+            AsmVirtualRegisterReader indexRegisterReader = this.IndexRegister != null ? new AsmVirtualRegisterReader(this.IndexRegister, "error") : null;
+            if (indexRegisterReader != null)
+            {
+                ret.WriterPreLines.WriteLine($"lea 0x{this.Displacement:X}(%{baseRegisterReader.RealRegister}, %{indexRegisterReader.RealRegister}, {this.Scaler}), %{tmpRegister}d");
+            }
+            else
+            {
+                if (this.Displacement == 0)
+                {
+                    ret.WriterPreLines.WriteLine($"mov %{baseRegisterReader.RealRegister}, %{tmpRegister}d");
+                }
+                else
+                {
+                    ret.WriterPreLines.WriteLine($"lea 0x{this.Displacement:X}(%{baseRegisterReader.RealRegister}), %{tmpRegister}d");
+                }
+            }
+
+            // calc real address
+            ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}");
+
+            if (writeMode == false)
+            {
+                // read memory
+                ret.WriterPreLines.WriteLine($"mov (%{tmpRegister}), %{tmpRegister}d");
+
+                ret.RealRegister = $"{tmpRegister}d";
+            }
+            else
+            {
+                // write memory
+                ret.WriterPostLines.WriteLine($"mov %{tmpRegister}d, (%{tmpRegister})");
+
+                ret.RealRegister = $"{tmpRegister}d";
+            }
+
+            return ret;
         }
 
         public string GenerateMemoryAccessCode(uint codeAddress, bool writeMode, string srcOrDestinationCode, string readModeRetType = "uint")
@@ -413,7 +489,7 @@ namespace SoftEther.WebSocket.Helper
             {
                 string memcache_tag = null;
 
-                if (this.IsPointer && this.BaseRegister != null && this.Scaler == 0 && this.OffsetRegister == null)
+                if (this.IsPointer && this.BaseRegister != null && this.Scaler == 0 && this.IndexRegister == null)
                 {
                     memcache_tag = $"memcache_{this.BaseRegister}_0x{this.Displacement:x}";
                 }
@@ -569,7 +645,7 @@ namespace SoftEther.WebSocket.Helper
                         else
                             w.WriteLine("if ((vaddr < cont_start || vaddr >= cont_end)){");
                     }
-                    
+
                     if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
                     {
                         w.WriteLine("    exception_string = $\"Access violation to 0x{vaddr:x}.\";");
@@ -602,15 +678,220 @@ namespace SoftEther.WebSocket.Helper
         }
     }
 
+    class AsmVirtualRegisterWriter
+    {
+        public string PreLines;
+        public string PostLines;
+        public string RealRegister;
+        public bool UseTmp;
+
+        public static void WriteSaveRFlags(StringWriter w)
+        {
+            w.WriteLine("mov $0, %eax");
+            w.WriteLine("seto %al");
+            w.WriteLine("lahf");
+        }
+
+        public static void WriteRestoreRFlags(StringWriter w)
+        {
+            w.WriteLine("add $127, %al");
+            w.WriteLine("sahf");
+        }
+
+        public AsmVirtualRegisterWriter(string virtualTargetRegister, string tmpRegister = "r12")
+        {
+            StringWriter pre = new StringWriter();
+            StringWriter post = new StringWriter();
+            string real = null;
+
+            switch (virtualTargetRegister)
+            {
+                case "eax":
+                    real = "r10d";
+                    break;
+
+                case "ecx":
+                    real = "r14d";
+                    break;
+
+                case "ebx":
+                case "edx":
+                case "ebp":
+                case "esi":
+                case "edi":
+                    real = virtualTargetRegister;
+                    break;
+
+                case "esp":
+                    real = "r11d";
+                    break;
+
+                case "ah":
+                    AsmVirtualRegisterWriter.WriteSaveRFlags(post);
+                    post.WriteLine($"shl $8, %{tmpRegister}d");
+                    post.WriteLine($"and $0xFF00, %{tmpRegister}");
+                    post.WriteLine($"and $0xFFFFFFFFFFFF00FF, %r10");
+                    post.WriteLine($"or %{tmpRegister}, %r10");
+                    AsmVirtualRegisterWriter.WriteRestoreRFlags(post);
+                    real = $"{tmpRegister}d";
+                    UseTmp = true;
+                    break;
+
+                case "al":
+                    AsmVirtualRegisterWriter.WriteSaveRFlags(post);
+                    post.WriteLine($"and $0xFF, %{tmpRegister}");
+                    post.WriteLine($"and $0xFFFFFFFFFFFFFF00, %r10");
+                    post.WriteLine($"or %{tmpRegister}, %r10");
+                    AsmVirtualRegisterWriter.WriteRestoreRFlags(post);
+                    real = $"{tmpRegister}d";
+                    UseTmp = true;
+                    break;
+
+                case "bh":
+                case "bl":
+                case "dh":
+                case "dl":
+                    real = virtualTargetRegister;
+                    break;
+            }
+
+            if (real == null)
+            {
+                throw new ApplicationException($"AsmRegisterOp: Invalid register: '{virtualTargetRegister}'");
+            }
+
+            this.PreLines = pre.ToString();
+            this.PostLines = post.ToString();
+            this.RealRegister = real.ToString();
+        }
+    }
+
+    class AsmVirtualRegisterReader
+    {
+        public string PreLines;
+        public string PostLines;
+        public string RealRegister;
+        public bool UseTmp;
+
+        public string RealRegisterOrImm
+        {
+            get
+            {
+                if (RealRegister.StartsWith("$") == false)
+                {
+                    return "%" + RealRegister;
+                }
+                else
+                {
+                    return RealRegister;
+                }
+            }
+        }
+
+        public AsmVirtualRegisterReader(VCodeOperand operand, string tmpRegister = "r12", bool forceTmp = false) :
+            this(operand.GetAsmRegisterOrImm(), tmpRegister, forceTmp)
+        { }
+
+        public AsmVirtualRegisterReader(string virtualTargetRegister, string tmpRegister = "r12", bool forceTmp = false)
+        {
+            StringWriter pre = new StringWriter();
+            StringWriter post = new StringWriter();
+            string real = null;
+
+            if (virtualTargetRegister.StartsWith("%"))
+                virtualTargetRegister = virtualTargetRegister.Substring(1);
+
+            if (virtualTargetRegister.StartsWith("$"))
+            {
+                real = virtualTargetRegister;
+            }
+            else
+            {
+                switch (virtualTargetRegister)
+                {
+                    case "eax":
+                        real = "r10d";
+                        break;
+
+                    case "ecx":
+                        real = "r14d";
+                        break;
+
+                    case "ebx":
+                    case "edx":
+                    case "ebp":
+                    case "esi":
+                    case "edi":
+                        real = virtualTargetRegister;
+                        break;
+
+                    case "esp":
+                        real = "r11d";
+                        break;
+
+                    case "ah":
+                        AsmVirtualRegisterWriter.WriteSaveRFlags(post);
+                        pre.WriteLine($"mov %eax, %{tmpRegister}d");
+                        pre.WriteLine($"shr $8, %{tmpRegister}d");
+                        pre.WriteLine($"and $0xFF, %{tmpRegister}d");
+                        AsmVirtualRegisterWriter.WriteRestoreRFlags(post);
+                        real = $"{tmpRegister}d";
+                        UseTmp = true;
+                        break;
+
+                    case "al":
+                        AsmVirtualRegisterWriter.WriteSaveRFlags(post);
+                        pre.WriteLine($"mov %r10d, %{tmpRegister}d");
+                        pre.WriteLine($"and $0xFF, %{tmpRegister}d");
+                        AsmVirtualRegisterWriter.WriteRestoreRFlags(post);
+                        real = $"{tmpRegister}d";
+                        UseTmp = true;
+                        break;
+
+                    case "bh":
+                    case "bl":
+                    case "dh":
+                    case "dl":
+                        real = virtualTargetRegister;
+                        if (forceTmp)
+                        {
+                            pre.WriteLine($"movzx %{virtualTargetRegister}, %{tmpRegister}d");
+                            UseTmp = true;
+                        }
+                        break;
+                }
+            }
+
+            if (real == null)
+            {
+                throw new ApplicationException($"AsmRegisterOp: Invalid register: '{virtualTargetRegister}'");
+            }
+
+            if (forceTmp && UseTmp == false)
+            {
+                UseTmp = true;
+                if (real.StartsWith("$") == false)
+                    pre.WriteLine($"mov %{real}, %{tmpRegister}d");
+                else
+                    pre.WriteLine($"mov {real}, %{tmpRegister}d");
+                real = $"{tmpRegister}d";
+            }
+
+            this.PreLines = pre.ToString();
+            this.PostLines = post.ToString();
+            this.RealRegister = real.ToString();
+        }
+    }
+
     class VCodeOperation
     {
-        void WriteJumpCode(StringWriter w, string condition, VCodeOperand operand)
+        void WriteJumpCode(StringWriter w, StringWriter asm, string condition, VCodeOperand operand)
         {
             w.WriteLine($"if ({condition}) {{");
 
             //if (operand.Displacement < Address)
             {
-                WriteTestInterruptCode(w);
+                WriteTestInterruptCode(w, asm);
             }
 
             if (operand.IsLabel == false) throw new ApplicationException("Operand is not a label.");
@@ -633,7 +914,7 @@ namespace SoftEther.WebSocket.Helper
             w.WriteLine("}");
         }
 
-        void WriteTestInterruptCode(StringWriter w)
+        void WriteTestInterruptCode(StringWriter w, StringWriter asm)
         {
             if (VConsts.Test_Interrupt)
             {
@@ -655,7 +936,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void WriteCode(StringWriter w, bool is_dual_fast)
+        public void WriteCode(StringWriter w, StringWriter asm, bool is_dual_fast)
         {
             if (is_dual_fast == false)
             {
@@ -674,13 +955,14 @@ namespace SoftEther.WebSocket.Helper
 
             w.WriteLine("{");
 
-            
+
             switch (Opcode)
             {
                 case "pushl":
                 case "push":
                     {
                         w.WriteLine("esp -= 4;");
+
                         var destMemory = new VCodeOperand("(%esp)");
                         if (Operand1.IsPointer == false)
                         {
@@ -692,6 +974,40 @@ namespace SoftEther.WebSocket.Helper
                             w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, "tmp1"));
                             w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, "tmp1"));
                         }
+
+                        // esp -= 4
+                        var esp1 = new AsmVirtualRegisterReader("esp", "r12");
+                        var esp2 = new AsmVirtualRegisterWriter("esp", "r13");
+
+                        asm.Write(esp1.PreLines);
+                        asm.WriteLine($"lea -4(%{esp1.RealRegister}), %{esp1.RealRegister}");
+                        asm.Write(esp1.PostLines);
+                        
+                        asm.Write(esp2.PreLines);
+                        if (esp1.RealRegister != esp2.RealRegister)
+                            asm.WriteLine($"mov %{esp1.RealRegister}, %{esp2.RealRegister}");
+                        asm.Write(esp2.PostLines);
+
+                        // push
+                        if (Operand1.IsPointer == false)
+                        {
+                            var valueReader = new AsmVirtualRegisterReader(Operand1.BaseRegister, "r12");
+
+                            asm.Write(valueReader.PreLines);
+
+                            var memoryWriter = destMemory.AsmGenerateMemoryAccessCode(Address, true, "r13");
+
+                            asm.Write(memoryWriter.PreLines);
+                            asm.WriteLine($"mov %{valueReader.RealRegister}, %{memoryWriter.RealRegister}");
+                            asm.Write(memoryWriter.PostLines);
+
+                            asm.Write(valueReader.PostLines);
+                        }
+                        else
+                        {
+                            throw new NotImplementedException();
+                        }
+
                         break;
                     }
 
@@ -711,7 +1027,8 @@ namespace SoftEther.WebSocket.Helper
                         }
                         else
                         {
-                            w.WriteLine($"{Operand2.GetValueAccessCode()} ^= {Operand1.GetValueAccessCode()};");
+                            throw new NotImplementedException();
+                            //w.WriteLine($"{Operand2.GetValueAccessCode()} ^= {Operand1.GetValueAccessCode()};");
                         }
                         break;
                     }
@@ -719,17 +1036,57 @@ namespace SoftEther.WebSocket.Helper
                 case "mov":
                 case "movl":
                     {
+                        // C / C#
                         if (Operand1.IsPointer == false && Operand2.IsPointer == false)
                         {
                             w.WriteLine($"{Operand2.GetValueAccessCode()} = {Operand1.GetValueAccessCode()};");
                         }
-                        else if (Operand1.IsPointer)
+                        else if (Operand1.IsPointer && Operand2.IsPointer == false)
                         {
                             w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, Operand2.GetValueAccessCode()));
                         }
-                        else if (Operand2.IsPointer)
+                        else if (Operand2.IsPointer && Operand1.IsPointer == false)
                         {
                             w.WriteLine(Operand2.GenerateMemoryAccessCode(Address, true, Operand1.GetValueAccessCode()));
+                        }
+                        else
+                        {
+                            throw new ApplicationException("Both operand1 and operand2 are pointers.");
+                        }
+
+                        // ASM
+                        if (Operand1.IsPointer == false && Operand2.IsPointer == false)
+                        {
+                            var op1 = new AsmVirtualRegisterReader(Operand1, "r12");
+                            var op2 = new AsmVirtualRegisterReader(Operand2, "r13");
+
+                            asm.Write(op1.PreLines);
+                            asm.Write(op2.PreLines);
+                            asm.WriteLine($"mov {op1.RealRegisterOrImm}, {op2.RealRegisterOrImm}");
+                            asm.Write(op2.PostLines);
+                            asm.Write(op1.PostLines);
+                        }
+                        else if (Operand1.IsPointer && Operand2.IsPointer == false)
+                        {
+                            var op1 = Operand1.AsmGenerateMemoryAccessCode(this.Address, false, "r12");
+                            var op2 = new AsmVirtualRegisterReader(Operand2, "r13");
+
+                            asm.Write(op1.PreLines);
+                            asm.Write(op2.PreLines);
+                            asm.WriteLine($"mov %{op1.RealRegister}, {op2.RealRegisterOrImm}");
+                            asm.Write(op2.PostLines);
+                            asm.Write(op1.PostLines);
+                        }
+                        else if (Operand2.IsPointer && Operand1.IsPointer == false)
+                        {
+                            var op1 = new AsmVirtualRegisterReader(Operand1, "r13");
+                            var op2 = Operand2.AsmGenerateMemoryAccessCode(this.Address, true, "r12");
+
+                            asm.Write(op1.PreLines);
+                            asm.Write(op2.PreLines);
+                            asm.WriteLine($"mov {op1.RealRegisterOrImm}, %{op2.RealRegister}");
+                            asm.Write(op2.PostLines);
+                            asm.Write(op1.PostLines);
                         }
                         else
                         {
@@ -765,45 +1122,50 @@ namespace SoftEther.WebSocket.Helper
 
 
                 case "jle": //TODO
+                    {
+                        WriteJumpCode(w, asm, "compare_result == 0", Operand1);
+                        break;
+                    }
+
                 case "je":
                     {
-                        WriteJumpCode(w, "compare_result == 0", Operand1);
+                        WriteJumpCode(w, asm, "compare_result == 0", Operand1);
                         break;
                     }
 
                 case "jb":
                     {
-                        WriteJumpCode(w, "compare_result >= 0x80000000", Operand1);
+                        WriteJumpCode(w, asm, "compare_result >= 0x80000000", Operand1);
                         break;
                     }
 
                 case "jbe":
                     {
-                        WriteJumpCode(w, "compare_result == 0 || compare_result >= 0x80000000", Operand1);
+                        WriteJumpCode(w, asm, "compare_result == 0 || compare_result >= 0x80000000", Operand1);
                         break;
                     }
 
                 case "jae":
                     {
-                        WriteJumpCode(w, "compare_result <= 0x80000000", Operand1);
+                        WriteJumpCode(w, asm, "compare_result <= 0x80000000", Operand1);
                         break;
                     }
 
                 case "ja":
                     {
-                        WriteJumpCode(w, "compare_result != 0 && compare_result <= 0x80000000", Operand1);
+                        WriteJumpCode(w, asm, "compare_result != 0 && compare_result <= 0x80000000", Operand1);
                         break;
                     }
 
                 case "jne":
                     {
-                        WriteJumpCode(w, "compare_result != 0", Operand1);
+                        WriteJumpCode(w, asm, "compare_result != 0", Operand1);
                         break;
                     }
 
                 case "jmp":
                     {
-                        WriteJumpCode(w, "true", Operand1);
+                        WriteJumpCode(w, asm, "true", Operand1);
                         break;
                     }
 
@@ -837,7 +1199,6 @@ namespace SoftEther.WebSocket.Helper
 
                 case "add":
                     {
-                        //if (Address == 0x8048874) break;
                         if (Operand1.IsPointer && Operand2.IsPointer == false)
                         {
                             w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, Operand2.GetValueAccessCode() + "+"));
@@ -856,7 +1217,6 @@ namespace SoftEther.WebSocket.Helper
 
                 case "inc":
                     {
-                        //if (Address == 0x8048874) break;
                         if (Operand1.IsPointer == false)
                         {
                             w.WriteLine(Operand1.GetValueAccessCode() + "++;");
@@ -885,7 +1245,7 @@ namespace SoftEther.WebSocket.Helper
                             w.WriteLine(Operand1.GenerateMemoryAccessCode(Address, false, "cmp1"));
                             w.WriteLine($"compare_result = (uint)({Operand2.GetValueAccessCode()} - cmp1);");
                         }
-                        else  if (Operand1.IsPointer == false && Operand2.IsPointer)
+                        else if (Operand1.IsPointer == false && Operand2.IsPointer)
                         {
                             w.WriteLine("uint cmp1;");
                             w.WriteLine(Operand2.GenerateMemoryAccessCode(Address, false, "cmp1"));
@@ -916,18 +1276,14 @@ namespace SoftEther.WebSocket.Helper
 
                 case "call":
                     {
-                        if (ToString().Contains("__stack_chk_fail")) { }
+                        w.WriteLine("esp -= 4;");
+                        var destMemory = new VCodeOperand("(%esp)");
+                        if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
+                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress._0x{Next.Address:x}"));
                         else
-                        {
-                            w.WriteLine("esp -= 4;");
-                            var destMemory = new VCodeOperand("(%esp)");
-                            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
-                                w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress._0x{Next.Address:x}"));
-                            else
-                                w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress__0x{Next.Address:x}"));
+                            w.WriteLine(destMemory.GenerateMemoryAccessCode(Address, true, $"(uint)CallRetAddress__0x{Next.Address:x}"));
 
-                            WriteJumpCode(w, "true", Operand1);
-                        }
+                        WriteJumpCode(w, asm, "true", Operand1);
                         break;
                     }
 
@@ -1038,6 +1394,8 @@ namespace SoftEther.WebSocket.Helper
     class VCodeGen
     {
         StringWriter Out = new StringWriter();
+        StringWriter Asm = new StringWriter();
+
         string[] Lines;
         public Dictionary<string, uint> FunctionTable;
         SortedDictionary<uint, VCodeOperation> OperationLines = new SortedDictionary<uint, VCodeOperation>();
@@ -1047,6 +1405,8 @@ namespace SoftEther.WebSocket.Helper
         public HashSet<string> MemCacheTags = new HashSet<string>();
 
         public override string ToString() => Out.ToString();
+
+        public string GetAsm() => Asm.ToString();
 
         public VCodeGen(string[] lines, Dictionary<string, uint> functionTable)
         {
@@ -1299,7 +1659,7 @@ namespace SoftEther.WebSocket.Helper
                     operands.Add(new VCodeOperand("(%esp)"));
                     foreach (var operand in operands.Where(x => x != null))
                     {
-                        if (operand.IsPointer && operand.BaseRegister != null && operand.Scaler == 0 && operand.OffsetRegister == null)
+                        if (operand.IsPointer && operand.BaseRegister != null && operand.Scaler == 0 && operand.IndexRegister == null)
                         {
                             MemCacheTags.Add($"memcache_{operand.BaseRegister}_0x{operand.Displacement:x}");
                         }
@@ -1358,7 +1718,7 @@ namespace SoftEther.WebSocket.Helper
             Out.WriteLine("switch (next_return)");
             Out.WriteLine("{");
 
-            if (VConsts.CodeGenTarget== CodeGenTargetEnum.CSharp)
+            if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
                 Out.Write($"case CallRetAddress._MagicReturn: ");
             else
                 Out.Write($"case CallRetAddress__MagicReturn: ");
@@ -1413,8 +1773,14 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 Out.WriteLine($"// {op.ToString()}");
-                op.WriteCode(Out, false);
+
+                Asm.WriteLine($"L_{op.Address:x}:");
+                Asm.WriteLine($"# {op.ToString()}");
+
+                op.WriteCode(Out, Asm, false);
+
                 Out.WriteLine();
+                Asm.WriteLine();
             }
 
             if (VConsts.Test_DualCode)
@@ -1427,7 +1793,7 @@ namespace SoftEther.WebSocket.Helper
                     }
 
                     Out.WriteLine($"// {op.ToString()}");
-                    op.WriteCode(Out, true);
+                    op.WriteCode(Out, Asm, true);
                     Out.WriteLine();
                 }
             }
@@ -1469,10 +1835,11 @@ namespace SoftEther.WebSocket.Helper
                 Out.WriteLine("#endif");
             }
         }
-        
+
         public void DoMain()
         {
             Out = new StringWriter();
+            Asm = new StringWriter();
 
             Out.WriteLine($"// Auto generated by IPA Box Test for {VConsts.CodeGenTarget}");
 
@@ -1498,6 +1865,45 @@ namespace SoftEther.WebSocket.Helper
 ");
             }
 
+            Asm.WriteLine(
+@"
+.include ""dynasm_include.s""
+
+	.text
+	.globl	dynasm
+	.globl	dynasm_begin
+	.globl	dynasm_end
+	.type	dynasm, @function
+dynasm:
+	.cfi_startproc
+	push	%r12
+	push	%r13
+	push	%r14
+	push	%r15
+	push	%rdi
+	push	%rsi
+	push	%rbx
+	push	%rbp
+	lea 	-16*10(%rsp), %rsp
+	vmovdqu	%xmm6, 16*0(%rsp)
+	vmovdqu	%xmm7, 16*1(%rsp)
+	vmovdqu	%xmm8, 16*2(%rsp)
+	vmovdqu	%xmm9, 16*3(%rsp)
+	vmovdqu	%xmm10, 16*4(%rsp)
+	vmovdqu	%xmm11, 16*5(%rsp)
+	vmovdqu	%xmm12, 16*6(%rsp)
+	vmovdqu	%xmm13, 16*7(%rsp)
+	vmovdqu	%xmm14, 16*8(%rsp)
+	vmovdqu	%xmm15, 16*9(%rsp)
+
+    mov     DYNASM_CPU_STATE_CONT_MEM_MINUS_START(%r8), %r15
+
+dynasm_begin:
+
+	# -- BEGIN --
+
+");
+
             WriteMainFunction();
 
             Out.WriteLine();
@@ -1508,6 +1914,35 @@ namespace SoftEther.WebSocket.Helper
             {
                 Out.WriteLine("}");
             }
+
+            Asm.WriteLine(
+@"
+
+	# -- end --
+
+dynasm_end:
+	vmovdqu	16*9(%rsp), %xmm15
+	vmovdqu	16*8(%rsp), %xmm14
+	vmovdqu	16*7(%rsp), %xmm13
+	vmovdqu	16*6(%rsp), %xmm12
+	vmovdqu	16*5(%rsp), %xmm11
+	vmovdqu	16*4(%rsp), %xmm10
+	vmovdqu	16*3(%rsp), %xmm9
+	vmovdqu	16*2(%rsp), %xmm8
+	vmovdqu	16*1(%rsp), %xmm7
+	vmovdqu	16*0(%rsp), %xmm6
+	lea		16*10(%rsp), %rsp
+	pop	%rbp
+	pop	%rbx
+	pop	%rsi
+	pop	%rdi
+	pop	%r15
+	pop	%r14
+	pop	%r13
+	pop	%r12
+	ret
+	.cfi_endproc
+");
 
             Out.WriteLine();
         }
@@ -1522,11 +1957,14 @@ namespace SoftEther.WebSocket.Helper
 
             string srcAsm = @"C:\git\DNT-Jikken\MVPNClientTest\NativeCodeTest\bin\test_exec.asm";
             string dstCs;
-            
+            string dstAsm;
+
             if (VConsts.CodeGenTarget == CodeGenTargetEnum.CSharp)
                 dstCs = @"C:\git\DNT-Jikken\MVPNClientTest\VCpuTest\GeneratedCode.cs";
             else
                 dstCs = @"C:\git\DNT-Jikken\MVPNClientTest\VCpuTestNative\GeneratedCode.c";
+
+            dstAsm = @"C:\git\DNT-Jikken\MVPNClientTest\VCpuTestNative\dynasm.s";
 
             string[] includeFunctions = new string[]
                 {
@@ -1573,6 +2011,8 @@ namespace SoftEther.WebSocket.Helper
             gen.DoMain();
 
             File.WriteAllText(dstCs, gen.ToString());
+
+            File.WriteAllText(dstAsm, gen.GetAsm());
         }
     }
 }

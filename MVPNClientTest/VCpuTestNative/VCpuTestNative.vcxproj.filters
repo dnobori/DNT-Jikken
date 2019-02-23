@@ -27,4 +27,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <CopyFileToFolders Include="c2asm_func2.s" />
+    <CopyFileToFolders Include="dynasm.s" />
+    <CopyFileToFolders Include="dynasm_include.s" />
+  </ItemGroup>
 </Project>

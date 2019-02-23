@@ -33,7 +33,7 @@ obj/obj/linux/code64.o: GeneratedCode.c common.h
 	@mkdir -p bin/
 	$(CC) -m64 $(OPTIONS_COMPILE) -c GeneratedCode.c -o obj/obj/linux/code64.o
 
-obj/obj/linux/c2asm_func2.o: c2asm_func2.s
+obj/obj/linux/c2asm_func2.o: c2asm_func2.s dynasm_include.s
 	@mkdir -p obj/obj/linux/
 	@mkdir -p bin/
 	as -64 -c c2asm_func2.s -o obj/obj/linux/c2asm_func2.o
@@ -41,8 +41,16 @@ obj/obj/linux/c2asm_func2.o: c2asm_func2.s
 obj/obj/linux/c2asm_func2_vc.o: obj/obj/linux/c2asm_func2.o
 	objcopy obj/obj/linux/c2asm_func2.o --output-format=pe-bigobj-x86-64 obj/obj/linux/c2asm_func2_vc.o
 
-bin/test64: obj/obj/linux/test64.o obj/obj/linux/code64.o obj/obj/linux/c2asm_func2.o obj/obj/linux/c2asm_func2_vc.o
-	$(CC) -m64 obj/obj/linux/test64.o obj/obj/linux/code64.o obj/obj/linux/c2asm_func2.o $(OPTIONS_LINK) -o bin/test64
+obj/obj/linux/dynasm.o: dynasm.s dynasm_include.s
+	@mkdir -p obj/obj/linux/
+	@mkdir -p bin/
+	as -64 -c dynasm.s -o obj/obj/linux/dynasm.o
+
+obj/obj/linux/dynasm_vc.o: obj/obj/linux/dynasm.o
+	objcopy obj/obj/linux/dynasm.o --output-format=pe-bigobj-x86-64 obj/obj/linux/dynasm_vc.o
+
+bin/test64: obj/obj/linux/test64.o obj/obj/linux/code64.o obj/obj/linux/c2asm_func2.o obj/obj/linux/c2asm_func2_vc.o obj/obj/linux/dynasm.o obj/obj/linux/dynasm_vc.o
+	$(CC) -m64 obj/obj/linux/test64.o obj/obj/linux/code64.o obj/obj/linux/c2asm_func2.o obj/obj/linux/dynasm.o $(OPTIONS_LINK) -o bin/test64
 
 clean:
 	-rm -f $(OBJECTS_test)
