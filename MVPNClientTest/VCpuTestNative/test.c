@@ -185,7 +185,6 @@ void AllocateMemory(VMemory *memory, uint startAddress, uint size, bool canRead,
 }
 
 MS_ABI NOINLINE void c2asm_func2(C2ASM *t);
-MS_ABI NOINLINE void dynasm(C2ASM *t);
 
 MS_ABI NOINLINE void c2asm_func1(C2ASM *t)
 {
@@ -212,7 +211,7 @@ MS_ABI NOINLINE void c2asm_test1()
 
 int main()
 {
-	c2asm_test1(); return;
+	//c2asm_test1(); return;
 
 	uint count = 10;
 	uint stackPtr = 0x500000 + 0x10000 / 2;
@@ -241,17 +240,26 @@ int main()
 	state->Memory = memory;
 
 	uint ret = 0xffffffff;
-
+	
 	ulong tick_start = Tick64();
+
+	state->UseAsm = true;
 
 	for (uint i = 0;i < count;i++)
 	{
 		state->Esp = stackPtr;
 		state->Esp -= 4;
 
-		*((uint*)(byte*)(memory->ContiguousMemory + state->Esp - memory->ContiguousStart)) = CallRetAddress__MagicReturn;
-
-		mem_write(memory->PageTableEntry, state->Esp, CallRetAddress__MagicReturn);
+		if (state->UseAsm == false)
+		{
+			mem_write(memory->PageTableEntry, state->Esp, CallRetAddress__MagicReturn);
+			*((uint*)(byte*)(memory->ContiguousMemory + state->Esp - memory->ContiguousStart)) = CallRetAddress__MagicReturn;
+		}
+		else
+		{
+			mem_write(memory->PageTableEntry, state->Esp, 0x7fffffff);
+			*((uint*)(byte*)(memory->ContiguousMemory + state->Esp - memory->ContiguousStart)) = 0x7fffffff;
+		}
 
 		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target2);
 

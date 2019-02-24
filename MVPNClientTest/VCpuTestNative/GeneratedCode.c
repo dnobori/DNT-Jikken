@@ -52,6 +52,44 @@ uint memcache_esp_0xc_pin = 0x7fffffff; uint memcache_esp_0xc_data = 0xcafebeef;
 uint memcache_esp_0x10_pin = 0x7fffffff; uint memcache_esp_0x10_data = 0xcafebeef;
 uint memcache_esp_0x18_pin = 0x7fffffff; uint memcache_esp_0x18_data = 0xcafebeef;
 
+
+if (state->UseAsm)
+{
+	DYNASM_CPU_STATE dyn = { 0 };
+
+	dyn.ContMemMinusStart = cont_memory_minus_start;
+	dyn.Eax = eax;
+	dyn.Ebx = ebx;
+	dyn.Ecx = ecx;
+	dyn.Edx = edx;
+	dyn.Esi = esi;
+	dyn.Edi = edi;
+	dyn.Ebp = ebp;
+	dyn.Esp = esp;
+	dyn.StartIp = next_ip;
+
+	dynasm(&dyn);
+
+	eax = dyn.Eax;
+	ebx = dyn.Ebx;
+	ecx = dyn.Ecx;
+	edx = dyn.Edx;
+	esi = dyn.Esi;
+	edi = dyn.Edi;
+	ebp = dyn.Ebp;
+	esp = dyn.Esp;
+
+	if (dyn.ExceptionType != 0)
+	{
+		exception_address = dyn.ExceptionAddress;
+		sprintf(exception_string, "ASM ExceptionType: % u", dyn.ExceptionType);
+
+    }
+
+	goto L_RETURN;
+}
+
+
 L_START:
 switch (next_ip)
 {

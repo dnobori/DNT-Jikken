@@ -13,6 +13,7 @@ aa:
 	mov %eax, %r12d
 	shr %r12d
 	and $0xFF, %r12d
+	mov 0(%rip), %r11
 	movl	%eax, C2ASM_c(%rcx)
 	SET_D_MEM	C2ASM_f(%rcx)
 	cmpl	%eax, %eax

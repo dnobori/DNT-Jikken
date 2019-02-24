@@ -62,6 +62,8 @@ typedef struct VCpuState
 	volatile char ExceptionString[256];
 	volatile uint ExceptionAddress;
 	volatile bool Interrupt;
+
+	volatile bool UseAsm;
 } VCpuState;
 
 void Iam_The_IntelCPU_HaHaHa(VCpuState *state, uint ip);
@@ -82,12 +84,14 @@ typedef struct C2ASM
 typedef struct DYNASM_CPU_STATE
 {
 	volatile byte *ContMemMinusStart;
-	volatile uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp, Eflags;
+	volatile uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp;
 
 	volatile uint StartIp;
 	volatile uint ExceptionAddress;
 	volatile uint ExceptionType;
 } DYNASM_CPU_STATE PACKED;
+
+MS_ABI NOINLINE void dynasm(DYNASM_CPU_STATE *t);
 
 #ifdef	_WIN32
 #pragma pack(pop)
