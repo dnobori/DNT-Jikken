@@ -230,9 +230,10 @@ int main()
 	AllocateMemory(memory, 0x8000000, 0x100000, true, true);
 	AllocateMemory(memory, 0x500000, 0x10000, true, true);
 
-	memory->ContiguousMemory = malloc(0x8000000 + 0x100000 - 0x500000);
+	uint cont_size = 0x200000;
+	memory->ContiguousMemory = malloc(cont_size);
 	memory->ContiguousStart = 0x500000;
-	memory->ContiguousEnd = memory->ContiguousStart + 0x8000000 + 0x100000 - 0x500000;
+	memory->ContiguousEnd = memory->ContiguousStart + cont_size;
 
 	VCpuState *state = malloc(sizeof(VCpuState));
 	memset(state, 0, sizeof(VCpuState));
@@ -242,8 +243,17 @@ int main()
 	uint ret = 0xffffffff;
 	
 	ulong tick_start = Tick64();
-
+	
+	// SWITCH!!!
 	state->UseAsm = true;
+
+	if (state->UseAsm)
+	{
+		memory->ContiguousMemory = AsmContMemory;
+	}
+
+	// TODO: ここで問題発生; 取得されるアドレスが不正 リロケーションうまくいってない?
+	printf("ASN_GLOBAL_CONT_MEM = %p\n", memory->ContiguousMemory);
 
 	for (uint i = 0;i < count;i++)
 	{
@@ -261,7 +271,7 @@ int main()
 			*((uint*)(byte*)(memory->ContiguousMemory + state->Esp - memory->ContiguousStart)) = 0x7fffffff;
 		}
 
-		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target2);
+		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target3);
 
 		if (state->ExceptionString[0] != 0)
 		{

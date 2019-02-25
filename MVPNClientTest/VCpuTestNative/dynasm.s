@@ -158,7 +158,7 @@ dynasm:
 
     mov     %rcx, %r8
 
-    mov     DYNASM_CPU_STATE_CONT_MEM_MINUS_START(%r8), %r15
+    mov     ASM_GLOBAL_CONT_MEM, %r15
     mov     DYNASM_CPU_STATE_START_IP(%r8), %r13d
 
     movl DYNASM_CPU_STATE_EAX(%r8), %r10d

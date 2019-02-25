@@ -61,6 +61,7 @@ namespace SoftEther.WebSocket.Helper
         public const uint NumPages = (uint)(0x100000000 / PageSize);
         public const uint Magic_Return = 0xdeadbeef;
 
+
         public const bool Test_InterpreterMode = false;
         public const bool Test_AllLabel = false;
         public const bool Test_DualCode = false;
@@ -70,6 +71,9 @@ namespace SoftEther.WebSocket.Helper
         public const FastCheckTypeEnum FastCheckType = FastCheckTypeEnum.Fast1;
 
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
+
+        public const uint Asm_Fast1_Dummy_Start = 0x500000;
+        public const uint Asm_Fast1_Dummy_End = 0x08100000;
 
         public static readonly string[] RegisterList = {
             "eax", "ebx", "ecx", "edx", "esi", "edi", "esp", "ebp", };
@@ -452,7 +456,7 @@ namespace SoftEther.WebSocket.Helper
             return GetCode();
         }
 
-        public AsmCode AsmGenerateMemoryWriteCode(uint codeAddress, bool writeMode, string tmpRegister = "r12")
+        public AsmCode AsmGenerateMemoryAccessCode(uint codeAddress, bool writeMode, string tmpRegister = "r12")
         {
             AsmCode ret = new AsmCode();
             ret.UseTmp = true;
@@ -476,18 +480,26 @@ namespace SoftEther.WebSocket.Helper
                 }
             }
 
-            // calc real address
-            ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}");
+            // check address
+            if (VConsts.Addressing == AddressingMode.Contiguous)
+            {
+                if (VConsts.FastCheckType == FastCheckTypeEnum.Fast1 || VConsts.FastCheckType == FastCheckTypeEnum.Fast2)
+                {
+                }
 
-            if (writeMode == false)
-            {
-                // read memory
-                ret.RealRegister = $"(%{tmpRegister})";
-            }
-            else
-            {
-                // write memory
-                ret.RealRegister = $"(%{tmpRegister})";
+                // calc real address
+                ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}");
+
+                if (writeMode == false)
+                {
+                    // read memory
+                    ret.RealRegister = $"(%{tmpRegister})";
+                }
+                else
+                {
+                    // write memory
+                    ret.RealRegister = $"(%{tmpRegister})";
+                }
             }
 
             StringWriter ww = new StringWriter();
@@ -1045,7 +1057,7 @@ namespace SoftEther.WebSocket.Helper
 
                             asm.Write(valueReader.PreLines);
 
-                            var memoryWriter = destMemory.AsmGenerateMemoryWriteCode(Address, true, "r13");
+                            var memoryWriter = destMemory.AsmGenerateMemoryAccessCode(Address, true, "r13");
 
                             asm.Write(memoryWriter.PreLines);
                             asm.WriteLine($"mov %{valueReader.RealRegister}, {memoryWriter.RealRegisterFixed}");
@@ -1076,7 +1088,7 @@ namespace SoftEther.WebSocket.Helper
 
                             asm.Write(valueWriter.PreLines);
 
-                            var memoryReader = destMemory.AsmGenerateMemoryWriteCode(Address, false, "r13");
+                            var memoryReader = destMemory.AsmGenerateMemoryAccessCode(Address, false, "r13");
 
                             asm.Write(memoryReader.PreLines);
                             asm.WriteLine($"mov {memoryReader.RealRegisterFixed}, %{valueWriter.RealRegister}");
@@ -1159,7 +1171,7 @@ namespace SoftEther.WebSocket.Helper
                         }
                         else if (Operand1.IsPointer && Operand2.IsPointer == false)
                         {
-                            var op1 = Operand1.AsmGenerateMemoryWriteCode(this.Address, false, "r12");
+                            var op1 = Operand1.AsmGenerateMemoryAccessCode(this.Address, false, "r12");
                             var op2 = new AsmVirtualRegisterReader(Operand2, "r13");
 
                             asm.Write(op1.PreLines);
@@ -1171,7 +1183,7 @@ namespace SoftEther.WebSocket.Helper
                         else if (Operand2.IsPointer && Operand1.IsPointer == false)
                         {
                             var op1 = new AsmVirtualRegisterReader(Operand1, "r13");
-                            var op2 = Operand2.AsmGenerateMemoryWriteCode(this.Address, true, "r12");
+                            var op2 = Operand2.AsmGenerateMemoryAccessCode(this.Address, true, "r12");
 
                             asm.Write(op1.PreLines);
                             asm.Write(op2.PreLines);
@@ -1230,7 +1242,7 @@ namespace SoftEther.WebSocket.Helper
 
                         // ASM
                         // pop
-                        var memoryReader = destMemory.AsmGenerateMemoryWriteCode(Address, false, "r13");
+                        var memoryReader = destMemory.AsmGenerateMemoryAccessCode(Address, false, "r13");
 
                         asm.Write(memoryReader.PreLines);
                         asm.WriteLine($"mov {memoryReader.RealRegisterFixed}, %ecx");
@@ -1399,7 +1411,7 @@ namespace SoftEther.WebSocket.Helper
                         // ASM
                         if (Operand1.IsPointer && Operand2.IsPointer == false)
                         {
-                            var op1 = Operand1.AsmGenerateMemoryWriteCode(this.Address, false, "r12");
+                            var op1 = Operand1.AsmGenerateMemoryAccessCode(this.Address, false, "r12");
                             var op2 = new AsmVirtualRegisterReader(Operand2, "r13");
 
                             asm.Write(op1.PreLines);
@@ -1464,7 +1476,7 @@ namespace SoftEther.WebSocket.Helper
                         // ASM
                         if (Operand1.IsPointer && Operand2.IsPointer == false)
                         {
-                            var op1 = Operand1.AsmGenerateMemoryWriteCode(this.Address, false, "r12");
+                            var op1 = Operand1.AsmGenerateMemoryAccessCode(this.Address, false, "r12");
                             var op2 = new AsmVirtualRegisterReader(Operand2, "r13");
 
                             asm.Write(op1.PreLines);
@@ -1574,7 +1586,7 @@ namespace SoftEther.WebSocket.Helper
                         asm.Write(esp2.PostLines);
 
                         // push
-                        var memoryWriter = destMemory.AsmGenerateMemoryWriteCode(Address, true, "r13");
+                        var memoryWriter = destMemory.AsmGenerateMemoryAccessCode(Address, true, "r13");
 
                         asm.Write(memoryWriter.PreLines);
                         asm.WriteLine($"movl $0x{Next.Address:x}, {memoryWriter.RealRegisterFixed}");
@@ -2103,7 +2115,7 @@ if (state->UseAsm)
             Out.WriteLine("    exception_address = next_ip;");
             Out.WriteLine("    goto L_RETURN;");
 
-            Out.WriteLine("}");
+            Out.WriteLine("}"); 
 
             Out.WriteLine();
 
@@ -2319,7 +2331,7 @@ dynasm:
 
     mov     %rcx, %r8
 
-    mov     DYNASM_CPU_STATE_CONT_MEM_MINUS_START(%r8), %r15
+    mov     ASM_GLOBAL_CONT_MEM, %r15
     mov     DYNASM_CPU_STATE_START_IP(%r8), %r13d
 ");
 

@@ -18,10 +18,10 @@ default:	build
 build:	$(OBJECTS_test) bin/test64 bin/test_lib64.asm bin/test_exec64.asm
 
 bin/test_lib64.asm: obj/obj/linux/test64.o
-	objdump -dlSr obj/obj/linux/test64.o > bin/test_lib64.asm
+	objdump -dlSrD obj/obj/linux/test64.o > bin/test_lib64.asm
 
 bin/test_exec64.asm: bin/test64
-	objdump -dlSr bin/test64 > bin/test_exec64.asm
+	objdump -dlSrD bin/test64 > bin/test_exec64.asm
 
 obj/obj/linux/test64.o: test.c common.h
 	@mkdir -p obj/obj/linux/

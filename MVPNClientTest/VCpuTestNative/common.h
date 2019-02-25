@@ -97,4 +97,10 @@ MS_ABI NOINLINE void dynasm(DYNASM_CPU_STATE *t);
 #pragma pack(pop)
 #endif	// _WIN32
 
+extern uint ASM_GLOBAL_CPU_STATE;
+extern uint ASM_GLOBAL_CONT_MEM;
+
+static DYNASM_CPU_STATE *AsmCpuState = &ASM_GLOBAL_CPU_STATE;
+static byte *AsmContMemory = &ASM_GLOBAL_CONT_MEM;
+
 
