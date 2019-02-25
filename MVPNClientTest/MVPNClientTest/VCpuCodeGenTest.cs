@@ -491,8 +491,8 @@ namespace SoftEther.WebSocket.Helper
             }
 
             StringWriter ww = new StringWriter();
-            AsmVirtualRegisterWriter.WriteSaveRFlags(ww);
-            AsmVirtualRegisterWriter.WriteRestoreRFlags(ww);
+            //AsmVirtualRegisterWriter.WriteSaveRFlags(ww);
+            //AsmVirtualRegisterWriter.WriteRestoreRFlags(ww);
             ret.WriterPostLines.WriteLine(ww.ToString());
 
             return ret;
@@ -708,15 +708,15 @@ namespace SoftEther.WebSocket.Helper
         public static void WriteSaveRFlags(StringWriter w)
         {
             // todo: try faster
-            //w.WriteLine("mov $0, %eax");
-            //w.WriteLine("seto %al");
-            //w.WriteLine("lahf");
+            w.WriteLine("mov $0, %eax");
+            w.WriteLine("seto %al");
+            w.WriteLine("lahf");
         }
 
         public static void WriteRestoreRFlags(StringWriter w)
         {
-            //w.WriteLine("add $127, %al");
-            //w.WriteLine("sahf");
+            w.WriteLine("add $127, %al");
+            w.WriteLine("sahf");
         }
 
         public AsmVirtualRegisterWriter(string virtualTargetRegister, string tmpRegister = "r12")
@@ -735,8 +735,11 @@ namespace SoftEther.WebSocket.Helper
                     real = "r14d";
                     break;
 
-                case "ebx":
                 case "edx":
+                    real = "r9d";
+                    break;
+
+                case "ebx":
                 case "ebp":
                 case "esi":
                 case "edi":
@@ -770,7 +773,7 @@ namespace SoftEther.WebSocket.Helper
 
                 case "bh":
                 case "bl":
-                case "dh":
+//                case "dh":
                 case "dl":
                     real = virtualTargetRegister;
                     break;
@@ -842,8 +845,11 @@ namespace SoftEther.WebSocket.Helper
                         real = "r14d";
                         break;
 
-                    case "ebx":
                     case "edx":
+                        real = "r9d";
+                        break;
+
+                    case "ebx":
                     case "ebp":
                     case "esi":
                     case "edi":
@@ -877,7 +883,7 @@ namespace SoftEther.WebSocket.Helper
                     case "bh":
                     case "bl":
                     case "dh":
-                    case "dl":
+                    //case "dl":
                         real = virtualTargetRegister;
                         if (forceTmp)
                         {
@@ -1320,7 +1326,7 @@ namespace SoftEther.WebSocket.Helper
 
                         var op1_base_reg = new AsmVirtualRegisterReader(Operand1.BaseRegister, "r12");
                         var op1_index_reg = new AsmVirtualRegisterReader(Operand1.IndexRegister, "r13");
-                        var op2 = new AsmVirtualRegisterReader(Operand2, "r9");
+                        var op2 = new AsmVirtualRegisterReader(Operand2, "ecx");
 
                         asm.Write(op1_base_reg.PreLines);
                         asm.Write(op1_index_reg.PreLines);
@@ -1365,8 +1371,10 @@ namespace SoftEther.WebSocket.Helper
                         var op1 = new AsmVirtualRegisterReader(Operand1.GetAsmRegisterOrImm(), "r12");
 
                         asm.WriteLine("mov %r10d, %eax");
+                        asm.WriteLine("mov %r9d, %edx");
                         asm.WriteLine($"div {op1.RealRegisterOrImm}");
                         asm.WriteLine("mov %eax, %r10d");
+                        asm.WriteLine("mov %edx, %r9d");
 
                         break;
                     }

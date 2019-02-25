@@ -164,7 +164,7 @@ dynasm:
     movl DYNASM_CPU_STATE_EAX(%r8), %r10d
     movl DYNASM_CPU_STATE_EBX(%r8), %ebx
     movl DYNASM_CPU_STATE_ECX(%r8), %r14d
-    movl DYNASM_CPU_STATE_EDX(%r8), %edx
+    movl DYNASM_CPU_STATE_EDX(%r8), %r9d
     movl DYNASM_CPU_STATE_ESI(%r8), %esi
     movl DYNASM_CPU_STATE_EDI(%r8), %edi
     movl DYNASM_CPU_STATE_ESP(%r8), %r11d
@@ -176,14 +176,21 @@ dynasm_begin:
 
 L_JUMP_TABLE:
 # Jump table
+mov $0, %eax
+seto %al
+lahf
 cmp $0x7fffffff, %r13d
 jne L_RESUME
+add $127, %al
+sahf
 jmp L_ERROR
 L_RESUME:
 cmp $0x80488b0, %r13d
 jb L_JUMP_TABLE_INVALID_ADDRESS
 cmp $0x80489f9, %r13d
 ja L_JUMP_TABLE_INVALID_ADDRESS
+add $127, %al
+sahf
 lea -0x80488b0(%r13d), %r14d
 lea 7(%rip), %r12
 mov (%r12, %r14, 8), %r14
@@ -520,6 +527,8 @@ L_JUMP_TABLE_DATA:
 .quad L_80489f8
 .quad L_80489f9
 L_JUMP_TABLE_INVALID_ADDRESS:
+add $127, %al
+sahf
 L_JUMP_TABLE_INVALID_ADDRESS2:
 movl $InvalidJumpTarget, DYNASM_CPU_STATE_EXCEPTION_TYPE(%r8)
 movl %r13d, DYNASM_CPU_STATE_EXCEPTION_ADDRESS(%r8)
@@ -609,7 +618,7 @@ lea 0x0(%esi), %esi
 
 L_80488e8:
 # 80488e8 xor %edx,%edx
-xor %edx, %edx
+xor %r9d, %r9d
 
 L_80488ea:
 # 80488ea mov %ebx,%eax
@@ -618,12 +627,14 @@ movl %ebx, %r10d
 L_80488ec:
 # 80488ec div %ecx
 mov %r10d, %eax
+mov %r9d, %edx
 div %r14d
 mov %eax, %r10d
+mov %edx, %r9d
 
 L_80488ee:
 # 80488ee test %edx,%edx
-test %edx, %edx
+test %r9d, %r9d
 
 L_80488f0:
 # 80488f0 je 80488fc <test_target1+0x4c>
@@ -758,7 +769,7 @@ L_8048930:
 # 8048930 mov 0xc(%esp),%edx
 lea 0xC(%r11d), %r12d
 lea (%r12, %r15, 1), %r12
-movl (%r12), %edx
+movl (%r12), %r9d
 
 
 L_8048934:
@@ -774,7 +785,7 @@ add $0x1, %r10d
 
 L_804893a:
 # 804893a cmp %eax,%edx
-cmp %r10d, %edx
+cmp %r10d, %r9d
 
 L_804893c:
 # 804893c ja 8048930 <test_target2+0x20>
@@ -796,12 +807,12 @@ L_8048948:
 # 8048948 mov 0xc(%esp),%edx
 lea 0xC(%r11d), %r12d
 lea (%r12, %r15, 1), %r12
-movl (%r12), %edx
+movl (%r12), %r9d
 
 
 L_804894c:
 # 804894c test %edx,%edx
-test %edx, %edx
+test %r9d, %r9d
 
 L_804894e:
 # 804894e je 804896e <test_target2+0x5e>
@@ -813,7 +824,7 @@ lea 0x10(%r11d), %ebx
 
 L_8048954:
 # 8048954 xor %edx,%edx
-xor %edx, %edx
+xor %r9d, %r9d
 
 L_8048956:
 # 8048956 lea 0x0(%esi),%esi
@@ -832,18 +843,18 @@ movl (%r12), %r14d
 
 L_8048964:
 # 8048964 add (%ebx,%edx,4),%eax
-lea 0x0(%ebx, %edx, 4), %r12d
+lea 0x0(%ebx, %r9d, 4), %r12d
 lea (%r12, %r15, 1), %r12
 add (%r12), %r10d
 
 
 L_8048967:
 # 8048967 add $0x1,%edx
-add $0x1, %edx
+add $0x1, %r9d
 
 L_804896a:
 # 804896a cmp %edx,%ecx
-cmp %edx, %r14d
+cmp %r9d, %r14d
 
 L_804896c:
 # 804896c ja 8048960 <test_target2+0x50>
@@ -1160,7 +1171,7 @@ dynasm_end:
     movl %r10d, DYNASM_CPU_STATE_EAX(%r8)
     movl %ebx, DYNASM_CPU_STATE_EBX(%r8)
     movl %r14d, DYNASM_CPU_STATE_ECX(%r8)
-    movl %edx, DYNASM_CPU_STATE_EDX(%r8)
+    movl %r9d, DYNASM_CPU_STATE_EDX(%r8)
     movl %esi, DYNASM_CPU_STATE_ESI(%r8)
     movl %edi, DYNASM_CPU_STATE_EDI(%r8)
     movl %r11d, DYNASM_CPU_STATE_ESP(%r8)
