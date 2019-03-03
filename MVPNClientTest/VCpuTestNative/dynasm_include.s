@@ -1,13 +1,13 @@
 
-#    .data
-#    .globl	ASM_GLOBAL_CPU_STATE
-#    .globl  ASM_GLOBAL_CONT_MEM
+   .data
+   .globl	ASM_GLOBAL_CPU_STATE
+   .globl  ASM_GLOBAL_CONT_MEM
 
-# ASM_GLOBAL_CPU_STATE:
-#    .space 1032
-#
-# ASM_GLOBAL_CONT_MEM:
-#    .space 0x200000
+ASM_GLOBAL_CPU_STATE:
+   .space 1032
+
+ASM_GLOBAL_CONT_MEM:
+   .space 0x200000
 
 .struct 0
 C2ASM_a:
