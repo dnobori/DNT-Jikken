@@ -15,10 +15,19 @@ CC=gcc
 # Build Action
 default:	build
 
-build:	$(OBJECTS_test) bin/test64 bin/test_lib64.asm bin/test_exec64.asm
+build:	$(OBJECTS_test) bin/test64 bin/test_lib64.asm bin/test_exec64.asm bin/dynasm_o.asm bin/dynasm_vc_o.asm bin/nativetest_x64_exe.asm
+
+bin/nativetest_x64_exe.asm: bin/nativetest_x64.exe
+	objdump -dlSrD bin/nativetest_x64.exe > bin/nativetest_x64_exe.asm
 
 bin/test_lib64.asm: obj/obj/linux/test64.o
 	objdump -dlSrD obj/obj/linux/test64.o > bin/test_lib64.asm
+
+bin/dynasm_o.asm: obj/obj/linux/dynasm.o
+	objdump -dlSrD obj/obj/linux/dynasm.o > bin/dynasm_o.asm
+
+bin/dynasm_vc_o.asm: obj/obj/linux/dynasm_vc.o
+	objdump -dlSrD obj/obj/linux/dynasm_vc.o > bin/dynasm_vc_o.asm
 
 bin/test_exec64.asm: bin/test64
 	objdump -dlSrD bin/test64 > bin/test_exec64.asm

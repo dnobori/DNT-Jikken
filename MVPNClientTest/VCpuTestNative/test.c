@@ -253,7 +253,8 @@ int main()
 	}
 
 	// TODO: ここで問題発生; 取得されるアドレスが不正 リロケーションうまくいってない?
-	printf("ASN_GLOBAL_CONT_MEM = %p\n", memory->ContiguousMemory);
+	printf("ASN_GLOBAL_CONT_MEM = 0x%p\n", memory->ContiguousMemory);
+	printf("dynasm = 0x%p\n", dynasm);
 
 	for (uint i = 0;i < count;i++)
 	{

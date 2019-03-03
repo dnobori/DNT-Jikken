@@ -84,6 +84,7 @@ typedef struct C2ASM
 typedef struct DYNASM_CPU_STATE
 {
 	volatile byte *ContMemMinusStart;
+	volatile uint ContStart;
 	volatile uint Eax, Ebx, Ecx, Edx, Esi, Edi, Ebp, Esp;
 
 	volatile uint StartIp;

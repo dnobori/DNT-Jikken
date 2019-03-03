@@ -58,6 +58,7 @@ if (state->UseAsm)
 	DYNASM_CPU_STATE dyn = { 0 };
 
 	dyn.ContMemMinusStart = cont_memory_minus_start;
+    dyn.ContStart = cont_start;
 	dyn.Eax = eax;
 	dyn.Ebx = ebx;
 	dyn.Ecx = ecx;

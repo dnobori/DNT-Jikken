@@ -10,6 +10,7 @@ c2asm_func2:
 #	imull	$81920000, C2ASM_b(%rcx), %eax
 	addl	%edx, %eax
 aa:
+	mov $0x1122334455667788, %r15
 	mov %eax, %r12d
 	shr %r12d
 	and $0xFF, %r12d

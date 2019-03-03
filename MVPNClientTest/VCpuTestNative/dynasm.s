@@ -12,6 +12,8 @@ InvalidJumpTarget = 1
     .globl  L_JUMP_TABLE_DATA
     .globl  L_JUMP_TABLE_INVALID_ADDRESS
     .globl  L_JUMP_TABLE_INVALID_ADDRESS2
+    .globl	ASM_GLOBAL_CPU_STATE
+    .globl  ASM_GLOBAL_CONT_MEM
     .globl L_80488b0
     .globl L_80488b1
     .globl L_80488b2
@@ -158,7 +160,10 @@ dynasm:
 
     mov     %rcx, %r8
 
-    mov     ASM_GLOBAL_CONT_MEM, %r15
+    movabs  $ASM_GLOBAL_CONT_MEM, %r15
+    subl     DYNASM_CPU_STATE_CONT_START(%r8), %r15d
+    # mov     DYNASM_CPU_STATE_CONT_MEM_MINUS_START(%r8), %r15
+
     mov     DYNASM_CPU_STATE_START_IP(%r8), %r13d
 
     movl DYNASM_CPU_STATE_EAX(%r8), %r10d
@@ -1198,4 +1203,10 @@ dynasm_end:
 	pop	%r12
 	ret
 	.cfi_endproc
+
+ASM_GLOBAL_CPU_STATE:
+   .space 1032
+
+ASM_GLOBAL_CONT_MEM:
+    .space 0x200000
 

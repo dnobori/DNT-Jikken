@@ -18,7 +18,7 @@ obj/obj/x64_gas_for_vc/dynasm.o: dynasm.s dynasm_include.s
 	as -64 --gstabs+ -c dynasm.s -o obj/obj/x64_gas_for_vc/dynasm.o
 
 obj/obj/x64_gas_for_vc/dynasm_vc.o: obj/obj/x64_gas_for_vc/dynasm.o
-	objcopy --debugging --output-format=pe-x86-64 obj/obj/x64_gas_for_vc/dynasm.o obj/obj/x64_gas_for_vc/dynasm_vc.o
+	objcopy --debugging --output-format=pe-bigobj-x86-64 obj/obj/x64_gas_for_vc/dynasm.o obj/obj/x64_gas_for_vc/dynasm_vc.o
 
 clean:
 	rm -f obj/obj/x64_gas_for_vc/c2asm_func2.o obj/obj/x64_gas_for_vc/c2asm_func2_vc.o obj/obj/x64_gas_for_vc/dynasm.o obj/obj/x64_gas_for_vc/dynasm_vc.o

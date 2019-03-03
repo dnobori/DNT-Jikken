@@ -152,6 +152,8 @@
       <AdditionalLibraryDirectories>$(SolutionDir)VCpuTestNative_src\win32_libs\vs2017\$(PlatformName)_$(ConfigurationName)</AdditionalLibraryDirectories>
       <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>legacy_stdio_definitions.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SpecifySectionAttributes>.text,RWE</SpecifySectionAttributes>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
@@ -186,6 +188,8 @@
       <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>obj/obj/x64_gas_for_vc/dynasm_vc.o;obj/obj/x64_gas_for_vc/c2asm_func2_vc.o;legacy_stdio_definitions.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>false</LargeAddressAware>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SpecifySectionAttributes>.text,RWE</SpecifySectionAttributes>
     </Link>
     <PreBuildEvent>
       <Command>Build_gas_for_vc.cmd</Command>
@@ -227,6 +231,8 @@
       <AdditionalLibraryDirectories>$(SolutionDir)VCpuTestNative_src\win32_libs\vs2017\$(PlatformName)_$(ConfigurationName)</AdditionalLibraryDirectories>
       <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>legacy_stdio_definitions.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SpecifySectionAttributes>.text,RWE</SpecifySectionAttributes>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -265,6 +271,8 @@
       <AdditionalOptions>/IGNORE:4099 %(AdditionalOptions)</AdditionalOptions>
       <AdditionalDependencies>obj/obj/x64_gas_for_vc/dynasm_vc.o;obj/obj/x64_gas_for_vc/c2asm_func2_vc.o;legacy_stdio_definitions.lib;kernel32.lib;user32.lib;gdi32.lib;winspool.lib;comdlg32.lib;advapi32.lib;shell32.lib;ole32.lib;oleaut32.lib;uuid.lib;odbc32.lib;odbccp32.lib;%(AdditionalDependencies)</AdditionalDependencies>
       <LargeAddressAware>false</LargeAddressAware>
+      <RandomizedBaseAddress>false</RandomizedBaseAddress>
+      <SpecifySectionAttributes>.text,RWE</SpecifySectionAttributes>
     </Link>
     <PreBuildEvent>
       <Command>Build_gas_for_vc.cmd</Command>
