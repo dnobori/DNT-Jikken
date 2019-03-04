@@ -181,14 +181,21 @@ dynasm_begin:
 
 L_JUMP_TABLE:
 # Jump table
+mov $0, %eax
+seto %al
+lahf
 cmp $0x7fffffff, %r13d
 jne L_RESUME
+add $127, %al
+sahf
 jmp L_ERROR
 L_RESUME:
 cmp $0x80488b0, %r13d
 jb L_JUMP_TABLE_INVALID_ADDRESS
 cmp $0x80489f9, %r13d
 ja L_JUMP_TABLE_INVALID_ADDRESS
+add $127, %al
+sahf
 lea -0x80488b0(%r13d), %r14d
 lea 7(%rip), %r12
 mov (%r12, %r14, 8), %r14
@@ -525,6 +532,8 @@ L_JUMP_TABLE_DATA:
 .quad L_80489f8
 .quad L_80489f9
 L_JUMP_TABLE_INVALID_ADDRESS:
+add $127, %al
+sahf
 L_JUMP_TABLE_INVALID_ADDRESS2:
 movl $InvalidJumpTarget, DYNASM_CPU_STATE_EXCEPTION_TYPE(%r8)
 movl %r13d, DYNASM_CPU_STATE_EXCEPTION_ADDRESS(%r8)
@@ -532,6 +541,7 @@ jmp L_ERROR
 
 L_80488b0:
 # 80488b0 push %esi
+nop
 lea -4(%r11d), %r11d
 mov %r11d, %r13d
 lea (%r13, %r15, 1), %r13

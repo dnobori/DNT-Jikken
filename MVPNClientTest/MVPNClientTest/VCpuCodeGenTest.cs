@@ -85,6 +85,8 @@ namespace SoftEther.WebSocket.Helper
         public const uint Asm_Fast1_Dummy_Start = 0x500000;
         public const uint Asm_Fast1_Dummy_End = 0x08100000;
 
+        public static readonly string Asm_ContMemMinusStart = $"$(ASM_GLOBAL_CONT_MEM - 0x{Asm_Fast1_Dummy_Start:x})";
+
         public static readonly string[] RegisterList = {
             "eax", "ebx", "ecx", "edx", "esi", "edi", "esp", "ebp", };
     }
@@ -498,7 +500,37 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 // calc real address
-                ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}");
+                //ret.WriterPreLines.WriteLine($"movabs {VConsts.Asm_ContMemMinusStart}, %rdx"); // target2: 61 -> 120
+                //ret.WriterPreLines.WriteLine($"mov ASM_GLOBAL_CONT_MEM_MINUS_START, %rdx"); // target2:61 -> 87
+
+                //ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %rdx, 1), %{tmpRegister}");
+
+                //ret.WriterPreLines.WriteLine($"add ASM_GLOBAL_CONT_MEM_MINUS_START, %{tmpRegister}"); // target2:61 -> 72 ただし eflags が更新されてしまう
+
+                //ret.WriterPreLines.WriteLine("PCMPGTD %xmm1, %xmm2");
+
+                ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}"); // target2: 60
+                //ret.WriterPreLines.WriteLine("mov %rax, %rax");
+                //ret.WriterPreLines.WriteLine($"test %r15, ASM_GLOBAL_CONT_MEM_MINUS_START"); // target2: 87
+                //ret.WriterPreLines.WriteLine($"test %r15, %r14"); // target2: 77
+                //ret.WriterPreLines.WriteLine($"jbe L_TMP_{ codeAddress }");
+                //ret.WriterPreLines.WriteLine($"movl $0, (1)");
+                //ret.WriterPreLines.WriteLine($"L_TMP_{ codeAddress }:");
+
+                //ret.WriterPreLines.WriteLine($"add %r15, %{tmpRegister}"); // target2:62
+
+                //                ret.WriterPreLines.WriteLine(
+                //$@"
+                //mov %r15, %rcx
+                //mov %r15, %rdx
+                //not %rcx
+                //lea (%rcx, %rdx, 1), %rcx
+                //cdq
+                //mov %rdx, %rcx
+                //jecxz L_TMP_{ codeAddress }
+                //mov %rcx, %rdx
+                //L_TMP_{ codeAddress }:
+                //");
 
                 if (writeMode == false)
                 {
@@ -1037,6 +1069,14 @@ namespace SoftEther.WebSocket.Helper
             }
 
             w.WriteLine("{");
+
+            if (Address == 0x80488b0)
+            {
+                for (int i = 0; i < 1; i++)
+                {
+                    asm.WriteLine("nop");
+                }
+            }
 
 
             switch (Opcode)

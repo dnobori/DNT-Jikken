@@ -254,6 +254,7 @@ int main()
 
 	// TODO: ここで問題発生; 取得されるアドレスが不正 リロケーションうまくいってない?
 	printf("ASN_GLOBAL_CONT_MEM = 0x%p\n", memory->ContiguousMemory);
+	printf("ASM_GLOBAL_CONT_MEM_MINUS_START = 0x%p\n", ASM_GLOBAL_CONT_MEM_MINUS_START);
 	printf("dynasm = 0x%p\n", dynasm);
 
 	for (uint i = 0;i < count;i++)
@@ -272,7 +273,7 @@ int main()
 			*((uint*)(byte*)(memory->ContiguousMemory + state->Esp - memory->ContiguousStart)) = 0x7fffffff;
 		}
 
-		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target3);
+		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target2);
 
 		if (state->ExceptionString[0] != 0)
 		{

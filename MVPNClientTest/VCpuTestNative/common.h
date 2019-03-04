@@ -100,6 +100,7 @@ MS_ABI NOINLINE void dynasm(DYNASM_CPU_STATE *t);
 
 extern uint ASM_GLOBAL_CPU_STATE;
 extern uint ASM_GLOBAL_CONT_MEM;
+extern uint ASM_GLOBAL_CONT_MEM_MINUS_START;
 
 static DYNASM_CPU_STATE *AsmCpuState = &ASM_GLOBAL_CPU_STATE;
 static byte *AsmContMemory = &ASM_GLOBAL_CONT_MEM;
