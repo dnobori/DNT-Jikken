@@ -55,6 +55,14 @@ namespace SoftEther.WebSocket.Helper
         InvalidJumpTarget = 1,
     }
 
+    [Flags]
+    public enum AsmEFlagsSaveMethod
+    {
+        None,
+        Lahf,
+        Pushf,
+    }
+
     public static class VConsts
     {
         public const uint PageSize = 4096;
@@ -71,6 +79,8 @@ namespace SoftEther.WebSocket.Helper
         public const FastCheckTypeEnum FastCheckType = FastCheckTypeEnum.Fast1;
 
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
+
+        public const AsmEFlagsSaveMethod EFlagsSaveMethod = AsmEFlagsSaveMethod.Lahf;
 
         public const uint Asm_Fast1_Dummy_Start = 0x500000;
         public const uint Asm_Fast1_Dummy_End = 0x08100000;
@@ -719,16 +729,29 @@ namespace SoftEther.WebSocket.Helper
 
         public static void WriteSaveRFlags(StringWriter w)
         {
-            // todo: try faster
-            w.WriteLine("mov $0, %eax");
-            w.WriteLine("seto %al");
-            w.WriteLine("lahf");
+            if (VConsts.EFlagsSaveMethod == AsmEFlagsSaveMethod.Lahf)
+            {
+                w.WriteLine("mov $0, %eax");
+                w.WriteLine("seto %al");
+                w.WriteLine("lahf");
+            }
+            else if (VConsts.EFlagsSaveMethod == AsmEFlagsSaveMethod.Pushf)
+            {
+                w.WriteLine("pushf");
+            }
         }
 
         public static void WriteRestoreRFlags(StringWriter w)
         {
-            w.WriteLine("add $127, %al");
-            w.WriteLine("sahf");
+            if (VConsts.EFlagsSaveMethod == AsmEFlagsSaveMethod.Lahf)
+            {
+                w.WriteLine("add $127, %al");
+                w.WriteLine("sahf");
+            }
+            else if (VConsts.EFlagsSaveMethod == AsmEFlagsSaveMethod.Pushf)
+            {
+                w.WriteLine("popf");
+            }
         }
 
         public AsmVirtualRegisterWriter(string virtualTargetRegister, string tmpRegister = "r12")
