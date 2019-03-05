@@ -177,9 +177,6 @@ NOINLINE UINT test_target2()
 		}
 	}
 	return ret;
-
-	//ret = 1165752192
-	//time = 60,848,300
 }
 
 NOINLINE UINT test_target4(UINT a)

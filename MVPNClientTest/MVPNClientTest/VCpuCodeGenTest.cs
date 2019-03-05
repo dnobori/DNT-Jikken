@@ -53,6 +53,7 @@ namespace SoftEther.WebSocket.Helper
     public enum AsmExceptionType
     {
         InvalidJumpTarget = 1,
+        MemoryOutOfRange = 2,
     }
 
     [Flags]
@@ -308,6 +309,7 @@ namespace SoftEther.WebSocket.Helper
     {
         public string PreLines => WriterPreLines.ToString();
         public string PostLines => WriterPostLines.ToString();
+        public string TailLines => WriterTailLines.ToString();
         public string RealRegister;
         public bool UseTmp;
 
@@ -323,6 +325,7 @@ namespace SoftEther.WebSocket.Helper
 
         public StringWriter WriterPreLines = new StringWriter();
         public StringWriter WriterPostLines = new StringWriter();
+        public StringWriter WriterTailLines = new StringWriter();
     }
 
     class VCodeOperand
@@ -500,6 +503,7 @@ namespace SoftEther.WebSocket.Helper
                 }
 
                 // calc real address
+
                 //ret.WriterPreLines.WriteLine($"movabs {VConsts.Asm_ContMemMinusStart}, %rdx"); // target2: 61 -> 120
                 //ret.WriterPreLines.WriteLine($"mov ASM_GLOBAL_CONT_MEM_MINUS_START, %rdx"); // target2:61 -> 87
 
@@ -509,7 +513,29 @@ namespace SoftEther.WebSocket.Helper
 
                 //ret.WriterPreLines.WriteLine("PCMPGTD %xmm1, %xmm2");
 
+                // 比較
+                //ret.WriterPreLines.WriteLine($"test ASM_GLOBAL_CONT_MEM_MINUS_START, %r15"); // target2: 60 -> 75
+                //ret.WriterPreLines.WriteLine($"test $0x12345678, %r15"); // target2: 60 -> 75
+
+                //ret.WriterPreLines.WriteLine($"mov ASM_GLOBAL_TMP1, %rcx"); // target2: 60 -> 75
+                //ret.WriterPreLines.WriteLine($"mov %r15, ASM_GLOBAL_TMP2"); // target2: 60 -> 75
+
                 ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}"); // target2: 60
+
+                string out_of_range_label = $"L_ERROR_OUT_RANGE_{codeAddress:x}";
+
+                ret.WriterPreLines.WriteLine("cmp %rsp, %r15");
+                ret.WriterPreLines.WriteLine($"je {out_of_range_label}");
+                ret.WriterPreLines.WriteLine("cmp %r8, %r15");
+                ret.WriterPreLines.WriteLine($"je {out_of_range_label}");
+
+                ret.WriterTailLines.WriteLine($"{out_of_range_label}:");
+                ret.WriterTailLines.WriteLine($"movl $0x{codeAddress:x}, DYNASM_CPU_STATE_EXCEPTION_ADDRESS(%r8)");
+                ret.WriterTailLines.WriteLine($"movl ${(int)AsmExceptionType.MemoryOutOfRange}, DYNASM_CPU_STATE_EXCEPTION_TYPE(%r8)");
+                ret.WriterTailLines.WriteLine("jmp L_ERROR");
+
+                //ret.WriterPreLines.WriteLine($"mov ASM_GLOBAL_TMP4, %r13");
+
                 //ret.WriterPreLines.WriteLine("mov %rax, %rax");
                 //ret.WriterPreLines.WriteLine($"test %r15, ASM_GLOBAL_CONT_MEM_MINUS_START"); // target2: 87
                 //ret.WriterPreLines.WriteLine($"test %r15, %r14"); // target2: 77
@@ -1051,7 +1077,7 @@ namespace SoftEther.WebSocket.Helper
             }
         }
 
-        public void WriteCode(StringWriter w, StringWriter asm, bool is_dual_fast)
+        public void WriteCode(StringWriter w, StringWriter asm, StringWriter asmTail, bool is_dual_fast)
         {
             if (is_dual_fast == false)
             {
@@ -1070,13 +1096,13 @@ namespace SoftEther.WebSocket.Helper
 
             w.WriteLine("{");
 
-            if (Address == 0x80488b0)
-            {
-                for (int i = 0; i < 1; i++)
-                {
-                    asm.WriteLine("nop");
-                }
-            }
+            //if (Address == 0x8048911)
+            //{
+            //    for (int i = 0; i < 3; i++)
+            //    {
+            //        asm.WriteLine("nop");
+            //    }
+            //}
 
 
             switch (Opcode)
@@ -1125,6 +1151,7 @@ namespace SoftEther.WebSocket.Helper
                             asm.Write(memoryWriter.PreLines);
                             asm.WriteLine($"mov %{valueReader.RealRegister}, {memoryWriter.RealRegisterFixed}");
                             asm.Write(memoryWriter.PostLines);
+                            asmTail.Write(memoryWriter.TailLines);
 
                             asm.Write(valueReader.PostLines);
                         }
@@ -1156,6 +1183,7 @@ namespace SoftEther.WebSocket.Helper
                             asm.Write(memoryReader.PreLines);
                             asm.WriteLine($"mov {memoryReader.RealRegisterFixed}, %{valueWriter.RealRegister}");
                             asm.Write(memoryReader.PostLines);
+                            asmTail.Write(memoryReader.TailLines);
 
                             asm.Write(valueWriter.PostLines);
                         }
@@ -1242,6 +1270,7 @@ namespace SoftEther.WebSocket.Helper
                             asm.WriteLine($"movl {op1.RealRegisterFixed}, {op2.RealRegisterOrImm}");
                             asm.Write(op2.PostLines);
                             asm.Write(op1.PostLines);
+                            asmTail.Write(op1.TailLines);
                         }
                         else if (Operand2.IsPointer && Operand1.IsPointer == false)
                         {
@@ -1253,6 +1282,7 @@ namespace SoftEther.WebSocket.Helper
                             asm.WriteLine($"movl {op1.RealRegisterOrImm}, {op2.RealRegisterFixed}");
                             asm.Write(op2.PostLines);
                             asm.Write(op1.PostLines);
+                            asmTail.Write(op2.TailLines);
                         }
                         else
                         {
@@ -1310,6 +1340,8 @@ namespace SoftEther.WebSocket.Helper
                         asm.Write(memoryReader.PreLines);
                         asm.WriteLine($"mov {memoryReader.RealRegisterFixed}, %ecx");
                         asm.Write(memoryReader.PostLines);
+
+                        asmTail.Write(memoryReader.TailLines);
 
                         // esp += 4
                         var esp1 = new AsmVirtualRegisterReader("esp", "r12");
@@ -1482,6 +1514,8 @@ namespace SoftEther.WebSocket.Helper
                             asm.WriteLine($"add {op1.RealRegisterFixed}, {op2.RealRegisterOrImm}");
                             asm.Write(op2.PostLines);
                             asm.Write(op1.PostLines);
+
+                            asmTail.Write(op1.TailLines);
                         }
                         else if (Operand1.IsPointer == false && Operand2.IsPointer == false)
                         {
@@ -1547,6 +1581,8 @@ namespace SoftEther.WebSocket.Helper
                             asm.WriteLine($"sub {op1.RealRegisterFixed}, {op2.RealRegisterOrImm}");
                             asm.Write(op2.PostLines);
                             asm.Write(op1.PostLines);
+
+                            asmTail.Write(op1.TailLines);
                         }
                         else if (Operand1.IsPointer == false && Operand2.IsPointer == false)
                         {
@@ -1654,6 +1690,8 @@ namespace SoftEther.WebSocket.Helper
                         asm.Write(memoryWriter.PreLines);
                         asm.WriteLine($"movl $0x{Next.Address:x}, {memoryWriter.RealRegisterFixed}");
                         asm.Write(memoryWriter.PostLines);
+
+                        asmTail.Write(memoryWriter.TailLines);
 
                         // jump
                         AsmWriteJumpCode(asm, "jmp", Operand1);
@@ -1768,6 +1806,7 @@ namespace SoftEther.WebSocket.Helper
     {
         StringWriter Out = new StringWriter();
         StringWriter Asm = new StringWriter();
+        StringWriter AsmTail = new StringWriter();
 
         string[] Lines;
         public Dictionary<string, uint> FunctionTable;
@@ -2251,7 +2290,7 @@ if (state->UseAsm)
                 Asm.WriteLine($"L_{op.Address:x}:");
                 Asm.WriteLine($"# {op.ToString()}");
 
-                op.WriteCode(Out, Asm, false);
+                op.WriteCode(Out, Asm, AsmTail, false);
 
                 Out.WriteLine();
                 Asm.WriteLine();
@@ -2267,7 +2306,7 @@ if (state->UseAsm)
                     }
 
                     Out.WriteLine($"// {op.ToString()}");
-                    op.WriteCode(Out, Asm, true);
+                    op.WriteCode(Out, Asm, AsmTail, true);
                     Out.WriteLine();
                 }
             }
@@ -2427,6 +2466,8 @@ dynasm:
             {
                 Out.WriteLine("}");
             }
+
+            Asm.WriteLine(AsmTail.ToString());
 
             Asm.WriteLine(
 @"

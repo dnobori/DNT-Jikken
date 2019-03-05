@@ -5,13 +5,30 @@
    .globl  ASM_GLOBAL_CONT_MEM_MINUS_START
 
 ASM_GLOBAL_CPU_STATE:
-   .space 1032
+   .space 1024
 
 ASM_GLOBAL_CONT_MEM:
    .space 0x200000
 
 ASM_GLOBAL_CONT_MEM_MINUS_START:
     .quad ASM_GLOBAL_CONT_MEM - 0x500000
+
+ASM_GLOBAL_TMP1:
+    .quad 0x500000
+ASM_GLOBAL_TMP2:
+    .quad 0x700000
+ASM_GLOBAL_TMP3:
+    .quad 0
+ASM_GLOBAL_TMP4:
+    .quad 0
+ASM_GLOBAL_TMP5:
+    .quad 0
+ASM_GLOBAL_TMP6:
+    .quad 0
+ASM_GLOBAL_TMP7:
+    .quad 0
+ASM_GLOBAL_TMP8:
+    .quad 0
 
 .struct 0
 C2ASM_a:
