@@ -4,7 +4,6 @@
 
 void mmap_test4()
 {
-	int i;
 	HANDLE h = CreateFileMapping(INVALID_HANDLE_VALUE, NULL, PAGE_READWRITE | SEC_RESERVE, 1, 0, NULL);
 	if (h == NULL)
 	{
@@ -25,6 +24,16 @@ void mmap_test4()
 		}
 	}
 	printf("alloc end.\n");
+}
+
+void mmap_test5()
+{
+	int i;
+	for (i = 0;i < 10000;i++)
+	{
+		mmap_test4();
+		printf("%u\n", i);
+	}
 }
 
 void mmap_test3()
@@ -419,7 +428,7 @@ int main()
 	//mmap_test1();
 	//mmap_test2();
 	//mmap_test2_0();
-	mmap_test2_2();
+	mmap_test5();
 	//mmap_test3();
 	//mmap_test4();
 
