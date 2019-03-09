@@ -70,7 +70,6 @@ namespace SoftEther.WebSocket.Helper
         public const uint NumPages = (uint)(0x100000000 / PageSize);
         public const uint Magic_Return = 0xdeadbeef;
 
-
         public const bool Test_InterpreterMode = false;
         public const bool Test_AllLabel = false;
         public const bool Test_DualCode = false;
