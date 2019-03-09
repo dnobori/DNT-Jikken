@@ -261,7 +261,7 @@ int main()
 	{
 		state->Esp = stackPtr;
 		state->Esp -= 4;
-
+		
 		if (state->UseAsm == false)
 		{
 			mem_write(memory->PageTableEntry, state->Esp, CallRetAddress__MagicReturn);
@@ -273,7 +273,7 @@ int main()
 			*((uint*)(byte*)(memory->ContiguousMemory + state->Esp - memory->ContiguousStart)) = 0x7fffffff;
 		}
 
-		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target2);
+		Iam_The_IntelCPU_HaHaHa(state, FunctionTable_test_target3);
 
 		if (state->ExceptionString[0] != 0)
 		{

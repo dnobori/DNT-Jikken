@@ -56,6 +56,7 @@ uint memcache_esp_0x18_pin = 0x7fffffff; uint memcache_esp_0x18_data = 0xcafebee
 L_START:
 switch (next_ip)
 {
+case 0x80488b0: goto L_80488b0;
 case 0x8048910: goto L_8048910;
 case 0x8048980: goto L_8048980;
 case 0x80489e0: goto L_80489e0;
@@ -75,6 +76,301 @@ default:
     exception_string = "Invalid call return target.";
     exception_address = next_ip;
     goto L_RETURN;
+}
+
+// function test_target1();
+// 80488b0 push %esi
+L_80488b0:
+{
+esp -= 4;
+vaddr = esp;
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488b0;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+*((uint*)(byte*)(cont_memory_minus_start + vaddr)) = esi;
+
+}
+
+// 80488b1 push %ebx
+{
+esp -= 4;
+vaddr = esp;
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488b1;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+*((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ebx;
+
+}
+
+// 80488b2 xor %esi,%esi
+{
+esi = 0;
+}
+
+// 80488b4 mov $0x3,%ebx
+{
+ebx = ( +0x3);
+}
+
+// 80488b9 sub $0x10,%esp
+{
+esp -= ( +0x10);
+compare_result = esp;
+}
+
+// 80488bc movl $0x4e20,0xc(%esp)
+{
+vaddr = (esp +0xc);
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488bc;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+*((uint*)(byte*)(cont_memory_minus_start + vaddr)) = ( +0x4e20);
+
+}
+
+// 80488c4 mov 0xc(%esp),%eax
+{
+vaddr = (esp +0xc);
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488c4;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+eax= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
+
+}
+
+// 80488c8 cmp $0x2,%eax
+{
+compare_result = (uint)(eax - ( +0x2));
+}
+
+// 80488cb jbe 8048907 <test_target1+0x57>
+{
+if (compare_result == 0 || compare_result >= 0x80000000) {
+    goto L_8048907;
+}
+}
+
+// 80488cd lea 0x0(%esi),%esi
+{
+esi = esi;
+}
+
+// 80488d0 cmp $0x2,%ebx
+L_80488d0:
+{
+compare_result = (uint)(ebx - ( +0x2));
+}
+
+// 80488d3 jbe 80488f9 <test_target1+0x49>
+{
+if (compare_result == 0 || compare_result >= 0x80000000) {
+    goto L_80488f9;
+}
+}
+
+// 80488d5 test $0x1,%bl
+{
+compare_result = (uint)(bl & ( +0x1));
+}
+
+// 80488d8 je 80488fc <test_target1+0x4c>
+{
+if (compare_result == 0) {
+    goto L_80488fc;
+}
+}
+
+// 80488da mov $0x2,%ecx
+{
+ecx = ( +0x2);
+}
+
+// 80488df jmp 80488f2 <test_target1+0x42>
+{
+if (true) {
+    goto L_80488f2;
+}
+}
+
+// 80488e1 lea 0x0(%esi,%eiz,1),%esi
+{
+esi = (esi + eiz * 0x1);
+}
+
+// 80488e8 xor %edx,%edx
+L_80488e8:
+{
+edx = 0;
+}
+
+// 80488ea mov %ebx,%eax
+{
+eax = ebx;
+}
+
+// 80488ec div %ecx
+{
+if (edx != 0) {
+ulong tmp1 =  (uint)(((ulong)edx << 32) + (ulong)eax);
+ulong tmp2 = ecx;
+eax = (uint)(tmp1 / tmp2);
+edx = (uint)(tmp1 - tmp2 * eax);
+} else
+{ 
+uint tmp1 = eax;
+uint tmp2 = ecx;
+eax = tmp1 / tmp2;
+edx = tmp1 - tmp2 * eax;
+}
+}
+
+// 80488ee test %edx,%edx
+{
+compare_result = (uint)(edx);
+}
+
+// 80488f0 je 80488fc <test_target1+0x4c>
+{
+if (compare_result == 0) {
+    goto L_80488fc;
+}
+}
+
+// 80488f2 add $0x1,%ecx
+L_80488f2:
+{
+ecx += ( +0x1);
+compare_result = ecx;
+}
+
+// 80488f5 cmp %ebx,%ecx
+{
+compare_result = (uint)(ecx - ebx);
+}
+
+// 80488f7 jne 80488e8 <test_target1+0x38>
+{
+if (compare_result != 0) {
+    goto L_80488e8;
+}
+}
+
+// 80488f9 add $0x1,%esi
+L_80488f9:
+{
+esi += ( +0x1);
+compare_result = esi;
+}
+
+// 80488fc mov 0xc(%esp),%eax
+L_80488fc:
+{
+vaddr = (esp +0xc);
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x80488fc;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+eax= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
+
+}
+
+// 8048900 add $0x1,%ebx
+{
+ebx += ( +0x1);
+compare_result = ebx;
+}
+
+// 8048903 cmp %ebx,%eax
+{
+compare_result = (uint)(eax - ebx);
+}
+
+// 8048905 jae 80488d0 <test_target1+0x20>
+{
+if (compare_result <= 0x80000000) {
+    goto L_80488d0;
+}
+}
+
+// 8048907 add $0x10,%esp
+L_8048907:
+{
+esp += ( +0x10);
+compare_result = esp;
+}
+
+// 804890a mov %esi,%eax
+{
+eax = esi;
+}
+
+// 804890c pop %ebx
+{
+vaddr = esp;
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804890c;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+ebx= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
+
+esp += 4;
+}
+
+// 804890d pop %esi
+{
+vaddr = esp;
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804890d;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+esi= (uint)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
+
+esp += 4;
+}
+
+// 804890e ret 
+{
+vaddr = esp;
+#if !NO_CHECK
+if (vaddr < cont_start || vaddr >= cont_end){
+    exception_string = $"Access violation to 0x{vaddr:x}.";
+    exception_address = 0x804890e;
+    goto L_RETURN;
+}
+#endif // !NO_CHECK
+next_return= (CallRetAddress)(*((uint*)(byte*)(cont_memory_minus_start + vaddr)) );
+
+esp += 4;
+goto L_RET_FROM_CALL;
+}
+
+// 804890f nop 
+{
 }
 
 // function test_target2();
@@ -848,6 +1144,7 @@ L_RETURN:
 
 public enum FunctionTable
 {
+    test_target1 = 0x80488b0,
     test_target2 = 0x8048910,
     test_target4 = 0x8048980,
     test_target3 = 0x80489e0,

@@ -487,7 +487,10 @@ namespace SoftEther.WebSocket.Helper
             {
                 if (this.Displacement == 0)
                 {
-                    ret.WriterPreLines.WriteLine($"mov %{baseRegisterReader.RealRegister}, %{tmpRegister}d");
+                    if ($"{baseRegisterReader.RealRegister}" != $"{tmpRegister}d")
+                    {
+                        ret.WriterPreLines.WriteLine($"mov %{baseRegisterReader.RealRegister}, %{tmpRegister}d");
+                    }
                 }
                 else
                 {
@@ -512,7 +515,7 @@ namespace SoftEther.WebSocket.Helper
                 //ret.WriterPreLines.WriteLine($"add ASM_GLOBAL_CONT_MEM_MINUS_START, %{tmpRegister}"); // target2:61 -> 72 ただし eflags が更新されてしまう
 
                 //ret.WriterPreLines.WriteLine("PCMPGTD %xmm1, %xmm2");
-
+                
                 // 比較
                 //ret.WriterPreLines.WriteLine($"test ASM_GLOBAL_CONT_MEM_MINUS_START, %r15"); // target2: 60 -> 75
                 //ret.WriterPreLines.WriteLine($"test $0x12345678, %r15"); // target2: 60 -> 75
@@ -520,19 +523,19 @@ namespace SoftEther.WebSocket.Helper
                 //ret.WriterPreLines.WriteLine($"mov ASM_GLOBAL_TMP1, %rcx"); // target2: 60 -> 75
                 //ret.WriterPreLines.WriteLine($"mov %r15, ASM_GLOBAL_TMP2"); // target2: 60 -> 75
 
-                ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}"); // target2: 60
+                //// ret.WriterPreLines.WriteLine($"lea (%{tmpRegister}, %r15, 1), %{tmpRegister}"); // target2: 60
 
-                string out_of_range_label = $"L_ERROR_OUT_RANGE_{codeAddress:x}";
+                //string out_of_range_label = $"L_ERROR_OUT_RANGE_{codeAddress:x}";
 
-                ret.WriterPreLines.WriteLine("cmp %rsp, %r15");
-                ret.WriterPreLines.WriteLine($"je {out_of_range_label}");
-                ret.WriterPreLines.WriteLine("cmp %r8, %r15");
-                ret.WriterPreLines.WriteLine($"je {out_of_range_label}");
+                //ret.WriterPreLines.WriteLine("cmp %rsp, %r15");
+                //ret.WriterPreLines.WriteLine($"je {out_of_range_label}");
+                //ret.WriterPreLines.WriteLine("cmp %r8, %r15");
+                //ret.WriterPreLines.WriteLine($"je {out_of_range_label}");
 
-                ret.WriterTailLines.WriteLine($"{out_of_range_label}:");
-                ret.WriterTailLines.WriteLine($"movl $0x{codeAddress:x}, DYNASM_CPU_STATE_EXCEPTION_ADDRESS(%r8)");
-                ret.WriterTailLines.WriteLine($"movl ${(int)AsmExceptionType.MemoryOutOfRange}, DYNASM_CPU_STATE_EXCEPTION_TYPE(%r8)");
-                ret.WriterTailLines.WriteLine("jmp L_ERROR");
+                //ret.WriterTailLines.WriteLine($"{out_of_range_label}:");
+                //ret.WriterTailLines.WriteLine($"movl $0x{codeAddress:x}, DYNASM_CPU_STATE_EXCEPTION_ADDRESS(%r8)");
+                //ret.WriterTailLines.WriteLine($"movl ${(int)AsmExceptionType.MemoryOutOfRange}, DYNASM_CPU_STATE_EXCEPTION_TYPE(%r8)");
+                //ret.WriterTailLines.WriteLine("jmp L_ERROR");
 
                 //ret.WriterPreLines.WriteLine($"mov ASM_GLOBAL_TMP4, %r13");
 
@@ -568,6 +571,8 @@ namespace SoftEther.WebSocket.Helper
                     // write memory
                     ret.RealRegister = $"(%{tmpRegister})";
                 }
+
+                ret.RealRegister = $"(%{tmpRegister}, %r15, 1)";
             }
 
             StringWriter ww = new StringWriter();
@@ -1127,8 +1132,8 @@ namespace SoftEther.WebSocket.Helper
 
                         // ASM
                         // esp -= 4
-                        var esp1 = new AsmVirtualRegisterReader("esp", "r12");
-                        var esp2 = new AsmVirtualRegisterWriter("esp", "r13");
+                        var esp1 = new AsmVirtualRegisterReader("esp", "error");
+                        var esp2 = new AsmVirtualRegisterWriter("esp", "error");
 
                         asm.Write(esp1.PreLines);
                         asm.WriteLine($"lea -4(%{esp1.RealRegister}), %{esp1.RealRegister}");
@@ -1142,11 +1147,11 @@ namespace SoftEther.WebSocket.Helper
                         // push
                         if (Operand1.IsPointer == false)
                         {
-                            var valueReader = new AsmVirtualRegisterReader(Operand1.BaseRegister, "r12");
+                            var valueReader = new AsmVirtualRegisterReader(Operand1.BaseRegister, "error");
 
                             asm.Write(valueReader.PreLines);
 
-                            var memoryWriter = destMemory.AsmGenerateMemoryAccessCode(Address, true, "r13");
+                            var memoryWriter = destMemory.AsmGenerateMemoryAccessCode(Address, true, "r11"); // r11 は esp である そのまま
 
                             asm.Write(memoryWriter.PreLines);
                             asm.WriteLine($"mov %{valueReader.RealRegister}, {memoryWriter.RealRegisterFixed}");
@@ -1174,11 +1179,11 @@ namespace SoftEther.WebSocket.Helper
                         // pop
                         if (Operand1.IsPointer == false)
                         {
-                            var valueWriter = new AsmVirtualRegisterWriter(Operand1.BaseRegister, "r12");
+                            var valueWriter = new AsmVirtualRegisterWriter(Operand1.BaseRegister, "error");
 
                             asm.Write(valueWriter.PreLines);
 
-                            var memoryReader = destMemory.AsmGenerateMemoryAccessCode(Address, false, "r13");
+                            var memoryReader = destMemory.AsmGenerateMemoryAccessCode(Address, false, "r11"); // r11 は esp である そのまま
 
                             asm.Write(memoryReader.PreLines);
                             asm.WriteLine($"mov {memoryReader.RealRegisterFixed}, %{valueWriter.RealRegister}");
@@ -1193,8 +1198,8 @@ namespace SoftEther.WebSocket.Helper
                         }
 
                         // esp += 4
-                        var esp1 = new AsmVirtualRegisterReader("esp", "r12");
-                        var esp2 = new AsmVirtualRegisterWriter("esp", "r13");
+                        var esp1 = new AsmVirtualRegisterReader("esp", "error");
+                        var esp2 = new AsmVirtualRegisterWriter("esp", "error");
 
                         asm.Write(esp1.PreLines);
                         asm.WriteLine($"lea 4(%{esp1.RealRegister}), %{esp1.RealRegister}");
@@ -1335,7 +1340,7 @@ namespace SoftEther.WebSocket.Helper
 
                         // ASM
                         // pop
-                        var memoryReader = destMemory.AsmGenerateMemoryAccessCode(Address, false, "r13");
+                        var memoryReader = destMemory.AsmGenerateMemoryAccessCode(Address, false, "r11"); // r11 は esp である そのまま
 
                         asm.Write(memoryReader.PreLines);
                         asm.WriteLine($"mov {memoryReader.RealRegisterFixed}, %ecx");
@@ -1344,8 +1349,8 @@ namespace SoftEther.WebSocket.Helper
                         asmTail.Write(memoryReader.TailLines);
 
                         // esp += 4
-                        var esp1 = new AsmVirtualRegisterReader("esp", "r12");
-                        var esp2 = new AsmVirtualRegisterWriter("esp", "r13");
+                        var esp1 = new AsmVirtualRegisterReader("esp", "error");
+                        var esp2 = new AsmVirtualRegisterWriter("esp", "error");
 
                         asm.Write(esp1.PreLines);
                         asm.WriteLine($"lea 4(%{esp1.RealRegister}), %{esp1.RealRegister}");
@@ -1672,8 +1677,8 @@ namespace SoftEther.WebSocket.Helper
 
                         // ASM
                         // esp -= 4
-                        var esp1 = new AsmVirtualRegisterReader("esp", "r12");
-                        var esp2 = new AsmVirtualRegisterWriter("esp", "r13");
+                        var esp1 = new AsmVirtualRegisterReader("esp", "tmp");
+                        var esp2 = new AsmVirtualRegisterWriter("esp", "tmp");
 
                         asm.Write(esp1.PreLines);
                         asm.WriteLine($"lea -4(%{esp1.RealRegister}), %{esp1.RealRegister}");
@@ -1685,7 +1690,7 @@ namespace SoftEther.WebSocket.Helper
                         asm.Write(esp2.PostLines);
 
                         // push
-                        var memoryWriter = destMemory.AsmGenerateMemoryAccessCode(Address, true, "r13");
+                        var memoryWriter = destMemory.AsmGenerateMemoryAccessCode(Address, true, "r11"); // r11 は esp である そのまま
 
                         asm.Write(memoryWriter.PreLines);
                         asm.WriteLine($"movl $0x{Next.Address:x}, {memoryWriter.RealRegisterFixed}");
