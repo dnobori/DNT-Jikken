@@ -283,6 +283,7 @@ void print_uint64(char *prefix, UINT64 v)
 	strcat(tmp2, "\n");
 	write(1, tmp2, strlen(tmp2));
 
+
 #ifndef _WIN32
 	fsync(1);
 
