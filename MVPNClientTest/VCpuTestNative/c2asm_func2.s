@@ -3,6 +3,19 @@
 	.text
 	.globl	c2asm_func2
 	.type	c2asm_func2, @function
+
+	.globl	test_get_fs_register
+	.type	test_get_fs_register, @function
+
+	.globl	test_get_gs_register
+	.type	test_get_gs_register, @function
+
+	.globl	test_set_fs_register
+	.type	test_set_fs_register, @function
+
+	.globl	test_set_gs_register
+	.type	test_set_gs_register, @function
+
 c2asm_func2:
 	.cfi_startproc
 	movq	%rcx, %r8
@@ -26,5 +39,29 @@ aa:
 	ret
 	.cfi_endproc
 
+test_get_fs_register:
+	.cfi_startproc
+	rdfsbase %rax
+	ret
+	.cfi_endproc
+
+test_get_gs_register:
+	.cfi_startproc
+	rdgsbase %rax
+	ret
+	.cfi_endproc
+
+
+test_set_fs_register:
+	.cfi_startproc
+	wrfsbase %rcx
+	ret
+	.cfi_endproc
+
+test_set_gs_register:
+	.cfi_startproc
+	wrgsbase %rcx
+	ret
+	.cfi_endproc
 
 

@@ -184,6 +184,12 @@ void AllocateMemory(VMemory *memory, uint startAddress, uint size, bool canRead,
 	}
 }
 
+MS_ABI NOINLINE UINT64 test_get_fs_register();
+MS_ABI NOINLINE UINT64 test_get_gs_register();
+
+MS_ABI NOINLINE void test_set_fs_register(UINT64 v);
+MS_ABI NOINLINE void test_set_gs_register(UINT64 v);
+
 MS_ABI NOINLINE void c2asm_func2(C2ASM *t);
 
 MS_ABI NOINLINE void c2asm_func1(C2ASM *t)
@@ -209,8 +215,38 @@ MS_ABI NOINLINE void c2asm_test1()
 	printf("d = %X\n", t.d);
 }
 
+void fs_gs_test()
+{
+	UINT64 fs1 = 0xcafebeef;
+	UINT64 gs1 = 0xdeadface;
+
+	UINT64 fs2 = 0;
+	UINT64 gs2 = 0;
+	UINT64 fs3 = 0;
+	UINT64 gs3 = 0;
+
+	//test_set_fs_register(fs1);
+	test_set_gs_register(gs1);
+
+	while (true)
+	{
+		fs2 = test_get_fs_register();
+		gs2 = test_get_gs_register();
+		fs3 = test_get_fs_register();
+		gs3 = test_get_gs_register();
+
+		printf("fs: %p\n", (UINT64)fs2);
+		printf("gs: %p\n", (UINT64)gs2);
+		printf("fs: %p\n", (UINT64)fs3);
+		printf("gs: %p\n", (UINT64)gs3);
+		printf("\n");
+	}
+}
+
 int main()
 {
+	fs_gs_test(); return;
+
 	//c2asm_test1(); return;
 
 	uint count = 10;
