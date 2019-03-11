@@ -283,15 +283,15 @@ void fs_gs_test()
 	UINT64 fs3 = 0;
 	UINT64 gs3 = 0;
 
-	//test_set_fs_register(fs1);
-	test_set_gs_register(gs1);
+	syscall_set_fs_register(fs1);
+	syscall_set_gs_register(gs1);
 
 	while (true)
 	{
-		fs2 = test_get_fs_register();
-		gs2 = test_get_gs_register();
-		fs3 = test_get_fs_register();
-		gs3 = test_get_gs_register();
+		fs2 = syscall_get_fs_register();
+		gs2 = syscall_get_gs_register();
+		fs3 = syscall_get_fs_register();
+		gs3 = syscall_get_gs_register();
 
 		printf("fs: %p\n", (UINT64)fs2);
 		printf("gs: %p\n", (UINT64)gs2);
