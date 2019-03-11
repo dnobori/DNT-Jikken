@@ -190,6 +190,9 @@ void AllocateMemory(VMemory *memory, uint startAddress, uint size, bool canRead,
 MS_ABI NOINLINE UINT64 test_get_fs_register();
 MS_ABI NOINLINE UINT64 test_get_gs_register();
 
+MS_ABI NOINLINE UINT64 asm_get_real_fs_register();
+MS_ABI NOINLINE UINT64 asm_get_real_gs_register();
+
 MS_ABI NOINLINE void test_set_fs_register(UINT64 v);
 MS_ABI NOINLINE void test_set_gs_register(UINT64 v);
 
@@ -309,8 +312,8 @@ void fs_gs_test()
 	{
 		fs2 = syscall_get_fs_register();
 		gs2 = syscall_get_gs_register();
-		fs3 = syscall_get_fs_register();
-		gs3 = syscall_get_gs_register();
+		fs3 = asm_get_real_fs_register();
+		gs3 = asm_get_real_gs_register();
 
 		print_uint64("fs: ", fs2);
 		print_uint64("gs: ", gs2);
