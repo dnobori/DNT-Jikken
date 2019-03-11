@@ -179,6 +179,10 @@ dynasm_begin:
 
 	# -- BEGIN --
 
+            movabs $0xfaceface, %r12
+            pushq %r12
+            pushq %r12
+
 
 L_JUMP_TABLE:
 # Jump table
@@ -699,7 +703,27 @@ L_804890e:
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
+mov $0, %eax
+seto %al
+lahf
 mov %ecx, %r13d
+cmp $0x7fffffff, %r13d
+je L_ERROR
+popq %rcx
+popq %rdx
+cmpl $0xfaceface, %ecx
+je L_HELPER1_804890e
+cmp %edx, %r13d
+jne L_JUMP_TABLE
+add $127, %al
+sahf
+jmp %rcx
+L_HELPER1_804890e:
+movabs $0xfaceface, %r12
+pushq %r12
+pushq %r12
+add $127, %al
+sahf
 jmp L_JUMP_TABLE
 
 L_804890f:
@@ -871,7 +895,27 @@ L_804897b:
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
+mov $0, %eax
+seto %al
+lahf
 mov %ecx, %r13d
+cmp $0x7fffffff, %r13d
+je L_ERROR
+popq %rcx
+popq %rdx
+cmpl $0xfaceface, %ecx
+je L_HELPER1_804897b
+cmp %edx, %r13d
+jne L_JUMP_TABLE
+add $127, %al
+sahf
+jmp %rcx
+L_HELPER1_804897b:
+movabs $0xfaceface, %r12
+pushq %r12
+pushq %r12
+add $127, %al
+sahf
 jmp L_JUMP_TABLE
 
 L_804897c:
@@ -959,6 +1003,9 @@ L_80489ac:
 lea -4(%r11d), %r11d
 movl $0x80489b1, (%r11, %r15, 1)
 
+movabs $L_80489b1, %r13
+pushq $0x80489b1
+pushq %r13
 jmp L_8048980;
 
 L_80489b1:
@@ -1002,7 +1049,27 @@ L_80489c2:
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
+mov $0, %eax
+seto %al
+lahf
 mov %ecx, %r13d
+cmp $0x7fffffff, %r13d
+je L_ERROR
+popq %rcx
+popq %rdx
+cmpl $0xfaceface, %ecx
+je L_HELPER1_80489c2
+cmp %edx, %r13d
+jne L_JUMP_TABLE
+add $127, %al
+sahf
+jmp %rcx
+L_HELPER1_80489c2:
+movabs $0xfaceface, %r12
+pushq %r12
+pushq %r12
+add $127, %al
+sahf
 jmp L_JUMP_TABLE
 
 L_80489c3:
@@ -1041,7 +1108,27 @@ L_80489d2:
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
+mov $0, %eax
+seto %al
+lahf
 mov %ecx, %r13d
+cmp $0x7fffffff, %r13d
+je L_ERROR
+popq %rcx
+popq %rdx
+cmpl $0xfaceface, %ecx
+je L_HELPER1_80489d2
+cmp %edx, %r13d
+jne L_JUMP_TABLE
+add $127, %al
+sahf
+jmp %rcx
+L_HELPER1_80489d2:
+movabs $0xfaceface, %r12
+pushq %r12
+pushq %r12
+add $127, %al
+sahf
 jmp L_JUMP_TABLE
 
 L_80489d3:
@@ -1090,6 +1177,9 @@ L_80489f0:
 lea -4(%r11d), %r11d
 movl $0x80489f5, (%r11, %r15, 1)
 
+movabs $L_80489f5, %r13
+pushq $0x80489f5
+pushq %r13
 jmp L_8048980;
 
 L_80489f5:
@@ -1101,7 +1191,27 @@ L_80489f8:
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
+mov $0, %eax
+seto %al
+lahf
 mov %ecx, %r13d
+cmp $0x7fffffff, %r13d
+je L_ERROR
+popq %rcx
+popq %rdx
+cmpl $0xfaceface, %ecx
+je L_HELPER1_80489f8
+cmp %edx, %r13d
+jne L_JUMP_TABLE
+add $127, %al
+sahf
+jmp %rcx
+L_HELPER1_80489f8:
+movabs $0xfaceface, %r12
+pushq %r12
+pushq %r12
+add $127, %al
+sahf
 jmp L_JUMP_TABLE
 
 L_80489f9:
@@ -1135,6 +1245,10 @@ dynasm_end:
 	vmovdqu	16*2(%rsp), %xmm8
 	vmovdqu	16*1(%rsp), %xmm7
 	vmovdqu	16*0(%rsp), %xmm6
+
+    popq %r12
+    popq %r12
+
 	lea		16*10(%rsp), %rsp
 	pop	%rbp
 	pop	%rbx

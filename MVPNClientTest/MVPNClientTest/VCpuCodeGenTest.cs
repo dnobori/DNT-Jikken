@@ -64,6 +64,14 @@ namespace SoftEther.WebSocket.Helper
         Pushf,
     }
 
+    [Flags]
+    public enum AsmCallMethod
+    {
+        Emulation,
+        FastStackNoCheck,
+        FastStackCheck,
+    }
+
     public static class VConsts
     {
         public const uint PageSize = 4096;
@@ -81,6 +89,8 @@ namespace SoftEther.WebSocket.Helper
         public static CodeGenTargetEnum CodeGenTarget = CodeGenTargetEnum.CSharp;
 
         public const AsmEFlagsSaveMethod EFlagsSaveMethod = AsmEFlagsSaveMethod.Lahf;
+
+        public const AsmCallMethod CallMethod = AsmCallMethod.FastStackCheck;
 
         public const uint Asm_Fast1_Dummy_Start = 0x500000;
         public const uint Asm_Fast1_Dummy_End = 0x08100000;
@@ -1362,8 +1372,39 @@ namespace SoftEther.WebSocket.Helper
 
 
                         // jump
-                        asm.WriteLine($"mov %ecx, %r13d");
-                        asm.WriteLine("jmp L_JUMP_TABLE");
+                        if (VConsts.CallMethod == AsmCallMethod.Emulation)
+                        {
+                            asm.WriteLine($"mov %ecx, %r13d");
+                            asm.WriteLine("jmp L_JUMP_TABLE");
+                        }
+                        else if (VConsts.CallMethod == AsmCallMethod.FastStackNoCheck)
+                        {
+                            asm.WriteLine("cmp $0x7fffffff, %ecx");
+                            asm.WriteLine("je L_ERROR");
+                            asm.WriteLine($"popq %rcx");
+                            asm.WriteLine("jmp %rcx");
+                        }
+                        else if (VConsts.CallMethod == AsmCallMethod.FastStackCheck)
+                        {
+                            AsmVirtualRegisterWriter.WriteSaveRFlags(asm);
+                            asm.WriteLine($"mov %ecx, %r13d");
+                            asm.WriteLine("cmp $0x7fffffff, %r13d");
+                            asm.WriteLine("je L_ERROR");
+                            asm.WriteLine("popq %rcx");
+                            asm.WriteLine("popq %rdx");
+                            asm.WriteLine("cmpl $0xfaceface, %ecx");
+                            asm.WriteLine($"je L_HELPER1_{Address:x}");
+                            asm.WriteLine("cmp %edx, %r13d");
+                            asm.WriteLine("jne L_JUMP_TABLE");
+                            AsmVirtualRegisterWriter.WriteRestoreRFlags(asm);
+                            asm.WriteLine("jmp %rcx");
+                            asm.WriteLine($"L_HELPER1_{Address:x}:");
+                            asm.WriteLine("movabs $0xfaceface, %r12");
+                            asm.WriteLine("pushq %r12");
+                            asm.WriteLine("pushq %r12");
+                            AsmVirtualRegisterWriter.WriteRestoreRFlags(asm);
+                            asm.WriteLine("jmp L_JUMP_TABLE");
+                        }
                     }
                     break;
 
@@ -1696,6 +1737,21 @@ namespace SoftEther.WebSocket.Helper
                         asm.Write(memoryWriter.PostLines);
 
                         asmTail.Write(memoryWriter.TailLines);
+
+                        if (VConsts.CallMethod == AsmCallMethod.Emulation)
+                        {
+                        }
+                        else if (VConsts.CallMethod == AsmCallMethod.FastStackNoCheck)
+                        {
+                            asm.WriteLine($"movabs $L_{Next.Address:x}, %r13");
+                            asm.WriteLine($"pushq %r13");
+                        }
+                        else if (VConsts.CallMethod == AsmCallMethod.FastStackCheck)
+                        {
+                            asm.WriteLine($"movabs $L_{Next.Address:x}, %r13");
+                            asm.WriteLine($"pushq $0x{Next.Address:x}");
+                            asm.WriteLine($"pushq %r13");
+                        }
 
                         // jump
                         AsmWriteJumpCode(asm, "jmp", Operand1);
@@ -2458,6 +2514,10 @@ dynasm:
 
 	# -- BEGIN --
 
+            movabs $0xfaceface, %r12
+            pushq %r12
+            pushq %r12
+
 ");
 
             WriteMainFunction();
@@ -2500,6 +2560,10 @@ dynasm_end:");
 	vmovdqu	16*2(%rsp), %xmm8
 	vmovdqu	16*1(%rsp), %xmm7
 	vmovdqu	16*0(%rsp), %xmm6
+
+    popq %r12
+    popq %r12
+
 	lea		16*10(%rsp), %rsp
 	pop	%rbp
 	pop	%rbx
