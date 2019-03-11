@@ -9,7 +9,7 @@ make && bin/test64
 
 ■ 2 回目以降
 cd ~/DNT-Jikken/MVPNClientTest/VCpuTestNative/
-git pull
-make && bin/test64
+
+git pull && make && bin/test64
 
 

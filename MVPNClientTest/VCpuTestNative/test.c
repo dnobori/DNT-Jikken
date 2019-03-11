@@ -5,6 +5,7 @@
 #define NOINLINE	__declspec(noinline)
 #else
 #include <time.h>
+#include <errno.h>
 #define NOINLINE	__attribute__((noinline))
 #include <asm/prctl.h>
 #include <sys/prctl.h>
