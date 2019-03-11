@@ -344,11 +344,11 @@ void fs_gs_test()
 
 	// Memo: Windows x64 の GS レジスタについて
 	//       あるコンテキストスイッチの内部で GS レジスタを触った場合は必ず Win32 API を呼び出す前に 0 に戻す必要がある。
-	//       また、コンテキストスイッチが発生した後に戻ってきたら GS レジスタは Windows 内部情報 (x64 / x86 変換レイヤ?) の
+	//       また、コンテキストスイッチが発生した後に戻ってきたら GS レジスタは Windows 内部情報 (TLS) の
 	//       値が勝手に書き込まれてしまっている。
 	// 
 	// Memo: Windows x64 の FS レジスタについて
-	//       また、コンテキストスイッチが発生した後に戻ってきたら FS レジスタは Windows 内部情報 (x64 / x86 変換レイヤ?) の
+	//       また、コンテキストスイッチが発生した後に戻ってきたら FS レジスタは
 	//       値が勝手に 0 になってしまっている。
 	//
 	//       WSL (Windows Subsystem for Linux) では FS, GS レジスタの値はちゃんと保存されているので、一体何が違うのか、
@@ -363,7 +363,7 @@ void fs_gs_test()
 		UINT64 read_fs = 0, read_gs = 0;
 
 		fs2 = syscall_get_fs_register();
-		gs2 = syscall_get_gs_register();
+//		gs2 = syscall_get_gs_register();
 
 		read_fs = asm_read_memory_with_fs(0);
 		read_gs = asm_read_memory_with_gs(0);
