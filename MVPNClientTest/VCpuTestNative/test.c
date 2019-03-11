@@ -190,8 +190,11 @@ void AllocateMemory(VMemory *memory, uint startAddress, uint size, bool canRead,
 MS_ABI NOINLINE UINT64 test_get_fs_register();
 MS_ABI NOINLINE UINT64 test_get_gs_register();
 
-MS_ABI NOINLINE UINT64 asm_get_real_fs_register();
-MS_ABI NOINLINE UINT64 asm_get_real_gs_register();
+MS_ABI NOINLINE UINT64 asm_read_memory_with_fs(UINT64 addr);
+MS_ABI NOINLINE UINT64 asm_read_memory_with_gs(UINT64 addr);
+
+MS_ABI NOINLINE void asm_write_memory_with_fs(UINT64 addr, UINT64 value);
+MS_ABI NOINLINE void asm_write_memory_with_gs(UINT64 addr, UINT64 value);
 
 MS_ABI NOINLINE void test_set_fs_register(UINT64 v);
 MS_ABI NOINLINE void test_set_gs_register(UINT64 v);
@@ -221,9 +224,14 @@ MS_ABI NOINLINE void c2asm_test1()
 	printf("d = %X\n", t.d);
 }
 
+#ifdef _WIN32
+#define USE_ASM_FS_GS_GET_SET
+#endif // _WIN32
+
+
 MS_ABI NOINLINE UINT64 syscall_get_fs_register()
 {
-#ifdef _WIN32
+#ifdef USE_ASM_FS_GS_GET_SET
 	return test_get_fs_register();
 #else
 	UINT64 ret = 0;
@@ -238,7 +246,7 @@ MS_ABI NOINLINE UINT64 syscall_get_fs_register()
 
 MS_ABI NOINLINE UINT64 syscall_get_gs_register()
 {
-#ifdef _WIN32
+#ifdef USE_ASM_FS_GS_GET_SET
 	return test_get_gs_register();
 #else
 	UINT64 ret = 0;
@@ -253,7 +261,7 @@ MS_ABI NOINLINE UINT64 syscall_get_gs_register()
 
 MS_ABI NOINLINE void syscall_set_fs_register(UINT64 v)
 {
-#ifdef _WIN32
+#ifdef USE_ASM_FS_GS_GET_SET
 	test_set_fs_register(v);
 #else
 	if (arch_prctl(ARCH_SET_FS, (unsigned long *)v) == -1)
@@ -265,7 +273,7 @@ MS_ABI NOINLINE void syscall_set_fs_register(UINT64 v)
 
 MS_ABI NOINLINE void syscall_set_gs_register(UINT64 v)
 {
-#ifdef _WIN32
+#ifdef USE_ASM_FS_GS_GET_SET
 	test_set_gs_register(v);
 #else
 	if (arch_prctl(ARCH_SET_GS, (unsigned long *)v) == -1)
@@ -276,6 +284,15 @@ MS_ABI NOINLINE void syscall_set_gs_register(UINT64 v)
 }
 
 
+void raw_stdout_write(char *str)
+{
+#ifdef _WIN32
+	write(1, str, strlen(str));
+#else
+	write(1, str, strlen(str));
+#endif // !_WIN32
+}
+
 void print_uint64(char *prefix, UINT64 v)
 {
 	char tmp[100];
@@ -284,8 +301,8 @@ void print_uint64(char *prefix, UINT64 v)
 	strcpy(tmp2, prefix);
 	strcat(tmp2, tmp);
 	strcat(tmp2, "\n");
-	write(1, tmp2, strlen(tmp2));
 
+	raw_stdout_write(tmp2);
 
 #ifndef _WIN32
 	//fsync(1);
@@ -298,27 +315,67 @@ void fs_gs_test()
 	UINT64 fs1 = 12345678;
 	UINT64 gs1 = 87654321;
 
+	UINT64 test_array[] =
+	{
+		0,
+		55555555,
+		0,
+		66666666,
+		0,
+		77777777,
+		0,
+		88888888,
+		0,
+	};
+
 	UINT64 fs2 = 0;
 	UINT64 gs2 = 0;
-	UINT64 fs3 = 0;
-	UINT64 gs3 = 0;
 
 	print_uint64("test", 123);
+
+	fs2 = syscall_get_fs_register();
+	gs2 = syscall_get_gs_register();
+	print_uint64("original fs: ", fs2);
+	print_uint64("original gs: ", gs2);
+	raw_stdout_write("\n");
+
+	fs1 = (UINT64)(&test_array) + 8;
+	gs1 = (UINT64)(&test_array) + 24;
+
+	// Memo: Windows x64 の GS レジスタについて
+	//       あるコンテキストスイッチの内部で GS レジスタを触った場合は必ず Win32 API を呼び出す前に 0 に戻す必要がある。
+	//       また、コンテキストスイッチが発生した後に戻ってきたら GS レジスタは Windows 内部情報 (x64 / x86 変換レイヤ?) の
+	//       値が勝手に書き込まれてしまっている。
+	// 
+	// Memo: Windows x64 の FS レジスタについて
+	//       また、コンテキストスイッチが発生した後に戻ってきたら FS レジスタは Windows 内部情報 (x64 / x86 変換レイヤ?) の
+	//       値が勝手に 0 になってしまっている。
+	//
+	//       WSL (Windows Subsystem for Linux) では FS, GS レジスタの値はちゃんと保存されているので、一体何が違うのか、
+	//       WSL のコードに対して詰問が必要だ。
+	//       まったく、けしからん。
 
 	syscall_set_fs_register(fs1);
 	syscall_set_gs_register(gs1);
 
 	while (true)
 	{
+		UINT64 read_fs = 0, read_gs = 0;
+
 		fs2 = syscall_get_fs_register();
 		gs2 = syscall_get_gs_register();
-		fs3 = asm_get_real_fs_register();
-		gs3 = asm_get_real_gs_register();
+
+		read_fs = asm_read_memory_with_fs(0);
+		read_gs = asm_read_memory_with_gs(0);
+		
+		//syscall_set_gs_register(0);
 
 		print_uint64("fs: ", fs2);
 		print_uint64("gs: ", gs2);
-		print_uint64("fs: ", fs3);
-		print_uint64("gs: ", gs3);
+		print_uint64("read_fs: ", read_fs);
+		print_uint64("read_gs: ", read_gs);
+
+		raw_stdout_write("\n");
 	}
 }
 

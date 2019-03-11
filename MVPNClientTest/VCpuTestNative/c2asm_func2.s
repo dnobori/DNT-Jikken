@@ -16,11 +16,17 @@
 	.globl	test_set_gs_register
 	.type	test_set_gs_register, @function
 
-	.globl	asm_get_real_fs_register
-	.type	asm_get_real_fs_register, @function
+	.globl	asm_read_memory_with_fs
+	.type	asm_read_memory_with_fs, @function
 
-	.globl	asm_get_real_gs_register
-	.type	asm_get_real_gs_register, @function
+	.globl	asm_read_memory_with_gs
+	.type	asm_read_memory_with_gs, @function
+	
+	.globl	asm_write_memory_with_fs
+	.type	asm_write_memory_with_fs, @function
+
+	.globl	asm_write_memory_with_gs
+	.type	asm_write_memory_with_gs, @function
 
 c2asm_func2:
 	.cfi_startproc
@@ -45,23 +51,27 @@ aa:
 	ret
 	.cfi_endproc
 
-asm_get_real_fs_register:
+asm_read_memory_with_fs:
 	.cfi_startproc
-	xor %r9, %r9
-	mov $1, %r9
-	lea %fs:0, %rax
-	# mov %fs:0, %rax
-#	mov %fs, %rax
+	mov %fs:(%rcx), %rax
 	ret
 	.cfi_endproc
 
-asm_get_real_gs_register:
+asm_read_memory_with_gs:
 	.cfi_startproc
-	xor %r9, %r9
-	mov $2, %r9
-	lea %gs:0, %rax
-	#mov %gs:0, %rax
-#	mov %gs, %rax
+	mov %gs:(%rcx), %rax
+	ret
+	.cfi_endproc
+
+asm_write_memory_with_fs:
+	.cfi_startproc
+	mov %rdx, %fs:(%rcx)
+	ret
+	.cfi_endproc
+
+asm_write_memory_with_gs:
+	.cfi_startproc
+	mov %rdx, %gs:(%rcx)
 	ret
 	.cfi_endproc
 
