@@ -285,7 +285,7 @@ void print_uint64(char *prefix, UINT64 v)
 
 
 #ifndef _WIN32
-	fsync(1);
+	//fsync(1);
 
 #endif // !_WIN32
 }
