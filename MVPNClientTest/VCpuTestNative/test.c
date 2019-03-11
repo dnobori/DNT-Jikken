@@ -279,6 +279,12 @@ void print_uint64(char *prefix, UINT64 v)
 	char tmp2[512];
 	ToStr64(tmp, v);
 	write(stdout, tmp, strlen(tmp));
+
+#ifndef _WIN32
+	fsync(stdout);
+
+#endif // !_WIN32
+
 	return;
 	strcpy(tmp2, prefix);
 	strcat(tmp2, tmp);
