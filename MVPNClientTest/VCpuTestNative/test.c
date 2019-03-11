@@ -6,6 +6,8 @@
 #else
 #include <time.h>
 #define NOINLINE	__attribute__((noinline))
+#include <asm/prctl.h>
+#include <sys/prctl.h>
 #endif
 
 #ifndef	_WINDOWS_
@@ -214,6 +216,61 @@ MS_ABI NOINLINE void c2asm_test1()
 
 	printf("d = %X\n", t.d);
 }
+
+MS_ABI NOINLINE UINT64 syscall_get_fs_register()
+{
+#ifdef _WIN32
+	return test_get_fs_register();
+#else
+	UINT64 ret = 0;
+	if (arch_prctl(ARCH_GET_FS, &ret) == -1)
+	{
+		printf("arch_prctl ARCH_GET_FS error: %u\n", errno);
+		return 0;
+	}
+	return ret;
+#endif
+}
+
+MS_ABI NOINLINE UINT64 syscall_get_gs_register()
+{
+#ifdef _WIN32
+	return test_get_gs_register();
+#else
+	UINT64 ret = 0;
+	if (arch_prctl(ARCH_GET_GS, &ret) == -1)
+	{
+		printf("arch_prctl ARCH_GET_GS error: %u\n", errno);
+		return 0;
+	}
+	return ret;
+#endif
+}
+
+MS_ABI NOINLINE void syscall_set_fs_register(UINT64 v)
+{
+#ifdef _WIN32
+	test_set_fs_register(v);
+#else
+	if (arch_prctl(ARCH_SET_FS, (unsigned long *)v) == -1)
+	{
+		printf("arch_prctl ARCH_SET_FS error: %u\n", errno);
+	}
+#endif
+}
+
+MS_ABI NOINLINE void syscall_set_gs_register(UINT64 v)
+{
+#ifdef _WIN32
+	test_set_gs_register(v);
+#else
+	if (arch_prctl(ARCH_SET_GS, (unsigned long *)v) == -1)
+	{
+		printf("arch_prctl ARCH_SET_GS error: %u\n", errno);
+	}
+#endif
+}
+
 
 void fs_gs_test()
 {

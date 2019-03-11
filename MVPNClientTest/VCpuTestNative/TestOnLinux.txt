@@ -1,0 +1,15 @@
+﻿yum -y groupinstall "Development Tools"
+yum -y install readline-devel ncurses-devel openssl-devel screen
+
+■ 1 回目
+cd ~/
+git clone --recursive git@github.com:dnobori/DNT-Jikken.git
+cd ~/DNT-Jikken/MVPNClientTest/VCpuTestNative/
+make && bin/test64
+
+■ 2 回目以降
+cd ~/DNT-Jikken/MVPNClientTest/VCpuTestNative/
+git pull
+make && bin/test64
+
+
