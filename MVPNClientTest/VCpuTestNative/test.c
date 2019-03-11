@@ -278,12 +278,15 @@ void print_uint64(char *prefix, UINT64 v)
 	char tmp[100];
 	char tmp2[512];
 	ToStr64(tmp, v);
-	write(stdout, tmp, strlen(tmp));
-	return;
 	strcpy(tmp2, prefix);
 	strcat(tmp2, tmp);
 	strcat(tmp2, "\n");
-	write(stdout, tmp2, strlen(tmp2));
+	write(1, tmp2, strlen(tmp2));
+
+#ifndef _WIN32
+	fsync(1);
+
+#endif // !_WIN32
 }
 
 void fs_gs_test()
@@ -298,8 +301,8 @@ void fs_gs_test()
 
 	print_uint64("test", 123);
 
-	//syscall_set_fs_register(fs1);
-	//syscall_set_gs_register(gs1);
+	syscall_set_fs_register(fs1);
+	syscall_set_gs_register(gs1);
 
 	while (true)
 	{
