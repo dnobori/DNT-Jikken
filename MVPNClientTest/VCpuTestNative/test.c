@@ -273,18 +273,31 @@ MS_ABI NOINLINE void syscall_set_gs_register(UINT64 v)
 }
 
 
+void print_uint64(char *prefix, UINT64 v)
+{
+	char tmp[100];
+	char tmp2[512];
+	ToStr64(tmp, v);
+	write(stdout, tmp, strlen(tmp));
+	return;
+	strcpy(tmp2, prefix);
+	strcat(tmp2, tmp);
+	strcat(tmp2, "\n");
+	write(stdout, tmp2, strlen(tmp2));
+}
+
 void fs_gs_test()
 {
-	UINT64 fs1 = 0xcafebeef;
-	UINT64 gs1 = 0xdeadface;
+	UINT64 fs1 = 12345678;
+	UINT64 gs1 = 87654321;
 
 	UINT64 fs2 = 0;
 	UINT64 gs2 = 0;
 	UINT64 fs3 = 0;
 	UINT64 gs3 = 0;
 
-	syscall_set_fs_register(fs1);
-	syscall_set_gs_register(gs1);
+	//syscall_set_fs_register(fs1);
+	//syscall_set_gs_register(gs1);
 
 	while (true)
 	{
@@ -293,11 +306,10 @@ void fs_gs_test()
 		fs3 = syscall_get_fs_register();
 		gs3 = syscall_get_gs_register();
 
-		printf("fs: %p\n", (UINT64)fs2);
-		printf("gs: %p\n", (UINT64)gs2);
-		printf("fs: %p\n", (UINT64)fs3);
-		printf("gs: %p\n", (UINT64)gs3);
-		printf("\n");
+		print_uint64("fs: ", (UINT)fs2);
+		print_uint64("gs: ", (UINT)gs2);
+		print_uint64("fs: ", (UINT)fs3);
+		print_uint64("gs: ", (UINT)gs3);
 	}
 }
 
