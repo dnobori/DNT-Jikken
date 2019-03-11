@@ -296,6 +296,8 @@ void fs_gs_test()
 	UINT64 fs3 = 0;
 	UINT64 gs3 = 0;
 
+	print_uint64("test", 123);
+
 	//syscall_set_fs_register(fs1);
 	//syscall_set_gs_register(gs1);
 
@@ -306,10 +308,10 @@ void fs_gs_test()
 		fs3 = syscall_get_fs_register();
 		gs3 = syscall_get_gs_register();
 
-		print_uint64("fs: ", (UINT)fs2);
-		print_uint64("gs: ", (UINT)gs2);
-		print_uint64("fs: ", (UINT)fs3);
-		print_uint64("gs: ", (UINT)gs3);
+		print_uint64("fs: ", fs2);
+		print_uint64("gs: ", gs2);
+		print_uint64("fs: ", fs3);
+		print_uint64("gs: ", gs3);
 	}
 }
 
