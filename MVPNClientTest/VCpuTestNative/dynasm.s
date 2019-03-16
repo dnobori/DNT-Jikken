@@ -15,127 +15,127 @@ MemoryOutOfRange = 2
     .globl  L_JUMP_TABLE_INVALID_ADDRESS2
 #    .globl	ASM_GLOBAL_CPU_STATE
 #    .globl  ASM_GLOBAL_CONT_MEM
-    .globl L_80488b0
-    .globl L_80488b1
-    .globl L_80488b2
-    .globl L_80488b4
-    .globl L_80488b9
-    .globl L_80488bc
-    .globl L_80488c4
-    .globl L_80488c8
-    .globl L_80488cb
-    .globl L_80488cd
-    .globl L_80488d0
-    .globl L_80488d3
-    .globl L_80488d5
-    .globl L_80488d8
-    .globl L_80488da
-    .globl L_80488df
-    .globl L_80488e1
-    .globl L_80488e8
-    .globl L_80488ea
-    .globl L_80488ec
-    .globl L_80488ee
-    .globl L_80488f0
-    .globl L_80488f2
-    .globl L_80488f5
-    .globl L_80488f7
-    .globl L_80488f9
-    .globl L_80488fc
-    .globl L_8048900
-    .globl L_8048903
-    .globl L_8048905
-    .globl L_8048907
-    .globl L_804890a
-    .globl L_804890c
-    .globl L_804890d
-    .globl L_804890e
-    .globl L_804890f
-    .globl L_8048910
-    .globl L_8048911
-    .globl L_8048912
-    .globl L_8048918
-    .globl L_8048920
-    .globl L_8048924
-    .globl L_8048926
-    .globl L_8048928
-    .globl L_804892c
-    .globl L_804892e
-    .globl L_8048930
-    .globl L_8048934
-    .globl L_8048937
-    .globl L_804893a
-    .globl L_804893c
-    .globl L_804893e
-    .globl L_8048943
-    .globl L_8048945
-    .globl L_8048948
-    .globl L_804894c
-    .globl L_804894e
-    .globl L_8048950
-    .globl L_8048954
-    .globl L_8048956
-    .globl L_8048959
-    .globl L_8048960
-    .globl L_8048964
-    .globl L_8048967
-    .globl L_804896a
-    .globl L_804896c
-    .globl L_804896e
-    .globl L_8048971
-    .globl L_8048973
-    .globl L_8048979
-    .globl L_804897a
-    .globl L_804897b
-    .globl L_804897c
-    .globl L_8048980
-    .globl L_8048981
-    .globl L_8048982
-    .globl L_8048985
-    .globl L_8048989
-    .globl L_804898b
-    .globl L_804898d
-    .globl L_8048990
-    .globl L_8048992
-    .globl L_8048994
-    .globl L_8048996
-    .globl L_8048999
-    .globl L_80489a0
-    .globl L_80489a3
-    .globl L_80489a5
-    .globl L_80489a8
-    .globl L_80489ab
-    .globl L_80489ac
-    .globl L_80489b1
-    .globl L_80489b4
-    .globl L_80489b6
-    .globl L_80489b9
-    .globl L_80489bb
-    .globl L_80489be
-    .globl L_80489c0
-    .globl L_80489c1
-    .globl L_80489c2
-    .globl L_80489c3
-    .globl L_80489c4
-    .globl L_80489c8
-    .globl L_80489cb
-    .globl L_80489ce
-    .globl L_80489d0
-    .globl L_80489d1
-    .globl L_80489d2
-    .globl L_80489d3
-    .globl L_80489d5
-    .globl L_80489d7
-    .globl L_80489dc
-    .globl L_80489de
-    .globl L_80489e0
-    .globl L_80489e3
-    .globl L_80489eb
-    .globl L_80489ef
-    .globl L_80489f0
-    .globl L_80489f5
-    .globl L_80489f8
-    .globl L_80489f9
+    .globl L_a70
+    .globl L_a71
+    .globl L_a72
+    .globl L_a74
+    .globl L_a79
+    .globl L_a7c
+    .globl L_a84
+    .globl L_a88
+    .globl L_a8b
+    .globl L_a8d
+    .globl L_a90
+    .globl L_a93
+    .globl L_a95
+    .globl L_a98
+    .globl L_a9a
+    .globl L_a9f
+    .globl L_aa1
+    .globl L_aa8
+    .globl L_aaa
+    .globl L_aac
+    .globl L_aae
+    .globl L_ab0
+    .globl L_ab2
+    .globl L_ab5
+    .globl L_ab7
+    .globl L_ab9
+    .globl L_abc
+    .globl L_ac0
+    .globl L_ac3
+    .globl L_ac5
+    .globl L_ac7
+    .globl L_aca
+    .globl L_acc
+    .globl L_acd
+    .globl L_ace
+    .globl L_acf
+    .globl L_ad0
+    .globl L_ad1
+    .globl L_ad2
+    .globl L_ad8
+    .globl L_ae0
+    .globl L_ae4
+    .globl L_ae6
+    .globl L_ae8
+    .globl L_aec
+    .globl L_aee
+    .globl L_af0
+    .globl L_af4
+    .globl L_af7
+    .globl L_afa
+    .globl L_afc
+    .globl L_afe
+    .globl L_b03
+    .globl L_b05
+    .globl L_b08
+    .globl L_b0c
+    .globl L_b0e
+    .globl L_b12
+    .globl L_b14
+    .globl L_b16
+    .globl L_b19
+    .globl L_b20
+    .globl L_b24
+    .globl L_b27
+    .globl L_b2a
+    .globl L_b2c
+    .globl L_b2e
+    .globl L_b31
+    .globl L_b33
+    .globl L_b39
+    .globl L_b3a
+    .globl L_b3b
+    .globl L_b3c
+    .globl L_b40
+    .globl L_b41
+    .globl L_b42
+    .globl L_b45
+    .globl L_b49
+    .globl L_b4b
+    .globl L_b4d
+    .globl L_b50
+    .globl L_b52
+    .globl L_b54
+    .globl L_b57
+    .globl L_b5a
+    .globl L_b5b
+    .globl L_b60
+    .globl L_b63
+    .globl L_b65
+    .globl L_b68
+    .globl L_b6a
+    .globl L_b6d
+    .globl L_b6f
+    .globl L_b72
+    .globl L_b75
+    .globl L_b77
+    .globl L_b78
+    .globl L_b79
+    .globl L_b7a
+    .globl L_b80
+    .globl L_b82
+    .globl L_b85
+    .globl L_b87
+    .globl L_b88
+    .globl L_b89
+    .globl L_b8a
+    .globl L_b90
+    .globl L_b95
+    .globl L_b98
+    .globl L_b9a
+    .globl L_b9b
+    .globl L_b9c
+    .globl L_b9d
+    .globl L_ba0
+    .globl L_ba3
+    .globl L_bab
+    .globl L_baf
+    .globl L_bb0
+    .globl L_bb5
+    .globl L_bb8
+    .globl L_bb9
 .type	dynasm, @function
 dynasm:
 	.cfi_startproc
@@ -195,30 +195,30 @@ add $127, %al
 sahf
 jmp L_ERROR
 L_RESUME:
-cmp $0x80488b0, %r13d
+cmp $0xa70, %r13d
 jb L_JUMP_TABLE_INVALID_ADDRESS
-cmp $0x80489f9, %r13d
+cmp $0xbb9, %r13d
 ja L_JUMP_TABLE_INVALID_ADDRESS
 add $127, %al
 sahf
-lea -0x80488b0(%r13d), %r14d
+lea -0xa70(%r13d), %r14d
 lea 7(%rip), %r12
 mov (%r12, %r14, 8), %r14
 jmp %r14
 L_JUMP_TABLE_DATA:
-.quad L_80488b0
-.quad L_80488b1
-.quad L_80488b2
+.quad L_a70
+.quad L_a71
+.quad L_a72
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488b4
+.quad L_a74
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488b9
+.quad L_a79
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488bc
+.quad L_a7c
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
@@ -226,91 +226,91 @@ L_JUMP_TABLE_DATA:
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488c4
+.quad L_a84
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488c8
+.quad L_a88
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488cb
+.quad L_a8b
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488cd
+.quad L_a8d
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488d0
+.quad L_a90
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488d3
+.quad L_a93
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488d5
+.quad L_a95
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488d8
+.quad L_a98
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488da
+.quad L_a9a
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488df
+.quad L_a9f
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488e1
+.quad L_aa1
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488e8
+.quad L_aa8
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488ea
+.quad L_aaa
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488ec
+.quad L_aac
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488ee
+.quad L_aae
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488f0
+.quad L_ab0
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488f2
+.quad L_ab2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488f5
+.quad L_ab5
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488f7
+.quad L_ab7
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488f9
+.quad L_ab9
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80488fc
+.quad L_abc
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048900
+.quad L_ac0
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048903
+.quad L_ac3
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048905
+.quad L_ac5
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048907
+.quad L_ac7
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804890a
+.quad L_aca
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804890c
-.quad L_804890d
-.quad L_804890e
-.quad L_804890f
-.quad L_8048910
-.quad L_8048911
-.quad L_8048912
+.quad L_acc
+.quad L_acd
+.quad L_ace
+.quad L_acf
+.quad L_ad0
+.quad L_ad1
+.quad L_ad2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048918
+.quad L_ad8
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
@@ -318,202 +318,202 @@ L_JUMP_TABLE_DATA:
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048920
+.quad L_ae0
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048924
+.quad L_ae4
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048926
+.quad L_ae6
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048928
+.quad L_ae8
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804892c
+.quad L_aec
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804892e
+.quad L_aee
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048930
+.quad L_af0
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048934
+.quad L_af4
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048937
+.quad L_af7
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804893a
+.quad L_afa
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804893c
+.quad L_afc
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804893e
+.quad L_afe
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048943
+.quad L_b03
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048945
+.quad L_b05
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048948
+.quad L_b08
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804894c
+.quad L_b0c
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804894e
+.quad L_b0e
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048950
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b12
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048954
+.quad L_b14
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048956
+.quad L_b16
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048959
+.quad L_b19
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048960
+.quad L_b20
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048964
+.quad L_b24
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048967
+.quad L_b27
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804896a
+.quad L_b2a
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804896c
+.quad L_b2c
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804896e
+.quad L_b2e
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048971
+.quad L_b31
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048973
+.quad L_b33
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048979
-.quad L_804897a
-.quad L_804897b
-.quad L_804897c
+.quad L_b39
+.quad L_b3a
+.quad L_b3b
+.quad L_b3c
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048980
-.quad L_8048981
-.quad L_8048982
+.quad L_b40
+.quad L_b41
+.quad L_b42
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048985
+.quad L_b45
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048989
+.quad L_b49
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804898b
+.quad L_b4b
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_804898d
+.quad L_b4d
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048990
+.quad L_b50
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048992
+.quad L_b52
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048994
+.quad L_b54
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048996
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b57
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_8048999
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b5a
+.quad L_b5b
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b60
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489a0
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b63
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489a3
+.quad L_b65
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489a5
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b68
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489a8
+.quad L_b6a
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489ab
-.quad L_80489ac
+.quad L_b6d
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b6f
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b72
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489b1
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b75
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489b4
+.quad L_b77
+.quad L_b78
+.quad L_b79
+.quad L_b7a
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489b6
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489b9
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489bb
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b80
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489be
+.quad L_b82
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489c0
-.quad L_80489c1
-.quad L_80489c2
-.quad L_80489c3
-.quad L_80489c4
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b85
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b87
+.quad L_b88
+.quad L_b89
+.quad L_b8a
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489c8
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489cb
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489ce
+.quad L_b90
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489d0
-.quad L_80489d1
-.quad L_80489d2
-.quad L_80489d3
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489d5
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489d7
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b95
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
+.quad L_b98
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489dc
+.quad L_b9a
+.quad L_b9b
+.quad L_b9c
+.quad L_b9d
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489de
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489e0
+.quad L_ba0
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489e3
+.quad L_ba3
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
@@ -521,21 +521,21 @@ L_JUMP_TABLE_DATA:
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489eb
+.quad L_bab
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489ef
-.quad L_80489f0
+.quad L_baf
+.quad L_bb0
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489f5
+.quad L_bb5
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
 .quad L_JUMP_TABLE_INVALID_ADDRESS2
-.quad L_80489f8
-.quad L_80489f9
+.quad L_bb8
+.quad L_bb9
 L_JUMP_TABLE_INVALID_ADDRESS:
 add $127, %al
 sahf
@@ -544,162 +544,162 @@ movl $InvalidJumpTarget, DYNASM_CPU_STATE_EXCEPTION_TYPE(%r8)
 movl %r13d, DYNASM_CPU_STATE_EXCEPTION_ADDRESS(%r8)
 jmp L_ERROR
 
-L_80488b0:
-# 80488b0 push %esi
+L_a70:
+# a70 push %esi
 lea -4(%r11d), %r11d
 mov %esi, (%r11, %r15, 1)
 
 
-L_80488b1:
-# 80488b1 push %ebx
+L_a71:
+# a71 push %ebx
 lea -4(%r11d), %r11d
 mov %ebx, (%r11, %r15, 1)
 
 
-L_80488b2:
-# 80488b2 xor %esi,%esi
+L_a72:
+# a72 xor %esi,%esi
 xor %esi, %esi
 
-L_80488b4:
-# 80488b4 mov $0x3,%ebx
+L_a74:
+# a74 mov $0x3,%ebx
 movl $0x3, %ebx
 
-L_80488b9:
-# 80488b9 sub $0x10,%esp
+L_a79:
+# a79 sub $0x10,%esp
 sub $0x10, %r11d
 
-L_80488bc:
-# 80488bc movl $0x4e20,0xc(%esp)
+L_a7c:
+# a7c movl $0x4e20,0xc(%esp)
 lea 0xC(%r11d), %r12d
 movl $0x4e20, (%r12, %r15, 1)
 
 
-L_80488c4:
-# 80488c4 mov 0xc(%esp),%eax
+L_a84:
+# a84 mov 0xc(%esp),%eax
 lea 0xC(%r11d), %r12d
 movl (%r12, %r15, 1), %r10d
 
 
-L_80488c8:
-# 80488c8 cmp $0x2,%eax
+L_a88:
+# a88 cmp $0x2,%eax
 cmp $0x2, %r10d
 
-L_80488cb:
-# 80488cb jbe 8048907 <test_target1+0x57>
-jbe L_8048907;
+L_a8b:
+# a8b jbe ac7 <test_target1+0x57>
+jbe L_ac7;
 
-L_80488cd:
-# 80488cd lea 0x0(%esi),%esi
+L_a8d:
+# a8d lea 0x0(%esi),%esi
 lea 0x0(%esi), %esi
 
-L_80488d0:
-# 80488d0 cmp $0x2,%ebx
+L_a90:
+# a90 cmp $0x2,%ebx
 cmp $0x2, %ebx
 
-L_80488d3:
-# 80488d3 jbe 80488f9 <test_target1+0x49>
-jbe L_80488f9;
+L_a93:
+# a93 jbe ab9 <test_target1+0x49>
+jbe L_ab9;
 
-L_80488d5:
-# 80488d5 test $0x1,%bl
+L_a95:
+# a95 test $0x1,%bl
 test $0x1, %bl
 
-L_80488d8:
-# 80488d8 je 80488fc <test_target1+0x4c>
-je L_80488fc;
+L_a98:
+# a98 je abc <test_target1+0x4c>
+je L_abc;
 
-L_80488da:
-# 80488da mov $0x2,%ecx
+L_a9a:
+# a9a mov $0x2,%ecx
 movl $0x2, %r14d
 
-L_80488df:
-# 80488df jmp 80488f2 <test_target1+0x42>
-jmp L_80488f2;
+L_a9f:
+# a9f jmp ab2 <test_target1+0x42>
+jmp L_ab2;
 
-L_80488e1:
-# 80488e1 lea 0x0(%esi,%eiz,1),%esi
+L_aa1:
+# aa1 lea 0x0(%esi,%eiz,1),%esi
 lea 0x0(%esi), %esi
 
-L_80488e8:
-# 80488e8 xor %edx,%edx
+L_aa8:
+# aa8 xor %edx,%edx
 xor %r9d, %r9d
 
-L_80488ea:
-# 80488ea mov %ebx,%eax
+L_aaa:
+# aaa mov %ebx,%eax
 movl %ebx, %r10d
 
-L_80488ec:
-# 80488ec div %ecx
+L_aac:
+# aac div %ecx
 mov %r10d, %eax
 mov %r9d, %edx
 div %r14d
 mov %eax, %r10d
 mov %edx, %r9d
 
-L_80488ee:
-# 80488ee test %edx,%edx
+L_aae:
+# aae test %edx,%edx
 test %r9d, %r9d
 
-L_80488f0:
-# 80488f0 je 80488fc <test_target1+0x4c>
-je L_80488fc;
+L_ab0:
+# ab0 je abc <test_target1+0x4c>
+je L_abc;
 
-L_80488f2:
-# 80488f2 add $0x1,%ecx
+L_ab2:
+# ab2 add $0x1,%ecx
 add $0x1, %r14d
 
-L_80488f5:
-# 80488f5 cmp %ebx,%ecx
+L_ab5:
+# ab5 cmp %ebx,%ecx
 cmp %ebx, %r14d
 
-L_80488f7:
-# 80488f7 jne 80488e8 <test_target1+0x38>
-jne L_80488e8;
+L_ab7:
+# ab7 jne aa8 <test_target1+0x38>
+jne L_aa8;
 
-L_80488f9:
-# 80488f9 add $0x1,%esi
+L_ab9:
+# ab9 add $0x1,%esi
 add $0x1, %esi
 
-L_80488fc:
-# 80488fc mov 0xc(%esp),%eax
+L_abc:
+# abc mov 0xc(%esp),%eax
 lea 0xC(%r11d), %r12d
 movl (%r12, %r15, 1), %r10d
 
 
-L_8048900:
-# 8048900 add $0x1,%ebx
+L_ac0:
+# ac0 add $0x1,%ebx
 add $0x1, %ebx
 
-L_8048903:
-# 8048903 cmp %ebx,%eax
+L_ac3:
+# ac3 cmp %ebx,%eax
 cmp %ebx, %r10d
 
-L_8048905:
-# 8048905 jae 80488d0 <test_target1+0x20>
-jae L_80488d0;
+L_ac5:
+# ac5 jae a90 <test_target1+0x20>
+jae L_a90;
 
-L_8048907:
-# 8048907 add $0x10,%esp
+L_ac7:
+# ac7 add $0x10,%esp
 add $0x10, %r11d
 
-L_804890a:
-# 804890a mov %esi,%eax
+L_aca:
+# aca mov %esi,%eax
 movl %esi, %r10d
 
-L_804890c:
-# 804890c pop %ebx
+L_acc:
+# acc pop %ebx
 mov (%r11, %r15, 1), %ebx
 
 lea 4(%r11d), %r11d
 
-L_804890d:
-# 804890d pop %esi
+L_acd:
+# acd pop %esi
 mov (%r11, %r15, 1), %esi
 
 lea 4(%r11d), %r11d
 
-L_804890e:
-# 804890e ret 
+L_ace:
+# ace ret 
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
@@ -712,13 +712,13 @@ je L_ERROR
 popq %rcx
 popq %rdx
 cmpl $0xfaceface, %ecx
-je L_HELPER1_804890e
+je L_HELPER1_ace
 cmp %edx, %r13d
 jne L_JUMP_TABLE
 add $127, %al
 sahf
 jmp %rcx
-L_HELPER1_804890e:
+L_HELPER1_ace:
 movabs $0xfaceface, %r12
 pushq %r12
 pushq %r12
@@ -726,172 +726,172 @@ add $127, %al
 sahf
 jmp L_JUMP_TABLE
 
-L_804890f:
-# 804890f nop 
+L_acf:
+# acf nop 
 
-L_8048910:
-# 8048910 push %esi
+L_ad0:
+# ad0 push %esi
 lea -4(%r11d), %r11d
 mov %esi, (%r11, %r15, 1)
 
 
-L_8048911:
-# 8048911 push %ebx
+L_ad1:
+# ad1 push %ebx
 lea -4(%r11d), %r11d
 mov %ebx, (%r11, %r15, 1)
 
 
-L_8048912:
-# 8048912 sub $0x1f50,%esp
+L_ad2:
+# ad2 sub $0x1f50,%esp
 sub $0x1f50, %r11d
 
-L_8048918:
-# 8048918 movl $0x7d0,0xc(%esp)
+L_ad8:
+# ad8 movl $0x7d0,0xc(%esp)
 lea 0xC(%r11d), %r12d
 movl $0x7d0, (%r12, %r15, 1)
 
 
-L_8048920:
-# 8048920 mov 0xc(%esp),%eax
+L_ae0:
+# ae0 mov 0xc(%esp),%eax
 lea 0xC(%r11d), %r12d
 movl (%r12, %r15, 1), %r10d
 
 
-L_8048924:
-# 8048924 test %eax,%eax
+L_ae4:
+# ae4 test %eax,%eax
 test %r10d, %r10d
 
-L_8048926:
-# 8048926 je 804893e <test_target2+0x2e>
-je L_804893e;
+L_ae6:
+# ae6 je afe <test_target2+0x2e>
+je L_afe;
 
-L_8048928:
-# 8048928 lea 0x10(%esp),%ebx
+L_ae8:
+# ae8 lea 0x10(%esp),%ebx
 lea 0x10(%r11d), %ebx
 
-L_804892c:
-# 804892c xor %eax,%eax
+L_aec:
+# aec xor %eax,%eax
 xor %r10d, %r10d
 
-L_804892e:
-# 804892e xchg %ax,%ax
+L_aee:
+# aee xchg %ax,%ax
 
-L_8048930:
-# 8048930 mov 0xc(%esp),%edx
+L_af0:
+# af0 mov 0xc(%esp),%edx
 lea 0xC(%r11d), %r12d
 movl (%r12, %r15, 1), %r9d
 
 
-L_8048934:
-# 8048934 mov %eax,(%ebx,%eax,4)
+L_af4:
+# af4 mov %eax,(%ebx,%eax,4)
 lea 0x0(%ebx, %r10d, 4), %r12d
 movl %r10d, (%r12, %r15, 1)
 
 
-L_8048937:
-# 8048937 add $0x1,%eax
+L_af7:
+# af7 add $0x1,%eax
 add $0x1, %r10d
 
-L_804893a:
-# 804893a cmp %eax,%edx
+L_afa:
+# afa cmp %eax,%edx
 cmp %r10d, %r9d
 
-L_804893c:
-# 804893c ja 8048930 <test_target2+0x20>
-ja L_8048930;
+L_afc:
+# afc ja af0 <test_target2+0x20>
+ja L_af0;
 
-L_804893e:
-# 804893e mov $0xc350,%esi
+L_afe:
+# afe mov $0xc350,%esi
 movl $0xc350, %esi
 
-L_8048943:
-# 8048943 xor %eax,%eax
+L_b03:
+# b03 xor %eax,%eax
 xor %r10d, %r10d
 
-L_8048945:
-# 8048945 lea 0x0(%esi),%esi
+L_b05:
+# b05 lea 0x0(%esi),%esi
 lea 0x0(%esi), %esi
 
-L_8048948:
-# 8048948 mov 0xc(%esp),%edx
-lea 0xC(%r11d), %r12d
-movl (%r12, %r15, 1), %r9d
-
-
-L_804894c:
-# 804894c test %edx,%edx
-test %r9d, %r9d
-
-L_804894e:
-# 804894e je 804896e <test_target2+0x5e>
-je L_804896e;
-
-L_8048950:
-# 8048950 lea 0x10(%esp),%ebx
-lea 0x10(%r11d), %ebx
-
-L_8048954:
-# 8048954 xor %edx,%edx
-xor %r9d, %r9d
-
-L_8048956:
-# 8048956 lea 0x0(%esi),%esi
-lea 0x0(%esi), %esi
-
-L_8048959:
-# 8048959 lea 0x0(%edi,%eiz,1),%edi
-lea 0x0(%edi), %edi
-
-L_8048960:
-# 8048960 mov 0xc(%esp),%ecx
+L_b08:
+# b08 mov 0xc(%esp),%ecx
 lea 0xC(%r11d), %r12d
 movl (%r12, %r15, 1), %r14d
 
 
-L_8048964:
-# 8048964 add (%ebx,%edx,4),%eax
+L_b0c:
+# b0c xor %edx,%edx
+xor %r9d, %r9d
+
+L_b0e:
+# b0e lea 0x10(%esp),%ebx
+lea 0x10(%r11d), %ebx
+
+L_b12:
+# b12 test %ecx,%ecx
+test %r14d, %r14d
+
+L_b14:
+# b14 je b2e <test_target2+0x5e>
+je L_b2e;
+
+L_b16:
+# b16 lea 0x0(%esi),%esi
+lea 0x0(%esi), %esi
+
+L_b19:
+# b19 lea 0x0(%edi,%eiz,1),%edi
+lea 0x0(%edi), %edi
+
+L_b20:
+# b20 mov 0xc(%esp),%ecx
+lea 0xC(%r11d), %r12d
+movl (%r12, %r15, 1), %r14d
+
+
+L_b24:
+# b24 add (%ebx,%edx,4),%eax
 lea 0x0(%ebx, %r9d, 4), %r12d
 add (%r12, %r15, 1), %r10d
 
 
-L_8048967:
-# 8048967 add $0x1,%edx
+L_b27:
+# b27 add $0x1,%edx
 add $0x1, %r9d
 
-L_804896a:
-# 804896a cmp %edx,%ecx
+L_b2a:
+# b2a cmp %edx,%ecx
 cmp %r9d, %r14d
 
-L_804896c:
-# 804896c ja 8048960 <test_target2+0x50>
-ja L_8048960;
+L_b2c:
+# b2c ja b20 <test_target2+0x50>
+ja L_b20;
 
-L_804896e:
-# 804896e sub $0x1,%esi
+L_b2e:
+# b2e sub $0x1,%esi
 sub $0x1, %esi
 
-L_8048971:
-# 8048971 jne 8048948 <test_target2+0x38>
-jne L_8048948;
+L_b31:
+# b31 jne b08 <test_target2+0x38>
+jne L_b08;
 
-L_8048973:
-# 8048973 add $0x1f50,%esp
+L_b33:
+# b33 add $0x1f50,%esp
 add $0x1f50, %r11d
 
-L_8048979:
-# 8048979 pop %ebx
+L_b39:
+# b39 pop %ebx
 mov (%r11, %r15, 1), %ebx
 
 lea 4(%r11d), %r11d
 
-L_804897a:
-# 804897a pop %esi
+L_b3a:
+# b3a pop %esi
 mov (%r11, %r15, 1), %esi
 
 lea 4(%r11d), %r11d
 
-L_804897b:
-# 804897b ret 
+L_b3b:
+# b3b ret 
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
@@ -904,13 +904,13 @@ je L_ERROR
 popq %rcx
 popq %rdx
 cmpl $0xfaceface, %ecx
-je L_HELPER1_804897b
+je L_HELPER1_b3b
 cmp %edx, %r13d
 jne L_JUMP_TABLE
 add $127, %al
 sahf
 jmp %rcx
-L_HELPER1_804897b:
+L_HELPER1_b3b:
 movabs $0xfaceface, %r12
 pushq %r12
 pushq %r12
@@ -918,193 +918,126 @@ add $127, %al
 sahf
 jmp L_JUMP_TABLE
 
-L_804897c:
-# 804897c lea 0x0(%esi,%eiz,1),%esi
+L_b3c:
+# b3c lea 0x0(%esi,%eiz,1),%esi
 lea 0x0(%esi), %esi
 
-L_8048980:
-# 8048980 push %esi
+L_b40:
+# b40 push %esi
 lea -4(%r11d), %r11d
 mov %esi, (%r11, %r15, 1)
 
 
-L_8048981:
-# 8048981 push %ebx
+L_b41:
+# b41 push %ebx
 lea -4(%r11d), %r11d
 mov %ebx, (%r11, %r15, 1)
 
 
-L_8048982:
-# 8048982 sub $0x4,%esp
+L_b42:
+# b42 sub $0x4,%esp
 sub $0x4, %r11d
 
-L_8048985:
-# 8048985 mov 0x10(%esp),%ebx
+L_b45:
+# b45 mov 0x10(%esp),%ebx
 lea 0x10(%r11d), %r12d
 movl (%r12, %r15, 1), %ebx
 
 
-L_8048989:
-# 8048989 test %ebx,%ebx
+L_b49:
+# b49 test %ebx,%ebx
 test %ebx, %ebx
 
-L_804898b:
-# 804898b je 80489d3 <test_target4+0x53>
-je L_80489d3;
+L_b4b:
+# b4b je b80 <test_target4+0x40>
+je L_b80;
 
-L_804898d:
-# 804898d cmp $0x1,%ebx
+L_b4d:
+# b4d cmp $0x1,%ebx
 cmp $0x1, %ebx
 
-L_8048990:
-# 8048990 je 80489d7 <test_target4+0x57>
-je L_80489d7;
+L_b50:
+# b50 je b90 <test_target4+0x50>
+je L_b90;
 
-L_8048992:
-# 8048992 xor %esi,%esi
+L_b52:
+# b52 xor %esi,%esi
 xor %esi, %esi
 
-L_8048994:
-# 8048994 jmp 80489a5 <test_target4+0x25>
-jmp L_80489a5;
-
-L_8048996:
-# 8048996 lea 0x0(%esi),%esi
-lea 0x0(%esi), %esi
-
-L_8048999:
-# 8048999 lea 0x0(%edi,%eiz,1),%edi
-lea 0x0(%edi), %edi
-
-L_80489a0:
-# 80489a0 cmp $0x1,%ebx
-cmp $0x1, %ebx
-
-L_80489a3:
-# 80489a3 je 80489c8 <test_target4+0x48>
-je L_80489c8;
-
-L_80489a5:
-# 80489a5 lea -0x1(%ebx),%eax
+L_b54:
+# b54 lea -0x1(%ebx),%eax
 lea -0x1(%ebx), %r10d
 
-L_80489a8:
-# 80489a8 sub $0xc,%esp
+L_b57:
+# b57 sub $0xc,%esp
 sub $0xc, %r11d
 
-L_80489ab:
-# 80489ab push %eax
+L_b5a:
+# b5a push %eax
 lea -4(%r11d), %r11d
 mov %r10d, (%r11, %r15, 1)
 
 
-L_80489ac:
-# 80489ac call 8048980 <test_target4>
+L_b5b:
+# b5b call b40 <test_target4>
 lea -4(%r11d), %r11d
-movl $0x80489b1, (%r11, %r15, 1)
+movl $0xb60, (%r11, %r15, 1)
 
-movabs $L_80489b1, %r13
-pushq $0x80489b1
+movabs $L_b60, %r13
+pushq $0xb60
 pushq %r13
-jmp L_8048980;
+jmp L_b40;
 
-L_80489b1:
-# 80489b1 add $0x10,%esp
+L_b60:
+# b60 add $0x10,%esp
 add $0x10, %r11d
 
-L_80489b4:
-# 80489b4 add %eax,%esi
+L_b63:
+# b63 add %eax,%esi
 add %r10d, %esi
 
-L_80489b6:
-# 80489b6 sub $0x2,%ebx
+L_b65:
+# b65 sub $0x2,%ebx
 sub $0x2, %ebx
 
-L_80489b9:
-# 80489b9 jne 80489a0 <test_target4+0x20>
-jne L_80489a0;
+L_b68:
+# b68 je b72 <test_target4+0x32>
+je L_b72;
 
-L_80489bb:
-# 80489bb add $0x4,%esp
-add $0x4, %r11d
+L_b6a:
+# b6a cmp $0x1,%ebx
+cmp $0x1, %ebx
 
-L_80489be:
-# 80489be mov %esi,%eax
-movl %esi, %r10d
+L_b6d:
+# b6d jne b54 <test_target4+0x14>
+jne L_b54;
 
-L_80489c0:
-# 80489c0 pop %ebx
-mov (%r11, %r15, 1), %ebx
-
-lea 4(%r11d), %r11d
-
-L_80489c1:
-# 80489c1 pop %esi
-mov (%r11, %r15, 1), %esi
-
-lea 4(%r11d), %r11d
-
-L_80489c2:
-# 80489c2 ret 
-mov (%r11, %r15, 1), %ecx
-
-lea 4(%r11d), %r11d
-mov $0, %eax
-seto %al
-lahf
-mov %ecx, %r13d
-cmp $0x7fffffff, %r13d
-je L_ERROR
-popq %rcx
-popq %rdx
-cmpl $0xfaceface, %ecx
-je L_HELPER1_80489c2
-cmp %edx, %r13d
-jne L_JUMP_TABLE
-add $127, %al
-sahf
-jmp %rcx
-L_HELPER1_80489c2:
-movabs $0xfaceface, %r12
-pushq %r12
-pushq %r12
-add $127, %al
-sahf
-jmp L_JUMP_TABLE
-
-L_80489c3:
-# 80489c3 nop 
-
-L_80489c4:
-# 80489c4 lea 0x0(%esi,%eiz,1),%esi
-lea 0x0(%esi), %esi
-
-L_80489c8:
-# 80489c8 add $0x1,%esi
+L_b6f:
+# b6f add $0x1,%esi
 add $0x1, %esi
 
-L_80489cb:
-# 80489cb add $0x4,%esp
+L_b72:
+# b72 add $0x4,%esp
 add $0x4, %r11d
 
-L_80489ce:
-# 80489ce mov %esi,%eax
+L_b75:
+# b75 mov %esi,%eax
 movl %esi, %r10d
 
-L_80489d0:
-# 80489d0 pop %ebx
+L_b77:
+# b77 pop %ebx
 mov (%r11, %r15, 1), %ebx
 
 lea 4(%r11d), %r11d
 
-L_80489d1:
-# 80489d1 pop %esi
+L_b78:
+# b78 pop %esi
 mov (%r11, %r15, 1), %esi
 
 lea 4(%r11d), %r11d
 
-L_80489d2:
-# 80489d2 ret 
+L_b79:
+# b79 ret 
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
@@ -1117,13 +1050,13 @@ je L_ERROR
 popq %rcx
 popq %rdx
 cmpl $0xfaceface, %ecx
-je L_HELPER1_80489d2
+je L_HELPER1_b79
 cmp %edx, %r13d
 jne L_JUMP_TABLE
 add $127, %al
 sahf
 jmp %rcx
-L_HELPER1_80489d2:
+L_HELPER1_b79:
 movabs $0xfaceface, %r12
 pushq %r12
 pushq %r12
@@ -1131,63 +1064,160 @@ add $127, %al
 sahf
 jmp L_JUMP_TABLE
 
-L_80489d3:
-# 80489d3 xor %esi,%esi
+L_b7a:
+# b7a lea 0x0(%esi),%esi
+lea 0x0(%esi), %esi
+
+L_b80:
+# b80 xor %esi,%esi
 xor %esi, %esi
 
-L_80489d5:
-# 80489d5 jmp 80489bb <test_target4+0x3b>
-jmp L_80489bb;
+L_b82:
+# b82 add $0x4,%esp
+add $0x4, %r11d
 
-L_80489d7:
-# 80489d7 mov $0x1,%esi
+L_b85:
+# b85 mov %esi,%eax
+movl %esi, %r10d
+
+L_b87:
+# b87 pop %ebx
+mov (%r11, %r15, 1), %ebx
+
+lea 4(%r11d), %r11d
+
+L_b88:
+# b88 pop %esi
+mov (%r11, %r15, 1), %esi
+
+lea 4(%r11d), %r11d
+
+L_b89:
+# b89 ret 
+mov (%r11, %r15, 1), %ecx
+
+lea 4(%r11d), %r11d
+mov $0, %eax
+seto %al
+lahf
+mov %ecx, %r13d
+cmp $0x7fffffff, %r13d
+je L_ERROR
+popq %rcx
+popq %rdx
+cmpl $0xfaceface, %ecx
+je L_HELPER1_b89
+cmp %edx, %r13d
+jne L_JUMP_TABLE
+add $127, %al
+sahf
+jmp %rcx
+L_HELPER1_b89:
+movabs $0xfaceface, %r12
+pushq %r12
+pushq %r12
+add $127, %al
+sahf
+jmp L_JUMP_TABLE
+
+L_b8a:
+# b8a lea 0x0(%esi),%esi
+lea 0x0(%esi), %esi
+
+L_b90:
+# b90 mov $0x1,%esi
 movl $0x1, %esi
 
-L_80489dc:
-# 80489dc jmp 80489bb <test_target4+0x3b>
-jmp L_80489bb;
+L_b95:
+# b95 add $0x4,%esp
+add $0x4, %r11d
 
-L_80489de:
-# 80489de xchg %ax,%ax
+L_b98:
+# b98 mov %esi,%eax
+movl %esi, %r10d
 
-L_80489e0:
-# 80489e0 sub $0x28,%esp
+L_b9a:
+# b9a pop %ebx
+mov (%r11, %r15, 1), %ebx
+
+lea 4(%r11d), %r11d
+
+L_b9b:
+# b9b pop %esi
+mov (%r11, %r15, 1), %esi
+
+lea 4(%r11d), %r11d
+
+L_b9c:
+# b9c ret 
+mov (%r11, %r15, 1), %ecx
+
+lea 4(%r11d), %r11d
+mov $0, %eax
+seto %al
+lahf
+mov %ecx, %r13d
+cmp $0x7fffffff, %r13d
+je L_ERROR
+popq %rcx
+popq %rdx
+cmpl $0xfaceface, %ecx
+je L_HELPER1_b9c
+cmp %edx, %r13d
+jne L_JUMP_TABLE
+add $127, %al
+sahf
+jmp %rcx
+L_HELPER1_b9c:
+movabs $0xfaceface, %r12
+pushq %r12
+pushq %r12
+add $127, %al
+sahf
+jmp L_JUMP_TABLE
+
+L_b9d:
+# b9d lea 0x0(%esi),%esi
+lea 0x0(%esi), %esi
+
+L_ba0:
+# ba0 sub $0x28,%esp
 sub $0x28, %r11d
 
-L_80489e3:
-# 80489e3 movl $0x22,0x18(%esp)
+L_ba3:
+# ba3 movl $0x22,0x18(%esp)
 lea 0x18(%r11d), %r12d
 movl $0x22, (%r12, %r15, 1)
 
 
-L_80489eb:
-# 80489eb mov 0x18(%esp),%eax
+L_bab:
+# bab mov 0x18(%esp),%eax
 lea 0x18(%r11d), %r12d
 movl (%r12, %r15, 1), %r10d
 
 
-L_80489ef:
-# 80489ef push %eax
+L_baf:
+# baf push %eax
 lea -4(%r11d), %r11d
 mov %r10d, (%r11, %r15, 1)
 
 
-L_80489f0:
-# 80489f0 call 8048980 <test_target4>
+L_bb0:
+# bb0 call b40 <test_target4>
 lea -4(%r11d), %r11d
-movl $0x80489f5, (%r11, %r15, 1)
+movl $0xbb5, (%r11, %r15, 1)
 
-movabs $L_80489f5, %r13
-pushq $0x80489f5
+movabs $L_bb5, %r13
+pushq $0xbb5
 pushq %r13
-jmp L_8048980;
+jmp L_b40;
 
-L_80489f5:
-# 80489f5 add $0x2c,%esp
+L_bb5:
+# bb5 add $0x2c,%esp
 add $0x2c, %r11d
 
-L_80489f8:
-# 80489f8 ret 
+L_bb8:
+# bb8 ret 
 mov (%r11, %r15, 1), %ecx
 
 lea 4(%r11d), %r11d
@@ -1200,13 +1230,13 @@ je L_ERROR
 popq %rcx
 popq %rdx
 cmpl $0xfaceface, %ecx
-je L_HELPER1_80489f8
+je L_HELPER1_bb8
 cmp %edx, %r13d
 jne L_JUMP_TABLE
 add $127, %al
 sahf
 jmp %rcx
-L_HELPER1_80489f8:
+L_HELPER1_bb8:
 movabs $0xfaceface, %r12
 pushq %r12
 pushq %r12
@@ -1214,8 +1244,8 @@ add $127, %al
 sahf
 jmp L_JUMP_TABLE
 
-L_80489f9:
-# 80489f9 lea 0x0(%esi,%eiz,1),%esi
+L_bb9:
+# bb9 lea 0x0(%esi,%eiz,1),%esi
 lea 0x0(%esi), %esi
 
 
