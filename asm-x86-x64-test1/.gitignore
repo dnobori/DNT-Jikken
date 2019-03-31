@@ -1,0 +1,9 @@
+.vs/
+bin/
+disasm_linux/
+disasm_win32/
+obj/
+obj_linux/
+obj_win32/
+vc_obj/
+
