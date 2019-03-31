@@ -1,0 +1,3 @@
+[submodule "cs-ipa-cores-test1/cs-ipa-cores-test1/submodules/IPA-DN-Cores"]
+	path = cs-ipa-cores-test1/cs-ipa-cores-test1/submodules/IPA-DN-Cores
+	url = https://github.com/IPA-CyberLab/IPA-DN-Cores.git
