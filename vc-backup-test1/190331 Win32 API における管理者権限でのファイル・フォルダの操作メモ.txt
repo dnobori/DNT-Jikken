@@ -1,0 +1,7 @@
+﻿Win32 API において、管理者権限のユーザーがプロセスの SeBackupPrivilege 特権を有効にした場合、
+
+・ ACL を無視したファイルの読み書きは CreateFile API で FILE_FLAG_BACKUP_SEMANTICS を指定すれば可能である。FILE_FLAG_BACKUP_SEMANTICS を指定しない場合はファイルの読み書きはできない。
+
+・ ACL を無視したディレクトリやファイルの列挙、ディレクトリの作成、削除は、SeBackupPrivilege が有効になっている間は、特に何も特殊なことをしなくても可能となる。
+
+

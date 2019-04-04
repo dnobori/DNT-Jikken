@@ -51,8 +51,6 @@ void test(UINT num, char **arg)
 {
 	if (true)
 	{
-		Print("Test! %u\n", IsX64());
-
 		Temp_TestFunction("Nekosan");
 		return;
 	}
@@ -69,6 +67,7 @@ typedef struct TEST_LIST
 TEST_LIST test_list[] =
 {
 	{ "test", test },
+	{ "t", test },
 	{ "ss", service_test },
 };
 
