@@ -25,50 +25,53 @@ namespace MVPNClientTest
     {
         static void Main(string[] args)
         {
-            //if (true)
-            //{
-            //    VCodeOperand op = new VCodeOperand("-0x1234(%esi,%eiz,8)");
-            //    return;
-            //}
+            if (false)
+            {
+                //if (true)
+                //{
+                //    VCodeOperand op = new VCodeOperand("-0x1234(%esi,%eiz,8)");
+                //    return;
+                //}
 
-            //VConsts.NoCheckRange = true;
+                //VConsts.NoCheckRange = true;
 
-            VConsts.CodeGenTarget = CodeGenTargetEnum.CSharp;
-            VCpuCodeGenTest.CodeGen();
+                VConsts.CodeGenTarget = CodeGenTargetEnum.CSharp;
+                VCpuCodeGenTest.CodeGen();
 
-            VConsts.CodeGenTarget = CodeGenTargetEnum.C;
-            VCpuCodeGenTest.CodeGen();
+                VConsts.CodeGenTarget = CodeGenTargetEnum.C;
+                VCpuCodeGenTest.CodeGen();
 
-            //PipeTest.TestMain();
+                //PipeTest.TestMain();
 
-            //while (true)
-            //{
-            //    var v = BackgroundState<HostNetInfo>.Current;
-            //    string str = "";
-            //    v.Data.IPAddressList.ForEach(x => str += x.ToString() + " ");
-            //    WriteLine("ver " + v.Version + "  " + str);
-            //    Console.ReadLine();
-            //}
+                //while (true)
+                //{
+                //    var v = BackgroundState<HostNetInfo>.Current;
+                //    string str = "";
+                //    v.Data.IPAddressList.ForEach(x => str += x.ToString() + " ");
+                //    WriteLine("ver " + v.Version + "  " + str);
+                //    Console.ReadLine();
+                //}
 
-            return;
+                return;
 
-            //SharedExceptionQueue q1 = new SharedExceptionQueue();
-            //SharedExceptionQueue q2 = new SharedExceptionQueue();
-            //SharedExceptionQueue q3 = new SharedExceptionQueue();
+                //SharedExceptionQueue q1 = new SharedExceptionQueue();
+                //SharedExceptionQueue q2 = new SharedExceptionQueue();
+                //SharedExceptionQueue q3 = new SharedExceptionQueue();
 
-            //q1.Add(new Exception("e1"));
-            //q2.Add(new Exception("e2"));
-            //q3.Add(new Exception("e3"));
+                //q1.Add(new Exception("e1"));
+                //q2.Add(new Exception("e2"));
+                //q3.Add(new Exception("e3"));
 
-            //q1.Encounter(q2);
-            //q2.Encounter(q3);
+                //q1.Encounter(q2);
+                //q2.Encounter(q3);
 
-            //WriteLine(q1.Exceptions.Length);
+                //WriteLine(q1.Exceptions.Length);
 
-            //return;
-            string s = "Hello";
+                //return;
+                string s = "Hello";
 
-            System.String s2 = s;
+                System.String s2 = s;
+            }
 
             test0().Wait();
             //nb_socket_tcp_test().Wait();

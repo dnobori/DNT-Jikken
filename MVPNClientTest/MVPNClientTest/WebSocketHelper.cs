@@ -2650,6 +2650,8 @@ namespace SoftEther.WebSocket.Helper
         {
             if (_UseFast == false) return AsSegmentSlow(memory);
 
+            if (memory.IsEmpty) return new ArraySegment<T>();
+
             unsafe
             {
                 byte* ptr = (byte*)Unsafe.AsPointer(ref memory);

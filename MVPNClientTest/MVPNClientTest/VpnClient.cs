@@ -20,7 +20,7 @@ using System.Security.Cryptography;
 
 namespace SoftEther.VpnClient
 {
-    class VpnError : ApplicationException
+    public class VpnError : ApplicationException
     {
         public string ErrorCode { get; }
         public string ErrorMessage { get; }
@@ -31,31 +31,31 @@ namespace SoftEther.VpnClient
         }
     }
 
-    class VpnProxySetting
+    public class VpnProxySetting
     {
     }
 
-    class VpnHostSetting
+    public class VpnHostSetting
     {
         public string Hostname = "";
         public int Port = 443;
     }
 
-    class VpnSessionDetails
+    public class VpnSessionDetails
     {
         public int TimeoutConnect = 15 * 1000;
         public int TimeoutComm = 15 * 1000;
         public bool UseUdpAcceleration = true;
     }
 
-    class VpnSessionSetting
+    public class VpnSessionSetting
     {
         public VpnHostSetting Host = new VpnHostSetting();
         public VpnProxySetting Proxy = new VpnProxySetting();
         public VpnSessionDetails Details = new VpnSessionDetails();
     }
 
-    enum VpnSessionEventType
+    public enum VpnSessionEventType
     {
         Init,
         SessionStarted,
@@ -66,7 +66,7 @@ namespace SoftEther.VpnClient
         Error,
     }
 
-    class VpnSessionEventArgs
+    public class VpnSessionEventArgs
     {
         public VpnSessionEventType EventType;
         public Exception Error;
@@ -78,7 +78,7 @@ namespace SoftEther.VpnClient
         }
     }
 
-    class VpnSessionNotify
+    public class VpnSessionNotify
     {
         public event EventHandler<VpnSessionEventArgs> VpnEventHandler;
 
@@ -93,7 +93,7 @@ namespace SoftEther.VpnClient
         }
     }
 
-    class VpnSocket : IDisposable
+    public class VpnSocket : IDisposable
     {
         public VpnSessionSetting Setting { get; }
 
@@ -211,9 +211,9 @@ namespace SoftEther.VpnClient
 
             if (noErrorCheck == false)
             {
-                if (string.IsNullOrEmpty(ret.ErrorStr) == false && ret.ErrorStr.StartsWith("e_", StringComparison.InvariantCultureIgnoreCase))
+                if (string.IsNullOrEmpty(ret.Error_str) == false && ret.Error_str.StartsWith("e_", StringComparison.InvariantCultureIgnoreCase))
                 {
-                    throw new VpnError(ret.ErrorStr, ret.ErrorMessage_Utf);
+                    throw new VpnError(ret.Error_str, ret.ErrorMessage_Utf);
                 }
             }
 
@@ -309,9 +309,9 @@ namespace SoftEther.VpnClient
         public string L3HelperIPv4PushedStaticRoutes_str = null;
     }
 
-    class VpnJsonResponse
+    public class VpnJsonResponse
     {
-        public string ErrorStr = null;
+        public string Error_str = null;
         public string ErrorMessage_Utf = null;
     }
 
@@ -384,6 +384,8 @@ namespace SoftEther.VpnClient
                 Nonce_bin = WebSocketHelper.Rand(128),
                 Implementation_str = ".NET Test Client",
                 NetworkName_str = "DEFAULT",
+                L3HelperIPv4Enable_bool = true,
+                L3HelperIPv4AddressType_str = "dynamic",
             };
 
             if (udpAccel != null)
@@ -415,6 +417,8 @@ namespace SoftEther.VpnClient
 
             // Phase 4: Receive a Server Auth Response JSON message
             VpnJsonServerAuthResponse serverAuthResponse = await s.RecvJsonAsync<VpnJsonServerAuthResponse>();
+
+            serverAuthResponse.Print();
 
             if (serverAuthResponse.UseUdpAcceleration_bool == false)
             {
