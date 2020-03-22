@@ -102,11 +102,46 @@ void pps_write_test()
 	}
 }
 
+void memory_read_speed_test()
+{
+	UINT64 num = 16777216;
+	UINT64 size = num * sizeof(UINT64);
+	UCHAR *buf = malloc(size + 20000 * sizeof(UINT64));
+	UINT64 *buf64 = (UINT64 *)buf;
+
+	while (1)
+	{
+		UINT64 start = TickHighres64();
+		UINT64 end;
+
+		UINT i;
+
+		UINT current = 0;
+
+		for (i = 0;i < num;i++)
+		{
+			current += 12341;
+			volatile UINT64 value = buf64[current % num];
+			//volatile UINT64 value2 = buf64[current % num + 4];
+			//buf64[(~current) % num] += i;
+		}
+
+		end = TickHighres64();
+
+		printf("write time = %f\n", (double)(end - start) * 1000000.0 / (double)num);
+	}
+
+	// 結果
+	// 読み込み および 書き込み 11ns くらいかかります
+}
+
 int main()
 {
 	printf("Benchmark test\n");
 
-	pps_write_test();
+	//pps_write_test();
+
+	memory_read_speed_test();
 }
 
 // プログラムの実行: Ctrl + F5 または [デバッグ] > [デバッグなしで開始] メニュー
