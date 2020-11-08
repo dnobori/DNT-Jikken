@@ -7,6 +7,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows.Forms;
+using System.Windows.Forms.VisualStyles;
 using cs_ahill_app.Properties;
 
 namespace cs_ahill_app
@@ -15,7 +16,7 @@ namespace cs_ahill_app
     {
         Bitmap ahillBmp = Resource1.Ahill;
         Bitmap formBmp;
-        Graphics formGraphics;
+        Graphics canvas;
         Random rand;
 
         public Form1()
@@ -36,21 +37,26 @@ namespace cs_ahill_app
             int width = this.Width + 100;
             int height = this.Height + 100;
 
+            timer1.Interval = Math.Max(timer1.Interval - 1, 10);
+
+            this.TransparencyKey = Color.Blue;
             if (flag == false)
             {
                 flag = true;
 
                 this.formBmp = new Bitmap(width, height);
-                this.formGraphics = Graphics.FromImage(this.formBmp);
+                this.canvas = Graphics.FromImage(this.formBmp);
 
-                this.formGraphics.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+                this.canvas.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.NearestNeighbor;
+
+                this.canvas.FillRectangle(new SolidBrush(Color.Blue), 0, 0, width, height);
 
                 this.pictureBox1.Location = new Point(0, 0);
                 this.pictureBox1.Size = new Size(width, height);
                 this.pictureBox1.Image = this.formBmp;
             }
 
-            int size_x = rand.Next(300) + 100;
+            int size_x = rand.Next(220) + 60;
 
             int size_y = (int)((double)size_x * 430.0 / 694.0);
 
@@ -78,10 +84,10 @@ namespace cs_ahill_app
                 neg = -1;
             }
 
-            formGraphics.DrawImage(ahillBmp, x, y, width * neg, height);
+            canvas.DrawImage(ahillBmp, x, y, width * neg, height);
             this.pictureBox1.Refresh();
 
-            this.pictureBox1.Location = new Point(-100 + rand.Next(30), -100 + rand.Next(30));
+            this.pictureBox1.Location = new Point(-100 + rand.Next(30), -100 + rand.Next(25));
         }
     }
 }
